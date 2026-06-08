@@ -1,0 +1,114 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: "-linux-x86_64"
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            suffix: "-linux-aarch64"
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: "-windows-x64.exe"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          pnpm install
+          pnpm build
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross (for aarch64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: cargo install cross
+
+      - name: Build Backend (Standard)
+        if: matrix.target != 'aarch64-unknown-linux-gnu'
+        run: |
+          cd backend
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Build Backend (Cross)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          cd backend
+          cross build --release --target ${{ matrix.target }}
+
+      - name: Prepare Binary
+        shell: bash
+        run: |
+          mkdir -p bin
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp backend/target/${{ matrix.target }}/release/sunset-backend.exe bin/sunset-server${{ matrix.suffix }}
+          else
+            cp backend/target/${{ matrix.target }}/release/sunset-backend bin/sunset-server${{ matrix.suffix }}
+          fi
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunset-server-${{ matrix.target }}
+          path: bin/
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract Changelog Entry
+        id: changelog
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF_NAME}
+          # Extract the section starting with ## VERSION and ending before the next ##
+          sed -n "/^## ${VERSION}/,/^## /p" CHANGELOG.md | sed '$d' > release_notes.md
+          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          files: |
+            artifacts/sunset-server-x86_64-unknown-linux-gnu/sunset-server-linux-x86_64
+            artifacts/sunset-server-aarch64-unknown-linux-gnu/sunset-server-linux-aarch64
+            artifacts/sunset-server-x86_64-pc-windows-msvc/sunset-server-windows-x64.exe
