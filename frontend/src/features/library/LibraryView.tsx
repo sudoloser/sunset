@@ -7,11 +7,11 @@ import type { MediaItem, Library } from '../../types';
 
 interface LibraryViewProps {
   library: Library;
-  onPlay: (item: MediaItem) => void;
+  onSelectItem: (item: MediaItem) => void;
   onBack: () => void;
 }
 
-export const LibraryView: React.FC<LibraryViewProps> = ({ library, onPlay, onBack }) => {
+export const LibraryView: React.FC<LibraryViewProps> = ({ library, onSelectItem, onBack }) => {
   const [items, setItems] = useState<MediaItem[]>([]);
   const [selectedShow, setSelectedShow] = useState<string | null>(null);
 
@@ -61,7 +61,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ library, onPlay, onBac
                     border: '1px solid var(--border-color)',
                     transition: 'var(--transition-standard)'
                   }}
-                  onClick={() => onPlay(ep)}
+                  onClick={() => onSelectItem(ep)}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-variant)'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--surface-color)'}
                 >
@@ -100,7 +100,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ library, onPlay, onBac
               itemId={item.id}
               title={item.title}
               subtitle={item.year?.toString()}
-              onClick={() => onPlay(item)}
+              onClick={() => onSelectItem(item)}
             />
           ))
         ) : (
@@ -110,7 +110,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ library, onPlay, onBac
               itemId={groupedShows[showTitle][0]?.id} // Use first episode for poster
               title={showTitle}
               subtitle={`${groupedShows[showTitle].length} Episodes`}
-              onClick={() => setSelectedShow(showTitle)}
+              onClick={() => onSelectItem(groupedShows[showTitle][0])}
             />
           ))
         )}

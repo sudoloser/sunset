@@ -8,6 +8,7 @@ import { LibraryView } from './features/library/LibraryView';
 import { Admin } from './features/dashboard/Admin';
 import { VideoPlayer } from './features/player/VideoPlayer';
 import { LibrariesTab } from './features/library/LibrariesTab';
+import { MediaDetails } from './features/library/MediaDetails';
 import type { SetupStatus, MediaItem, Library } from './types';
 
 type AppStep = 'loading' | 'onboarding' | 'login' | 'dashboard' | 'admin' | 'library' | 'player' | 'libraries' | 'settings';
@@ -17,6 +18,7 @@ function App() {
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [activeTab, setActiveTab] = useState('home');
   const [selectedLibrary, setSelectedLibrary] = useState<Library | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   const [playingMedia, setPlayingMedia] = useState<MediaItem | null>(null);
   const [previousStep, setPreviousStep] = useState<AppStep>('dashboard');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -81,7 +83,7 @@ function App() {
         <div style={{ padding: step === 'dashboard' ? 0 : 'var(--spacing-xl)' }}>
           {step === 'dashboard' && (
             <Dashboard 
-              onPlay={item => { setPlayingMedia(item); setPreviousStep('dashboard'); setStep('player'); }}
+              onSelectItem={item => setSelectedItem(item)}
             />
           )}
 
@@ -96,13 +98,21 @@ function App() {
           {step === 'library' && selectedLibrary && (
             <LibraryView 
               library={selectedLibrary}
-              onPlay={item => { setPlayingMedia(item); setPreviousStep('library'); setStep('player'); }}
+              onSelectItem={item => setSelectedItem(item)}
               onBack={() => setStep('libraries')}
             />
           )}
 
           {step === 'settings' && <Admin />}
         </div>
+
+        {selectedItem && (
+          <MediaDetails 
+            item={selectedItem} 
+            onClose={() => setSelectedItem(null)} 
+            onPlay={item => { setPlayingMedia(item); setPreviousStep(step); setStep('player'); setSelectedItem(null); }} 
+          />
+        )}
 
         {step === 'player' && playingMedia && (
           <VideoPlayer 

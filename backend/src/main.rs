@@ -120,6 +120,8 @@ struct MediaItem {
     episode: Option<i32>,
     added_at: Option<chrono::NaiveDateTime>,
     file_path: String,
+    description: Option<String>,
+    cast: Option<String>,
 }
 
 struct AppState {
@@ -173,7 +175,11 @@ async fn main() {
     sqlx::query("CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK (id = 1), server_name TEXT, setup_complete BOOLEAN DEFAULT 0)").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, is_admin BOOLEAN DEFAULT 0)").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS libraries (id TEXT PRIMARY KEY, name TEXT NOT NULL, path TEXT NOT NULL, lib_type TEXT NOT NULL)").execute(&pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, cast TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
+    
+    // Migration: ensure columns exist
+    let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN description TEXT").execute(&pool).await;
+    let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN cast TEXT").execute(&pool).await;
     info!("Database schema verified.");
 
     info!("Initializing application state...");
@@ -321,7 +327,7 @@ async fn download_image(client: &reqwest::Client, url: &str, path: &StdPath) -> 
     Ok(())
 }
 
-async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_type: &str, folder_path: &StdPath) {
+async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_type: &str, folder_path: &StdPath) -> (Option<String>, Option<String>) {
     let search_type = if media_type == "movie" { "movie" } else { "tv" };
     let url = format!(
         "https://api.themoviedb.org/3/search/{}?api_key={}&query={}{}",
@@ -331,10 +337,14 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
         year.map(|y| format!("&year={}", y)).unwrap_or_default()
     );
 
+    let mut overview = None;
+    let mut cast = None;
+
     if let Ok(resp) = state.client.get(&url).send().await {
         if let Ok(json) = resp.json::<serde_json::Value>().await {
             if let Some(result) = json["results"].get(0) {
                 let id = result["id"].as_i64().unwrap_or(0);
+                overview = result["overview"].as_str().map(|s| s.to_string());
                 let poster_path = result["poster_path"].as_str().unwrap_or("");
                 let backdrop_path = result["backdrop_path"].as_str().unwrap_or("");
 
@@ -347,7 +357,7 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
                     let _ = download_image(&state.client, &format!("https://image.tmdb.org/t/p/w1280{}", backdrop_path), &folder_path.join("landscape.jpg")).await;
                 }
 
-                // Fetch extra assets (logo)
+                // Fetch extra assets (logo) and credits
                 let images_url = format!("https://api.themoviedb.org/3/{}/{}/images?api_key={}", search_type, id, TMDB_API_KEY);
                 if let Ok(img_resp) = state.client.get(&images_url).send().await {
                     if let Ok(img_json) = img_resp.json::<serde_json::Value>().await {
@@ -360,9 +370,23 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
                         }
                     }
                 }
+
+                let credits_url = format!("https://api.themoviedb.org/3/{}/{}/credits?api_key={}", search_type, id, TMDB_API_KEY);
+                if let Ok(cred_resp) = state.client.get(&credits_url).send().await {
+                    if let Ok(cred_json) = cred_resp.json::<serde_json::Value>().await {
+                        if let Some(cast_array) = cred_json["cast"].as_array() {
+                            let cast_names: Vec<&str> = cast_array.iter()
+                                .take(10)
+                                .filter_map(|c| c["name"].as_str())
+                                .collect();
+                            cast = Some(cast_names.join(", "));
+                        }
+                    }
+                }
             }
         }
     }
+    (overview, cast)
 }
 
 async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
@@ -587,10 +611,10 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 };
 
                 // Fetch metadata and assets
-                fetch_metadata(&state, &title, year, "movie", folder_path).await;
+                let (overview, cast) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
 
-                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, year) VALUES (?, ?, ?, NULL, ?, 'movie', ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(&file_path).bind(year).execute(&state.pool).await {
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, year, description, cast) VALUES (?, ?, ?, NULL, ?, 'movie', ?, ?, ?)")
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(&file_path).bind(year).bind(overview).bind(cast).execute(&state.pool).await {
                         count += 1;
                     }
             } else {
@@ -600,10 +624,10 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                     let episode = caps[3].parse::<i32>().unwrap_or(0);
 
                     // Fetch metadata and assets for the show if not already done
-                    fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
+                    let (overview, cast) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
-                    if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, season, episode) VALUES (?, ?, ?, ?, ?, 'episode', ?, ?)")
-                        .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).execute(&state.pool).await {
+                    if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, season, episode, description, cast) VALUES (?, ?, ?, ?, ?, 'episode', ?, ?, ?, ?)")
+                        .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).execute(&state.pool).await {
                             count += 1;
                         }
                 }

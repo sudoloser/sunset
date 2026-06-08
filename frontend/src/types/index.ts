@@ -10,6 +10,8 @@ export interface MediaItem {
   episode?: number;
   added_at?: string;
   file_path: string;
+  description?: string;
+  cast?: string;
 }
 
 export interface Library {

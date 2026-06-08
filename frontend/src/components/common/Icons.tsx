@@ -18,7 +18,43 @@ export const SearchIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
 
 export const PlayIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
-    <polygon points="5 3 19 12 5 21 5 3"/>
+    <path d="M8 5v14l11-7z"/>
+  </svg>
+);
+
+export const PauseIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+  </svg>
+);
+
+export const VolumeHighIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+  </svg>
+);
+
+export const VolumeMutedIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/><path d="M11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+  </svg>
+);
+
+export const MaximizeIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>
+  </svg>
+);
+
+export const SkipBackIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+  </svg>
+);
+
+export const SkipForwardIcon: React.FC<IconProps> = ({ size = 24, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M18.41 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.59 3.6z"/>
   </svg>
 );
 

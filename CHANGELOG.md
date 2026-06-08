@@ -6,10 +6,10 @@ All notable changes to the SunSet Media Server will be documented in this file.
 - Initial release of SunSet Media Server.
 - Immersive Netflix-style UI with Material 3 Expressive styling.
 - TMDB integration for automatic metadata and poster art downloading.
-- Support for vertical posters, backdrops, and logo art.
+- Rich Media Details view with cast, descriptions, and episode selector.
 - Automatic subtitle recognition for `.srt` and `.vtt` files.
+- Premium Video Player with playback persistence, touch controls, and subtitle support.
 - Unified "Libraries" management system.
-- Admin-only settings and user profile verification.
-- "Remember Me" and auto-login functionality.
+- Admin-only Settings panel.
 - Multi-platform support (Linux x64/aarch64, Windows x64).
 - Self-contained single-binary distribution.

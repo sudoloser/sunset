@@ -5,7 +5,7 @@ interface CardProps {
   className?: string;
   style?: React.CSSProperties;
   glass?: boolean;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   onMouseEnter?: (e: React.MouseEvent) => void;
   onMouseLeave?: (e: React.MouseEvent) => void;
 }

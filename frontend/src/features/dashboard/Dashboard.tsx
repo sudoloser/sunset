@@ -5,10 +5,10 @@ import { MediaRow } from '../../components/common/MediaRow';
 import type { MediaItem, Library } from '../../types';
 
 interface DashboardProps {
-  onPlay: (item: MediaItem) => void;
+  onSelectItem: (item: MediaItem) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onPlay }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem }) => {
   const [recent, setRecent] = useState<MediaItem[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [featured, setFeatured] = useState<MediaItem | undefined>();
@@ -30,16 +30,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onPlay }) => {
 
   return (
     <div style={{ paddingBottom: 'var(--spacing-xxl)', marginTop: 'calc(-1 * var(--header-height))' }}>
-      <Hero item={featured} onPlay={onPlay} />
+      <Hero item={featured} onPlay={onSelectItem} />
       
       <div style={{ position: 'relative', zIndex: 10, marginTop: '-100px' }}>
-        <MediaRow title="Recently Added" items={recent} onPlay={onPlay} />
+        <MediaRow title="Recently Added" items={recent} onPlay={onSelectItem} />
         
         {libraries.map(lib => (
           <LibraryRow 
             key={lib.id} 
             lib={lib} 
-            onPlay={onPlay} 
+            onPlay={onSelectItem} 
           />
         ))}
       </div>

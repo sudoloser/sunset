@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+        default: 'v0.1.0'
 
 jobs:
   build:
@@ -97,7 +102,7 @@ jobs:
         id: changelog
         shell: bash
         run: |
-          VERSION=${GITHUB_REF_NAME}
+          VERSION=${{ github.event.inputs.version || github.ref_name }}
           # Extract the section starting with ## VERSION and ending before the next ##
           sed -n "/^## ${VERSION}/,/^## /p" CHANGELOG.md | sed '$d' > release_notes.md
           echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
