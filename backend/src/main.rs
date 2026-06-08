@@ -27,7 +27,7 @@ const TMDB_API_KEY: &str = "fb7bb23f03b6994dafc674c074d01761";
 const OMDB_API_KEY: &str = "4b447405";
 
 #[derive(RustEmbed)]
-#[folder = "../frontend/dist/"]
+#[folder = "dist/"]
 struct Asset;
 
 #[derive(Serialize, Deserialize)]

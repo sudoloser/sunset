@@ -57,12 +57,14 @@ jobs:
       - name: Build Backend (Standard)
         if: matrix.target != 'aarch64-unknown-linux-gnu'
         run: |
+          cp -r frontend/dist backend/dist
           cd backend
           cargo build --release --target ${{ matrix.target }}
 
       - name: Build Backend (Cross)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
+          cp -r frontend/dist backend/dist
           cd backend
           cross build --release --target ${{ matrix.target }}
 
