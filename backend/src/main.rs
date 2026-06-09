@@ -25,7 +25,7 @@ use std::io::Write;
 
 const TMDB_API_KEY: &str = "fb7bb23f03b6994dafc674c074d01761";
 const IMDB_API_KEY: &str = "4b447405";
-const VERSION: &str = "v0.1.0";
+const VERSION: &str = "v0.2.0";
 const GITHUB_REPO: &str = "sudoloser/sunset";
 
 fn platform_asset_name() -> Option<String> {

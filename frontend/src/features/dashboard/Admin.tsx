@@ -131,7 +131,7 @@ export const Admin: React.FC = () => {
               </div>
               <div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '0.4rem' }}>VERSION</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>SunSet v0.1.0</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>SunSet v0.2.0</div>
               </div>
             </div>
           </Card>
