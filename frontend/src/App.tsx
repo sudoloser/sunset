@@ -4,15 +4,14 @@ import { Navigation } from './components/layout/Navigation';
 import { OnboardingWizard } from './features/onboarding/OnboardingWizard';
 import { LoginForm } from './features/auth/LoginForm';
 import { Dashboard } from './features/dashboard/Dashboard';
-import { LibraryView } from './features/library/LibraryView';
 import { Settings } from './features/settings/Settings';
 import { VideoPlayer } from './features/player/VideoPlayer';
 import { LibrariesTab } from './features/library/LibrariesTab';
 import { MediaDetails } from './features/library/MediaDetails';
 import { SearchOverlay } from './features/search/SearchOverlay';
-import type { SetupStatus, MediaItem, Library } from './types';
+import type { SetupStatus, MediaItem } from './types';
 
-type AppStep = 'loading' | 'onboarding' | 'login' | 'dashboard' | 'admin' | 'library' | 'player' | 'libraries' | 'settings';
+type AppStep = 'loading' | 'onboarding' | 'login' | 'dashboard' | 'admin' | 'player' | 'libraries' | 'settings';
 
 function App() {
   // Apply saved theme on load
@@ -32,7 +31,6 @@ function App() {
   const [step, setStep] = useState<AppStep>('loading');
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [activeTab, setActiveTab] = useState('home');
-  const [selectedLibrary, setSelectedLibrary] = useState<Library | null>(null);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   const [playingMedia, setPlayingMedia] = useState<MediaItem | null>(null);
   const [previousStep, setPreviousStep] = useState<AppStep>('dashboard');
@@ -110,14 +108,6 @@ function App() {
               isAdmin={isAdmin}
               onSelectItem={item => setSelectedItem(item)}
               onGoToSettings={() => handleTabChange('settings')}
-            />
-          )}
-
-          {step === 'library' && selectedLibrary && (
-            <LibraryView 
-              library={selectedLibrary}
-              onSelectItem={item => setSelectedItem(item)}
-              onBack={() => setStep('libraries')}
             />
           )}
 
