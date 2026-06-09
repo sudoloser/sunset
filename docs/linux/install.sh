@@ -41,33 +41,49 @@ curl -sL "$DL_URL" -o "$ZIP_PATH"
 echo "[3/4] Extracting..."
 unzip -o "$ZIP_PATH" -d "$TMP_DIR/extracted" >/dev/null 2>&1
 
-# Find the binary
-BINARY=""
-if [ -f "$TMP_DIR/extracted/$ASSET" ]; then
-  BINARY="$TMP_DIR/extracted/$ASSET"
-else
-  BINARY=$(find "$TMP_DIR/extracted" -type f -name "$ASSET" 2>/dev/null | head -1)
-fi
+BINARY=$(find "$TMP_DIR/extracted" -type f \( -name "sunset-server*" -o -executable \) 2>/dev/null | head -1)
 
 if [ -z "$BINARY" ]; then
   echo "Binary not found in archive."
+  echo "Contents of extracted folder:"
+  find "$TMP_DIR/extracted" -type f
   exit 1
 fi
 
-INSTALL_PATH="$INSTALL_DIR/$ASSET"
+INSTALL_PATH="$INSTALL_DIR/sunset-server"
 cp "$BINARY" "$INSTALL_PATH"
 chmod +x "$INSTALL_PATH"
 
-echo "[4/4] Cleaning up..."
+echo "[4/4] Adding to PATH..."
+SHELL_RC=""
+if [ -f "$HOME/.zshrc" ]; then
+  SHELL_RC="$HOME/.zshrc"
+elif [ -f "$HOME/.bashrc" ]; then
+  SHELL_RC="$HOME/.bashrc"
+elif [ -f "$HOME/.bash_profile" ]; then
+  SHELL_RC="$HOME/.bash_profile"
+fi
+
+if [ -n "$SHELL_RC" ]; then
+  if grep -q '\.sunset/bin' "$SHELL_RC" 2>/dev/null; then
+    echo "  PATH already configured in $SHELL_RC"
+  else
+    echo "" >> "$SHELL_RC"
+    echo "# SunSet" >> "$SHELL_RC"
+    echo "export PATH=\"\$HOME/.sunset/bin:\$PATH\"" >> "$SHELL_RC"
+    echo "  Added ~/.sunset/bin to PATH in $SHELL_RC"
+  fi
+else
+  echo "  Could not detect shell rc file. Add this manually:"
+  echo "    export PATH=\"\$HOME/.sunset/bin:\$PATH\""
+fi
+
 rm -rf "$TMP_DIR"
 
 echo ""
 echo "  ✓ Installed to $INSTALL_PATH"
 echo ""
 echo "  Run it:"
-echo "    $INSTALL_PATH"
-echo ""
-echo "  Or add to your PATH:"
-echo "    export PATH=\"\$HOME/.sunset/bin:\$PATH\""
+echo "    source $SHELL_RC"
 echo "    sunset-server"
 echo ""
