@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use tracing::{info, error};
+use tracing::{info, error, warn, debug};
 use sqlx::sqlite::{SqlitePoolOptions};
 use sqlx::{SqlitePool, Row};
 use tower_http::cors::CorsLayer;
@@ -448,7 +448,13 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
         if let Some(Ok(Message::Text(msg))) = read.next().await {
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&msg) {
                 heartbeat_interval = val["d"]["heartbeat_interval"].as_u64().unwrap_or(41250);
+                info!("Discord Gateway HELLO received, heartbeat interval: {}ms", heartbeat_interval);
+            } else {
+                warn!("Discord Gateway: failed to parse HELLO: {}", msg);
             }
+        } else {
+            warn!("Discord Gateway: no HELLO received");
+            continue;
         }
 
         // Identify
@@ -482,28 +488,71 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
             tokio::select! {
                 _ = heartbeat_timer.tick() => {
                     let hb = serde_json::json!({"op": 1, "d": sequence});
-                    if let Err(_) = write.send(Message::Text(hb.to_string())).await { break; }
+                    if let Err(e) = write.send(Message::Text(hb.to_string())).await {
+                        warn!("Discord heartbeat send failed: {}", e);
+                        break;
+                    }
                 }
                 Some(presence) = rx.recv() => {
+                    let status = &presence.status;
+                    let detail = presence.activities.first().map(|a| a.details.as_deref().unwrap_or("")).unwrap_or("");
+                    debug!("Sending Discord presence: status={}, details={}", status, detail);
                     let update = serde_json::json!({
                         "op": 3,
                         "d": presence
                     });
-                    if let Err(_) = write.send(Message::Text(update.to_string())).await { break; }
+                    if let Err(e) = write.send(Message::Text(update.to_string())).await {
+                        warn!("Discord presence send failed: {}", e);
+                        break;
+                    }
                 }
                 msg = read.next() => {
                     match msg {
                         Some(Ok(Message::Text(text))) => {
                             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+                                let op = val["op"].as_u64().unwrap_or(999);
                                 if let Some(s) = val["s"].as_u64() { sequence = Some(s); }
-                                if val["op"] == 7 { break; } // Reconnect
+                                match op {
+                                    0 => {
+                                        let t = val["t"].as_str().unwrap_or("");
+                                        if t == "READY" {
+                                            info!("Discord RPC connected successfully (READY received)");
+                                        } else {
+                                            debug!("Discord dispatch: {}", t);
+                                        }
+                                    }
+                                    7 => {
+                                        warn!("Discord requested reconnect (op 7)");
+                                        break;
+                                    }
+                                    9 => {
+                                        let d = &val["d"];
+                                        warn!("Discord Invalid Session (op 9) — token likely invalid or rate limited: {:?}", d);
+                                        break;
+                                    }
+                                    _ => debug!("Discord opcode {} received", op),
+                                }
                             }
                         }
-                        _ => break,
+                        Some(Ok(Message::Ping(_))) => {
+                            // handled automatically by tungstenite
+                        }
+                        Some(Ok(_)) => {
+                            // other message types (Pong, Close, Frame) — handled internally by tungstenite
+                        }
+                        Some(Err(e)) => {
+                            warn!("Discord websocket error: {}", e);
+                            break;
+                        }
+                        None => {
+                            debug!("Discord websocket closed");
+                            break;
+                        }
                     }
                 }
             }
         }
+        info!("Discord RPC session ended, reconnecting in 5s...");
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
 }
@@ -1057,6 +1106,8 @@ async fn update_discord_config(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<DiscordConfigPayload>,
 ) -> Json<bool> {
+    let masked = payload.token.chars().map(|c| if c.len_utf8() == 1 && c.is_ascii_graphic() { '*' } else { c }).collect::<String>();
+    info!("Updating Discord config for user {} (token: {}, status: {})", id, masked, payload.status);
     sqlx::query("UPDATE users SET discord_token = ?, discord_status = ? WHERE id = ?")
         .bind(&payload.token)
         .bind(&payload.status)
@@ -1065,9 +1116,11 @@ async fn update_discord_config(
         .await
         .unwrap();
     
-    // Close existing session if any to force reconnect with new config
+    // Close existing session to force reconnect with new token
     let mut manager = state.rpc_manager.lock().await;
-    manager.sessions.remove(&id);
+    if manager.sessions.remove(&id).is_some() {
+        info!("Closed existing Discord RPC session for user {}", id);
+    }
     
     Json(true)
 }
@@ -1083,57 +1136,71 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
     let user_row = sqlx::query("SELECT discord_token, discord_status FROM users WHERE id = ?").bind(&user_id).fetch_optional(&state.pool).await.unwrap();
     if let Some(row) = user_row {
         if let Some(token) = row.get::<Option<String>, _>("discord_token") {
-            let status = row.get::<Option<String>, _>("discord_status").unwrap_or_else(|| "online".to_string());
-            let mut manager = state.rpc_manager.lock().await;
-            let session = if let Some(s) = manager.sessions.get(&user_id) {
-                s
+            if token.is_empty() {
+                debug!("User {} has empty discord_token, skipping RPC", user_id);
             } else {
-                let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-                let token_clone = token.clone();
-                tokio::spawn(async move { run_discord_rpc(token_clone, rx).await; });
-                manager.sessions.insert(user_id.clone(), DiscordRpcSession { token, presence_tx: tx });
-                manager.sessions.get(&user_id).unwrap()
-            };
-
-            // Fetch item details for presence
-            if let Ok(item) = sqlx::query("SELECT title, show_title, media_type FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
-                let title: String = item.get("title");
-                let show_title: Option<String> = item.get("show_title");
-                let media_type: String = item.get("media_type");
-
-                let name = if media_type == "episode" {
-                    format!("Watching {}", show_title.unwrap_or(title.clone()))
+                let status = row.get::<Option<String>, _>("discord_status").unwrap_or_else(|| "online".to_string());
+                debug!("Discord RPC triggered for user {} (status: {})", user_id, status);
+                let mut manager = state.rpc_manager.lock().await;
+                let session = if let Some(s) = manager.sessions.get(&user_id) {
+                    s
                 } else {
-                    format!("Watching {}", title)
+                    info!("Creating new Discord RPC session for user {}", user_id);
+                    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+                    let token_clone = token.clone();
+                    tokio::spawn(async move { run_discord_rpc(token_clone, rx).await; });
+                    manager.sessions.insert(user_id.clone(), DiscordRpcSession { token, presence_tx: tx });
+                    manager.sessions.get(&user_id).unwrap()
                 };
 
-                let progress = if let Some(dur) = payload.duration {
-                    if dur > 0.0 { (payload.timestamp / dur * 100.0) as i32 } else { 0 }
-                } else { 0 };
+                // Fetch item details for presence
+                if let Ok(item) = sqlx::query("SELECT title, show_title, media_type FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
+                    let title: String = item.get("title");
+                    let show_title: Option<String> = item.get("show_title");
+                    let media_type: String = item.get("media_type");
 
-                let presence = DiscordPresence {
-                    status: status,
-                    since: None,
-                    activities: vec![DiscordActivity {
-                        name: "SunSet".to_string(),
-                        activity_type: 3, // Watching
-                        details: Some(name),
-                        state: Some(format!("Progress: {}%", progress)),
-                        assets: Some(DiscordAssets {
-                            large_image: Some(format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)),
-                            large_text: Some(title),
-                            small_image: None,
-                            small_text: None,
-                        }),
-                        timestamps: Some(DiscordTimestamps {
-                            start: Some(chrono::Utc::now().timestamp() as u64 - payload.timestamp as u64),
-                            end: None,
-                        }),
-                    }],
-                    afk: false,
-                };
-                let _ = session.presence_tx.send(presence);
+                    let name = if media_type == "episode" {
+                        format!("Watching {}", show_title.unwrap_or(title.clone()))
+                    } else {
+                        format!("Watching {}", title)
+                    };
+
+                    let progress = if let Some(dur) = payload.duration {
+                        if dur > 0.0 { (payload.timestamp / dur * 100.0) as i32 } else { 0 }
+                    } else { 0 };
+
+                    debug!("Sending Discord presence: {} ({}%)", name, progress);
+
+                    let presence = DiscordPresence {
+                        status: status,
+                        since: None,
+                        activities: vec![DiscordActivity {
+                            name: "SunSet".to_string(),
+                            activity_type: 3, // Watching
+                            details: Some(name),
+                            state: Some(format!("Progress: {}%", progress)),
+                            assets: Some(DiscordAssets {
+                                large_image: Some(format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)),
+                                large_text: Some(title),
+                                small_image: None,
+                                small_text: None,
+                            }),
+                            timestamps: Some(DiscordTimestamps {
+                                start: Some(chrono::Utc::now().timestamp() as u64 - payload.timestamp as u64),
+                                end: None,
+                            }),
+                        }],
+                        afk: false,
+                    };
+                    if session.presence_tx.send(presence).is_err() {
+                        warn!("Failed to send presence to Discord RPC session for user {} (channel closed)", user_id);
+                    }
+                } else {
+                    warn!("Could not fetch media item {} for Discord presence", payload.item_id);
+                }
             }
+        } else {
+            debug!("User {} has no discord_token set, skipping RPC", user_id);
         }
     }
 
