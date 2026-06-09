@@ -24,7 +24,7 @@ use std::fs::File as StdFile;
 use std::io::Write;
 
 const TMDB_API_KEY: &str = "fb7bb23f03b6994dafc674c074d01761";
-const OMDB_API_KEY: &str = "4b447405";
+const IMDB_API_KEY: &str = "4b447405";
 
 #[derive(RustEmbed)]
 #[folder = "dist/"]
@@ -178,7 +178,7 @@ async fn main() {
 
     // Drop and recreate media_items to ensure it has all columns
     sqlx::query("DROP TABLE IF EXISTS media_items").execute(&pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, cast TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, \"cast\" TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
     info!("Database schema verified.");
 
     info!("Initializing application state...");
@@ -395,7 +395,7 @@ async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
 }
 
 async fn get_recently_added(State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items ORDER BY added_at DESC LIMIT 15")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, \"cast\" FROM media_items ORDER BY added_at DESC LIMIT 15")
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
@@ -437,14 +437,14 @@ async fn delete_library(Path(id): Path<String>, State(state): State<Arc<AppState
 }
 
 async fn get_library_items(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE library_id = ? ORDER BY title ASC")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, \"cast\" FROM media_items WHERE library_id = ? ORDER BY title ASC")
         .bind(id)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
 
 async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, \"cast\" FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
         .bind(show_title)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -453,7 +453,7 @@ async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<A
 async fn search_media(Query(params): Query<std::collections::HashMap<String, String>>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
     let query = params.get("q").cloned().unwrap_or_default();
     let search_pattern = format!("%{}%", query);
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE title LIKE ? LIMIT 20")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, \"cast\" FROM media_items WHERE title LIKE ? LIMIT 20")
         .bind(search_pattern)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -612,7 +612,7 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 // Fetch metadata and assets
                 let (overview, cast) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
 
-                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, year, description, cast) VALUES (?, ?, ?, NULL, ?, 'movie', ?, ?, ?)")
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, year, description, \"cast\") VALUES (?, ?, ?, NULL, ?, 'movie', ?, ?, ?)")
                     .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(&file_path).bind(year).bind(overview).bind(cast).execute(&state.pool).await {
                         count += 1;
                     }
@@ -625,7 +625,7 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                     // Fetch metadata and assets for the show if not already done
                     let (overview, cast) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
-                    if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, season, episode, description, cast) VALUES (?, ?, ?, ?, ?, 'episode', ?, ?, ?, ?)")
+                    if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, season, episode, description, \"cast\") VALUES (?, ?, ?, ?, ?, 'episode', ?, ?, ?, ?)")
                         .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).execute(&state.pool).await {
                             count += 1;
                         }
