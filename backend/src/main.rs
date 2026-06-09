@@ -178,8 +178,22 @@ async fn main() {
     sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, cast TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
     
     // Migration: ensure columns exist
-    let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN description TEXT").execute(&pool).await;
-    let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN cast TEXT").execute(&pool).await;
+    let columns = sqlx::query("PRAGMA table_info(media_items)").fetch_all(&pool).await.unwrap();
+    let mut has_description = false;
+    let mut has_cast = false;
+    for col in columns {
+        let name: String = col.get("name");
+        if name == "description" { has_description = true; }
+        if name == "cast" { has_cast = true; }
+    }
+    if !has_description {
+        info!("Adding missing column: description");
+        let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN description TEXT").execute(&pool).await;
+    }
+    if !has_cast {
+        info!("Adding missing column: cast");
+        let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN cast TEXT").execute(&pool).await;
+    }
     info!("Database schema verified.");
 
     info!("Initializing application state...");
