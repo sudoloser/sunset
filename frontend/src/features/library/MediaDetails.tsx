@@ -210,7 +210,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                       padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', outline: 'none'
                     }}
                   >
-                    {seasons.map(s => <option key={s} value={s}>Season {s}</option>)}
+                    {seasons.map(s => <option key={s} value={s}>{s === 0 ? 'Specials' : `Season ${s}`}</option>)}
                   </select>
                 </div>
 

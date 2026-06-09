@@ -1,18 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Card } from '../../components/common/Card';
 import { MediaRow } from '../../components/common/MediaRow';
 import { api } from '../../api/client';
 import type { Library, MediaItem } from '../../types';
-import { MovieIcon, TVIcon } from '../../components/common/Icons';
 
 interface LibrariesTabProps {
-  onSelectLibrary: (lib: Library) => void;
   onSelectItem?: (item: MediaItem) => void;
   isAdmin: boolean;
   onGoToSettings: () => void;
 }
 
-export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectLibrary, onSelectItem, isAdmin, onGoToSettings }) => {
+export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmin, onGoToSettings }) => {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [loading, setLoading] = useState(true);
   const [continueWatching, setContinueWatching] = useState<MediaItem[]>([]);

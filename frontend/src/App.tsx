@@ -108,7 +108,6 @@ function App() {
           {step === 'libraries' && (
             <LibrariesTab 
               isAdmin={isAdmin}
-              onSelectLibrary={lib => { setSelectedLibrary(lib); setStep('library'); }}
               onSelectItem={item => setSelectedItem(item)}
               onGoToSettings={() => handleTabChange('settings')}
             />

@@ -285,7 +285,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
               <h2 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 700 }}>{item.title}</h2>
               {item.show_title && (
                 <small style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                  {item.show_title} • S{item.season} E{item.episode}
+                  {item.show_title} • {item.season === 0 ? 'Specials' : `S${String(item.season).padStart(2, '0')}`} E{String(item.episode).padStart(2, '0')}
                 </small>
               )}
             </div>
