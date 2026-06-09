@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MediaRow } from '../../components/common/MediaRow';
+import { MovieIcon, TVIcon } from '../../components/common/Icons';
+import { LibraryView } from './LibraryView';
 import { api } from '../../api/client';
 import type { Library, MediaItem } from '../../types';
 
@@ -14,6 +16,8 @@ export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmi
   const [loading, setLoading] = useState(true);
   const [continueWatching, setContinueWatching] = useState<MediaItem[]>([]);
   const [myListItems, setMyListItems] = useState<MediaItem[]>([]);
+  const [selectedLibrary, setSelectedLibrary] = useState<Library | null>(null);
+
   useEffect(() => {
     (async () => {
       const libs = await api.getLibraries();
@@ -51,6 +55,16 @@ export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmi
   }, []);
 
   if (loading) return <div style={{ padding: '2rem' }}>Loading libraries...</div>;
+
+  if (selectedLibrary && onSelectItem) {
+    return (
+      <LibraryView
+        library={selectedLibrary}
+        onSelectItem={onSelectItem}
+        onBack={() => setSelectedLibrary(null)}
+      />
+    );
+  }
 
   if (libraries.length === 0) {
     return (
@@ -99,6 +113,50 @@ export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmi
           <MediaRow title="My List" items={myListItems} onPlay={onSelectItem} />
         </div>
       )}
+
+      <h2 style={{ fontSize: '1.4rem', marginBottom: 'var(--spacing-md)', paddingLeft: 'var(--spacing-xl)' }}>
+        Your Libraries
+      </h2>
+      <div style={{ 
+        display: 'flex', 
+        gap: 'var(--spacing-md)', 
+        overflowX: 'auto', 
+        padding: '0 var(--spacing-xl) 1rem var(--spacing-xl)',
+      }}>
+        {libraries.map(lib => (
+          <div
+            key={lib.id}
+            onClick={() => setSelectedLibrary(lib)}
+            style={{
+              minWidth: '160px',
+              width: '160px',
+              aspectRatio: '2/3',
+              backgroundColor: 'var(--surface-variant)',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              padding: '1rem',
+              textAlign: 'center',
+              transition: 'var(--transition-standard)',
+              border: '1px solid var(--border-color)',
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-color)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--surface-variant)'}
+          >
+            <div style={{ opacity: 0.6 }}>
+              {lib.lib_type === 'movies' ? <MovieIcon size={40} /> : <TVIcon size={40} />}
+            </div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{lib.name}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              {lib.lib_type === 'movies' ? 'Movies' : 'TV Shows'}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

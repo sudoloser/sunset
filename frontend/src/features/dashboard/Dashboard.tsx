@@ -160,8 +160,24 @@ const LibraryRow: React.FC<{ lib: Library, onPlay: (item: MediaItem) => void }> 
   const [items, setItems] = useState<MediaItem[]>([]);
 
   useEffect(() => {
-    api.getLibraryItems(lib.id).then(data => setItems(data.slice(0, 15)));
-  }, [lib.id]);
+    api.getLibraryItems(lib.id).then(data => {
+      if (lib.lib_type === 'shows') {
+        const seen = new Set<string>();
+        const grouped = data.filter(item => {
+          if (item.show_title) {
+            if (seen.has(item.show_title)) return false;
+            seen.add(item.show_title);
+            item.title = item.show_title;
+            return true;
+          }
+          return true;
+        });
+        setItems(grouped.slice(0, 15));
+      } else {
+        setItems(data.slice(0, 15));
+      }
+    });
+  }, [lib.id, lib.lib_type]);
 
   return <MediaRow title={lib.name} items={items} onPlay={onPlay} />;
 };

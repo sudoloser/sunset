@@ -1,9 +1,71 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { api } from '../../api/client';
 import { PlayIcon } from '../../components/common/Icons';
 import type { MediaItem } from '../../types';
+
+const ContextMenu: React.FC<{ item: MediaItem; onClose: () => void }> = ({ item, onClose }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  const handleAction = async (action: 'stream' | 'download') => {
+    try {
+      const token = await api.generateMediaToken(item.id);
+      const base = action === 'stream' ? `/api/stream/${item.id}` : `/api/media/${item.id}/download`;
+      window.open(`${base}?token=${encodeURIComponent(token)}`, '_blank');
+    } catch {}
+    onClose();
+  };
+
+  return (
+    <div
+      ref={menuRef}
+      style={{
+        position: 'absolute', top: '100%', right: 0, zIndex: 100,
+        background: 'var(--surface-color)', border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+        minWidth: '180px', overflow: 'hidden'
+      }}
+    >
+      {[{
+        label: 'Direct Stream', action: 'stream' as const, icon: (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        )
+      }, {
+        label: 'Download', action: 'download' as const, icon: (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        )
+      }].map(({ label, action, icon }) => (
+        <div
+          key={action}
+          onClick={() => handleAction(action)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.75rem',
+            padding: '0.75rem 1rem', cursor: 'pointer', fontSize: '0.9rem',
+            transition: 'background 0.15s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          {icon}
+          <span>{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 interface MediaDetailsProps {
   item: MediaItem;
@@ -40,6 +102,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
       return list.includes(item.id);
     } catch { return false; }
   });
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
   const toggleMyList = () => {
     try {
@@ -185,6 +248,24 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
               <Button size="lg" variant="secondary" onClick={toggleMyList}>
                 {inMyList ? '✓ In My List' : '+ My List'}
               </Button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === item.id ? null : item.id); }}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
+                    width: '44px', height: '44px', borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.2rem', transition: 'var(--transition-standard)'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                  </svg>
+                </button>
+                {menuOpen === item.id && <ContextMenu item={item} onClose={() => setMenuOpen(null)} />}
+              </div>
             </div>
           </div>
         </div>
@@ -249,7 +330,23 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                       <div>
                         <div style={{ fontWeight: 700 }}>{ep.title}</div>
                       </div>
-                      <PlayIcon size={20} style={{ opacity: 0.5 }} />
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
+                          style={{
+                            background: 'transparent', border: 'none', color: 'var(--text-secondary)',
+                            cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: 'var(--radius-sm)',
+                            transition: 'var(--transition-standard)'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                          </svg>
+                        </button>
+                        {menuOpen === ep.id && <ContextMenu item={ep} onClose={() => setMenuOpen(null)} />}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -52,4 +52,5 @@ export const api = {
   getGenreItems: (genre: string) => request<MediaItem[]>(`/genre/${encodeURIComponent(genre)}`),
   createInvite: () => request<string>('/invite', { method: 'POST' }),
   redeemInvite: (code: string) => request<boolean>('/invite/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
+  generateMediaToken: (id: string) => request<string>(`/media/${id}/token`, { method: 'POST' }),
 };

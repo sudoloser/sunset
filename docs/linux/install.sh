@@ -9,6 +9,7 @@ ARCH="$(uname -m)"
 case "$ARCH" in
   x86_64)  ASSET="sunset-server-x86_64-unknown-linux-gnu" ;;
   aarch64) ASSET="sunset-server-aarch64-unknown-linux-gnu" ;;
+  aarch64-android) ASSET="sunset-server-aarch64-unknown-linux-gnu" ;;
   *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 

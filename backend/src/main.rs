@@ -83,6 +83,7 @@ const GITHUB_REPO: &str = "sudoloser/sunset";
 fn platform_asset_name() -> Option<String> {
     let arch = std::env::consts::ARCH;
     let os = std::env::consts::OS;
+    let os = if os == "android" { "linux" } else { os };
     match (arch, os) {
         ("aarch64", "linux") => Some("sunset-server-aarch64-unknown-linux-gnu".to_string()),
         ("x86_64", "linux") => Some("sunset-server-x86_64-unknown-linux-gnu".to_string()),
@@ -621,6 +622,7 @@ async fn main() {
     sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, collection_name TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, \"cast\" TEXT, genres TEXT, rating REAL, tmdb_id TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS playback_state (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, user_id TEXT DEFAULT 'default', timestamp REAL NOT NULL, duration REAL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(item_id, user_id))").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS invite_codes (code TEXT PRIMARY KEY, used BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS temp_tokens (id TEXT PRIMARY KEY, media_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, expires_at DATETIME NOT NULL)").execute(&pool).await.unwrap();
     info!("Database schema verified.");
 
     info!("Initializing application state...");
@@ -659,6 +661,8 @@ async fn main() {
         .route("/api/genre/:genre", get(get_genre_items))
         .route("/api/invite", post(create_invite))
         .route("/api/invite/redeem", post(redeem_invite))
+        .route("/api/media/:id/token", post(generate_media_token))
+        .route("/api/media/:id/download", get(download_media))
         .fallback(static_handler)
         .layer(CorsLayer::permissive())
         .with_state(state.clone());
@@ -1025,6 +1029,26 @@ async fn get_media_subtitle_file(
 }
 
 async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>, req: axum::http::Request<Body>) -> Response {
+    let token = req.uri().query().and_then(|q| {
+        q.split('&').find_map(|pair| {
+            let mut parts = pair.splitn(2, '=');
+            if parts.next()? == "token" { parts.next() } else { None }
+        })
+    });
+
+    if let Some(token) = token {
+        let valid = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM temp_tokens WHERE id = ? AND media_id = ? AND expires_at > datetime('now')"
+        )
+        .bind(token)
+        .bind(&id)
+        .fetch_one(&state.pool)
+        .await.unwrap_or(0);
+        if valid == 0 {
+            return StatusCode::UNAUTHORIZED.into_response();
+        }
+    }
+
     let row = sqlx::query("SELECT file_path FROM media_items WHERE id = ?").bind(id).fetch_optional(&state.pool).await.unwrap();
     if let Some(r) = row {
         let path: String = r.get("file_path");
@@ -1065,6 +1089,64 @@ async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>
                 .header(header::CONTENT_TYPE, "video/mp4")
                 .header(header::CONTENT_LENGTH, size)
                 .header(header::ACCEPT_RANGES, "bytes")
+                .body(Body::from_stream(stream))
+                .unwrap();
+        }
+    }
+    StatusCode::NOT_FOUND.into_response()
+}
+
+async fn generate_media_token(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<String> {
+    let token = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query("INSERT INTO temp_tokens (id, media_id, expires_at) VALUES (?, ?, datetime('now', '+1 day'))")
+        .bind(&token)
+        .bind(&id)
+        .execute(&state.pool)
+        .await;
+    Json(token)
+}
+
+async fn download_media(Path(id): Path<String>, State(state): State<Arc<AppState>>, req: axum::http::Request<Body>) -> Response {
+    let token = req.uri().query().and_then(|q| {
+        q.split('&').find_map(|pair| {
+            let mut parts = pair.splitn(2, '=');
+            if parts.next()? == "token" { parts.next() } else { None }
+        })
+    });
+
+    match token {
+        Some(token) => {
+            let valid = sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM temp_tokens WHERE id = ? AND media_id = ? AND expires_at > datetime('now')"
+            )
+            .bind(token)
+            .bind(&id)
+            .fetch_one(&state.pool)
+            .await.unwrap_or(0);
+            if valid == 0 {
+                return StatusCode::UNAUTHORIZED.into_response();
+            }
+        }
+        None => return StatusCode::UNAUTHORIZED.into_response(),
+    }
+
+    let row = sqlx::query("SELECT file_path FROM media_items WHERE id = ?").bind(&id).fetch_optional(&state.pool).await.unwrap();
+    if let Some(r) = row {
+        let path: String = r.get("file_path");
+        let path = std::path::Path::new(&path);
+        if path.exists() {
+            let file = tokio::fs::File::open(path).await.unwrap();
+            let metadata = file.metadata().await.unwrap();
+            let size = metadata.len();
+
+            use tokio_util::io::ReaderStream;
+            let stream = ReaderStream::new(file);
+            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("download");
+
+            return Response::builder()
+                .header(header::CONTENT_TYPE, "application/octet-stream")
+                .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", filename))
+                .header(header::CONTENT_LENGTH, size)
                 .body(Body::from_stream(stream))
                 .unwrap();
         }
