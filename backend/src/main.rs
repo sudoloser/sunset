@@ -373,7 +373,7 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
                 let credits_url = format!("https://api.themoviedb.org/3/{}/{}/credits?api_key={}", search_type, id, TMDB_API_KEY);
                 if let Ok(cred_resp) = state.client.get(&credits_url).send().await {
                     if let Ok(cred_json) = cred_resp.json::<serde_json::Value>().await {
-                        if let Some(cast_array) = cred_json[\"cast\"].as_array() {
+                        if let Some(cast_array) = cred_json["cast"].as_array() {
                             let cast_names: Vec<&str> = cast_array.iter()
                                 .take(10)
                                 .filter_map(|c| c["name"].as_str())
@@ -395,7 +395,7 @@ async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
 }
 
 async fn get_recently_added(State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, \"cast\" FROM media_items ORDER BY added_at DESC LIMIT 15")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items ORDER BY added_at DESC LIMIT 15")
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
@@ -437,14 +437,14 @@ async fn delete_library(Path(id): Path<String>, State(state): State<Arc<AppState
 }
 
 async fn get_library_items(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, \"cast\" FROM media_items WHERE library_id = ? ORDER BY title ASC")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE library_id = ? ORDER BY title ASC")
         .bind(id)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
 
 async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, \"cast\" FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
         .bind(show_title)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -453,7 +453,7 @@ async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<A
 async fn search_media(Query(params): Query<std::collections::HashMap<String, String>>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
     let query = params.get("q").cloned().unwrap_or_default();
     let search_pattern = format!("%{}%", query);
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, \"cast\" FROM media_items WHERE title LIKE ? LIMIT 20")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE title LIKE ? LIMIT 20")
         .bind(search_pattern)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -612,7 +612,7 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 // Fetch metadata and assets
                 let (overview, cast) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
 
-                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, year, description, \"cast\") VALUES (?, ?, ?, NULL, ?, 'movie', ?, ?, ?)")
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, year, description, cast) VALUES (?, ?, ?, NULL, ?, 'movie', ?, ?, ?)")
                     .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(&file_path).bind(year).bind(overview).bind(cast).execute(&state.pool).await {
                         count += 1;
                     }
@@ -625,7 +625,7 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                     // Fetch metadata and assets for the show if not already done
                     let (overview, cast) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
-                    if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, season, episode, description, \"cast\") VALUES (?, ?, ?, ?, ?, 'episode', ?, ?, ?, ?)")
+                    if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, season, episode, description, cast) VALUES (?, ?, ?, ?, ?, 'episode', ?, ?, ?, ?)")
                         .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).execute(&state.pool).await {
                             count += 1;
                         }
