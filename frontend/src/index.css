@@ -87,6 +87,12 @@ body {
   -webkit-font-smoothing: antialiased;
   line-height: 1.4;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 /* Typography - M3 Display/Headline */
@@ -139,6 +145,36 @@ h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; }
 /* Hero Gradient Overlay */
 .hero-gradient {
   background: linear-gradient(to top, var(--bg-color) 0%, transparent 100%);
+}
+
+/* Responsive grid */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .responsive-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+/* Pull-to-refresh indicator */
+.pull-indicator {
+  text-align: center;
+  padding: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  transition: opacity 0.3s;
 }
 
 /* Responsive adjustments */

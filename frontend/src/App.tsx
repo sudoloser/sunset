@@ -5,15 +5,30 @@ import { OnboardingWizard } from './features/onboarding/OnboardingWizard';
 import { LoginForm } from './features/auth/LoginForm';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { LibraryView } from './features/library/LibraryView';
-import { Admin } from './features/dashboard/Admin';
+import { Settings } from './features/settings/Settings';
 import { VideoPlayer } from './features/player/VideoPlayer';
 import { LibrariesTab } from './features/library/LibrariesTab';
 import { MediaDetails } from './features/library/MediaDetails';
+import { SearchOverlay } from './features/search/SearchOverlay';
 import type { SetupStatus, MediaItem, Library } from './types';
 
 type AppStep = 'loading' | 'onboarding' | 'login' | 'dashboard' | 'admin' | 'library' | 'player' | 'libraries' | 'settings';
 
 function App() {
+  // Apply saved theme on load
+  useEffect(() => {
+    const saved = localStorage.getItem('sunset_theme');
+    if (saved === 'light') {
+      const root = document.documentElement;
+      root.style.setProperty('--bg-color', '#f5f5f7');
+      root.style.setProperty('--surface-color', '#ffffff');
+      root.style.setProperty('--surface-variant', '#e8e8ed');
+      root.style.setProperty('--text-primary', '#1d1d1f');
+      root.style.setProperty('--text-secondary', '#6e6e73');
+      root.style.setProperty('--border-color', '#d2d2d7');
+    }
+  }, []);
+
   const [step, setStep] = useState<AppStep>('loading');
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [activeTab, setActiveTab] = useState('home');
@@ -22,6 +37,7 @@ function App() {
   const [playingMedia, setPlayingMedia] = useState<MediaItem | null>(null);
   const [previousStep, setPreviousStep] = useState<AppStep>('dashboard');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     checkStatus();
@@ -71,7 +87,7 @@ function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Navigation activeTab={activeTab} onTabChange={handleTabChange} isAdmin={isAdmin} />
+      <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
       
       <main style={{ 
         flex: 1, 
@@ -84,6 +100,8 @@ function App() {
           {step === 'dashboard' && (
             <Dashboard 
               onSelectItem={item => setSelectedItem(item)}
+              onPlayItem={item => { setPlayingMedia(item); setPreviousStep(step); setStep('player'); }}
+              onSearch={() => setShowSearch(true)}
             />
           )}
 
@@ -91,6 +109,7 @@ function App() {
             <LibrariesTab 
               isAdmin={isAdmin}
               onSelectLibrary={lib => { setSelectedLibrary(lib); setStep('library'); }}
+              onSelectItem={item => setSelectedItem(item)}
               onGoToSettings={() => handleTabChange('settings')}
             />
           )}
@@ -103,7 +122,7 @@ function App() {
             />
           )}
 
-          {step === 'settings' && <Admin />}
+          {step === 'settings' && <Settings isAdmin={isAdmin} />}
         </div>
 
         {selectedItem && (
@@ -118,6 +137,13 @@ function App() {
           <VideoPlayer 
             item={playingMedia} 
             onClose={() => setStep(previousStep)} 
+          />
+        )}
+
+        {showSearch && (
+          <SearchOverlay 
+            onClose={() => setShowSearch(false)} 
+            onSelect={item => setSelectedItem(item)}
           />
         )}
       </main>

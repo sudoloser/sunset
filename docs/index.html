@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SunSet — Media Server</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(229,9,20,0.06) 0%, transparent 70%),
+                radial-gradient(ellipse at 80% 100%, rgba(232,93,4,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 880px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Floating Pill Nav ── */
+  .nav-pill {
+    position: fixed;
+    top: 1.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1px;
+    padding: 4px;
+    border-radius: 100px;
+    z-index: 100;
+    background: transparent;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .nav-pill .pill-bg {
+    position: absolute;
+    inset: 0;
+    border-radius: 100px;
+    z-index: -1;
+    background: rgba(10,10,10,0.7);
+  }
+
+  .nav-btn {
+    padding: 10px 24px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    z-index: 2;
+  }
+
+  .nav-btn {
+    pointer-events: auto;
+  }
+  .nav-btn:hover { color: #999; }
+  .nav-btn.active {
+    color: #fff;
+    background: rgba(232,93,4,0.2);
+  }
+
+  .nav-divider {
+    width: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 6px 0;
+  }
+
+  /* ── Page Sections ── */
+  .page-section { display: none; }
+  .page-section.active { display: block; }
+
+  /* ── Home ── */
+  .ascii {
+    color: #e85d04;
+    font-size: 0.65rem;
+    line-height: 1.15;
+    white-space: pre;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    margin-top: 4rem;
+    text-shadow: 0 0 20px rgba(232,93,4,0.3);
+  }
+  .ascii span:nth-child(1) { color: #e85d04; }
+  .ascii span:nth-child(2) { color: #f48c06; }
+  .ascii span:nth-child(3) { color: #faa307; }
+
+  .subtitle {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6e6e73;
+    margin-bottom: 2.5rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+  .subtitle em { color: #e85d04; font-style: normal; }
+
+  .terminal-box {
+    background: #0d0d0d;
+    border: 1px solid #1a1a1a;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+
+  .terminal-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 20px; background: #111;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.red { background: #ff5f56; }
+  .dot.yellow { background: #ffbd2e; }
+  .dot.green { background: #27c93f; }
+
+  .terminal-title {
+    font-size: 0.75rem; color: #484848; margin-left: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .tabs {
+    display: flex; border-bottom: 1px solid #1a1a1a; background: #0a0a0a;
+  }
+
+  .tab-btn {
+    padding: 12px 28px; font-size: 0.8rem; font-weight: 700;
+    cursor: pointer; color: #484848;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-family: 'JetBrains Mono', monospace;
+    background: transparent;
+    border-top: none; border-left: none; border-right: none;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+
+  .tab-btn:hover { color: #888; }
+  .tab-btn.active { color: #e85d04; border-bottom-color: #e85d04; }
+
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .code-area { padding: 24px 28px; position: relative; }
+  .code-area pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem; line-height: 1.6;
+    color: #e0e0e0; overflow-x: auto;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .code-area pre .prompt { color: #27c93f; }
+
+  .cursor {
+    display: inline-block; width: 10px; height: 1.2em;
+    background: #e85d04; vertical-align: text-bottom;
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .install-btn {
+    display: inline-block; margin-top: 2rem; padding: 1rem 2.5rem;
+    background: transparent; border: 1px solid #e85d04;
+    color: #e85d04; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem; font-weight: 700; border-radius: 8px;
+    cursor: pointer; text-transform: uppercase;
+    letter-spacing: 0.15em; transition: all 0.25s;
+    text-decoration: none;
+  }
+  .install-btn:hover {
+    background: #e85d04; color: #0a0a0a;
+    box-shadow: 0 0 30px rgba(232,93,4,0.3);
+  }
+
+  blockquote {
+    text-align: center; margin: 2.5rem auto; max-width: 600px;
+    color: #888; font-size: 0.95rem; line-height: 1.6;
+  }
+  blockquote em { font-style: italic; color: #888; }
+  blockquote cite {
+    display: block; margin-top: 0.5rem; color: #555;
+    font-size: 0.8rem; font-style: normal;
+  }
+
+  /* ── Features ── */
+  .features-section { margin-top: 4rem; }
+
+  .features-section h2 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #e85d04, #faa307);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .features-section p {
+    text-align: center;
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .feature-card {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.85rem 1.1rem;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    color: #b0b0b0;
+    transition: all 0.25s;
+  }
+
+  .feature-card:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(232,93,4,0.15);
+    color: #e0e0e0;
+    transform: translateY(-1px);
+  }
+
+  .feat-icon { font-size: 1.1rem; width: 26px; text-align: center; flex-shrink: 0; }
+
+  /* ── Docs ── */
+  .docs-section { margin-top: 4rem; }
+
+  .docs-section h2 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #e85d04, #faa307);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .docs-section > p {
+    text-align: center;
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .docs-nav {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #1a1a1a;
+    overflow-x: auto;
+  }
+
+  .docs-nav-btn {
+    padding: 10px 22px;
+    background: transparent;
+    border: none;
+    color: #555;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .docs-nav-btn:hover { color: #999; }
+  .docs-nav-btn.active {
+    color: #e85d04;
+    border-bottom-color: #e85d04;
+  }
+
+  .docs-pane { display: none; }
+  .docs-pane.active { display: block; }
+
+  .docs-card {
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .docs-card h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 0.75rem;
+  }
+
+  .docs-card h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ccc;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .docs-card p {
+    color: #999;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    margin-bottom: 0.75rem;
+  }
+
+  .docs-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .docs-card li {
+    color: #999;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    padding-left: 1.25rem;
+    position: relative;
+    margin-bottom: 0.35rem;
+  }
+
+  .docs-card li::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: #e85d04;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+  }
+
+  .docs-card code, .docs-card .inline-code {
+    background: rgba(232,93,4,0.1);
+    color: #e85d04;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  .docs-card pre.code-block {
+    background: #0d0d0d;
+    border: 1px solid #1a1a1a;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: #ccc;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+  }
+
+  .docs-card pre.code-block .cmt { color: #555; }
+  .docs-card pre.code-block .k { color: #e85d04; }
+  .docs-card pre.code-block .s { color: #27c93f; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: rgba(232,93,4,0.1);
+    border: 1px solid rgba(232,93,4,0.2);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #e85d04;
+    font-family: 'JetBrains Mono', monospace;
+    margin-right: 0.35rem;
+  }
+
+  .badge.blue {
+    background: rgba(127,180,255,0.1);
+    border-color: rgba(127,180,255,0.2);
+    color: #7fb4ff;
+  }
+
+  .badge.green {
+    background: rgba(39,201,63,0.1);
+    border-color: rgba(39,201,63,0.2);
+    color: #27c93f;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    text-align: center;
+    font-size: 0.75rem;
+    color: #333;
+  }
+  .footer a { color: #555; text-decoration: none; transition: color 0.2s; }
+  .footer a:hover { color: #e85d04; }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .container { padding: 1rem; }
+    .ascii { font-size: 0.35rem; margin-top: 5rem; }
+    .code-area { padding: 16px; }
+    .code-area pre { font-size: 0.75rem; }
+    .tab-btn { padding: 10px 16px; font-size: 0.7rem; }
+    .nav-btn { padding: 8px 16px; font-size: 0.78rem; }
+    .features-grid { grid-template-columns: 1fr; }
+    .docs-nav-btn { padding: 8px 14px; font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ─── Floating Pill Nav ─── -->
+  <nav class="nav-pill" id="navPill">
+    <div class="pill-bg" id="pillBg"></div>
+    <button class="nav-btn active" data-page="home">Home</button>
+    <div class="nav-divider"></div>
+    <button class="nav-btn" data-page="features">Features</button>
+    <div class="nav-divider"></div>
+    <button class="nav-btn" data-page="docs">Docs</button>
+  </nav>
+
+  <div class="container">
+
+    <!-- ═══════════ HOME ═══════════ -->
+    <div class="page-section active" id="page-home">
+      <div class="ascii">
+<span>   _____             _____      _   </span>
+<span>  / ____|           / ____|    | |  </span>
+<span> | (___  _   _ _ __| (___   ___| |_ </span>
+<span>  \___ \| | | | '_ \___ \ / _ \ __|</span>
+<span>  ____) | |_| | | | |___) |  __/ |_ </span>
+<span> |_____/ \__,_|_| |_|_____/ \___|\__|</span>
+      </div>
+
+      <div class="subtitle">Your personal <em>media server</em> — one command install</div>
+
+      <div class="terminal-box">
+        <div class="terminal-header">
+          <div class="dot red"></div>
+          <div class="dot yellow"></div>
+          <div class="dot green"></div>
+          <span class="terminal-title">sunset@install:~$</span>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-os="linux">Linux</button>
+          <button class="tab-btn" data-os="windows">Windows</button>
+        </div>
+
+        <div id="os-linux" class="tab-pane active">
+          <div class="code-area">
+            <pre><span class="prompt">$</span> curl -sL https://sudoloser.github.io/linux/install.sh | bash<span class="cursor"></span></pre>
+          </div>
+        </div>
+
+        <div id="os-windows" class="tab-pane">
+          <div class="code-area">
+            <pre><span class="prompt">PS></span> irm https://sudoloser.github.io/windows/install.ps1 | iex<span class="cursor"></span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center">
+        <a class="install-btn" href="#" id="copyBtn">Copy Command</a>
+      </div>
+
+      <blockquote>
+        <em>&ldquo;A vibecoded alternative to Jellyfin I made because Jellyfin gave me issues&rdquo;</em>
+        <cite>&mdash; sudoloser</cite>
+      </blockquote>
+    </div>
+
+    <!-- ═══════════ FEATURES ═══════════ -->
+    <div class="page-section" id="page-features">
+      <div class="features-section">
+        <h2>Features</h2>
+        <p>Everything you need for a personal media streaming experience</p>
+
+        <div class="features-grid">
+          <div class="feature-card"><span class="feat-icon">▶</span> Video streaming with subtitle support</div>
+          <div class="feature-card"><span class="feat-icon">🎬</span> Automatic metadata fetching (TMDB)</div>
+          <div class="feature-card"><span class="feat-icon">🖼</span> Poster, backdrop &amp; logo artwork</div>
+          <div class="feature-card"><span class="feat-icon">📺</span> TV show season/episode parsing</div>
+          <div class="feature-card"><span class="feat-icon">🔍</span> Search across your whole library</div>
+          <div class="feature-card"><span class="feat-icon">⏯</span> Playback speed, PiP, keyboard shortcuts</div>
+          <div class="feature-card"><span class="feat-icon">📝</span> Subtitle styling (color, size, font, CC)</div>
+          <div class="feature-card"><span class="feat-icon">☁</span> Cloud-synced playback progress</div>
+          <div class="feature-card"><span class="feat-icon">🌙</span> Dark &amp; light theme</div>
+          <div class="feature-card"><span class="feat-icon">📱</span> Mobile-friendly responsive UI</div>
+          <div class="feature-card"><span class="feat-icon">👤</span> Multi-user with admin panel</div>
+          <div class="feature-card"><span class="feat-icon">📦</span> Single-binary deploy (embeds frontend)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ DOCS ═══════════ -->
+    <div class="page-section" id="page-docs">
+      <div class="docs-section">
+        <h2>Documentation</h2>
+        <p>Everything you need to get started with SunSet</p>
+
+        <div class="docs-nav">
+          <button class="docs-nav-btn active" data-doc="getting-started">Getting Started</button>
+          <button class="docs-nav-btn" data-doc="library">Library Scanning</button>
+          <button class="docs-nav-btn" data-doc="parsing">Movie &amp; Show Parsing</button>
+          <button class="docs-nav-btn" data-doc="player">Player Controls</button>
+          <button class="docs-nav-btn" data-doc="config">Configuration</button>
+        </div>
+
+        <!-- Getting Started -->
+        <div class="docs-pane active" id="doc-getting-started">
+          <div class="docs-card">
+            <h3>Getting Started</h3>
+            <p>SunSet is a single-binary media server. The backend (Rust + Axum) serves both the API and the embedded React frontend. Download, run, and you're live.</p>
+
+            <h4>Installation</h4>
+            <p>Run the install command for your OS:</p>
+            <pre class="code-block"><span class="cmt"># Linux / macOS</span>
+curl -sL https://sudoloser.github.io/linux/install.sh | bash</pre>
+            <pre class="code-block"><span class="cmt"># Windows (PowerShell)</span>
+irm https://sudoloser.github.io/windows/install.ps1 | iex</pre>
+
+            <h4>Manual Setup</h4>
+            <p>Or grab the latest binary from the <a href="https://github.com/sudoloser/sunset/releases" style="color:#e85d04">releases page</a> and run:</p>
+            <pre class="code-block">./sunset-server</pre>
+            <p>Open it in your browser and follow the setup wizard to create your admin account.</p>
+          </div>
+
+          <div class="docs-card">
+            <h3>Quick Start</h3>
+            <p>Once the server is running:</p>
+            <ul>
+              <li>Create an admin account on first visit</li>
+              <li>Add a library path (e.g. <span class="inline-code">/media/movies</span>)</li>
+              <li>SunSet will scan the directory and fetch metadata automatically</li>
+              <li>Start watching from any device on your network</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Library Scanning -->
+        <div class="docs-pane" id="doc-library">
+          <div class="docs-card">
+            <h3>Library Scanning</h3>
+            <p>SunSet watches your media directories and automatically indexes new files. The scanner runs on startup and can be triggered manually from the admin panel.</p>
+
+            <h4>How It Works</h4>
+            <ul>
+              <li>Each library path is scanned recursively for video files</li>
+              <li>Supported formats: <span class="badge green">mp4</span><span class="badge green">mkv</span><span class="badge green">avi</span><span class="badge green">mov</span></li>
+              <li>Duplicate detection — files already in the DB are skipped</li>
+              <li>Metadata is fetched from TMDB based on the filename</li>
+              <li>Artwork (posters, backdrops, logos) is cached to disk</li>
+            </ul>
+
+            <h4>Adding Libraries</h4>
+            <p>Go to the admin panel and click "Add Library". Enter a name and the absolute path to your media folder. SunSet will start scanning immediately.</p>
+            <pre class="code-block"><span class="cmt"># Example library paths</span>
+/mnt/storage/movies
+/mnt/storage/tv-shows
+/media/anime</pre>
+          </div>
+        </div>
+
+        <!-- Movie & Show Parsing -->
+        <div class="docs-pane" id="doc-parsing">
+          <div class="docs-card">
+            <h3>Movie &amp; Show Parsing</h3>
+            <p>SunSet uses regex-based filename parsing to identify your media and fetch metadata from TMDB. Libraries are tagged as <span class="badge">movies</span> or <span class="badge green">shows</span> when you add them &mdash; each type uses a different parser.</p>
+
+            <h4>Required Folder Structure</h4>
+            <p>Your media <strong>must</strong> be organized exactly like this:</p>
+            <pre class="code-block">[movies]
+movies
+|_'Iron Lung (2026)'
+  |_'Iron Lung (2026).mp4'
+
+[shows]
+shows
+|_'Breaking Bad'
+  |_'Season 01'
+    |_'Breaking Bad S01E01 Pilot.mp4'</pre>
+
+            <h4>Movie Parsing</h4>
+            <p>Each movie must be in its own subfolder. The filename needs the year in parentheses:</p>
+            <pre class="code-block"><span class="cmt"># Regex: ^(.*)\((\d{4})\)$</span>
+<span class="cmt"># Group 1 = title, Group 2 = year</span>
+
+movies
+|_'The Matrix (1999)'
+| |_'The Matrix (1999).mkv'
+|_'Inception (2010)'
+| |_'Inception (2010).mp4'
+|_'Interstellar (2014)'
+  |_'Interstellar (2014).mkv'</pre>
+            <ul>
+              <li>Only <span class="inline-code">Title (YYYY).ext</span> is parsed — quality tags like <span class="inline-code">1080p</span>, <span class="inline-code">bluray</span> are <strong>not</strong> stripped</li>
+              <li>If no year is found, the entire filename stem is used as the search query (worse results)</li>
+              <li>The first TMDB result with a matching year (if found) is selected</li>
+            </ul>
+
+            <h4>TV Show Parsing</h4>
+            <p>Each show in its own folder, episodes inside <span class="inline-code">Season XX</span> subfolders. Filenames must use <span class="inline-code">SxxExx</span>:</p>
+            <pre class="code-block"><span class="cmt"># Regex: (?i)^(.*?)\s*S(\d{2})E(\d{2})</span>
+<span class="cmt"># Group 1 = show title, Group 2 = season, Group 3 = episode</span>
+
+shows
+|_'Breaking Bad'
+| |_'Season 01'
+| | |_'Breaking Bad S01E01 Pilot.mkv'
+| | |_'Breaking Bad S01E02 Cat's in the Bag.mkv'
+| |_'Season 02'
+| | |_'Breaking Bad S02E01 Seven Thirty-Seven.mkv'
+|_'Mr. Robot'
+| |_'Season 01'
+|   |_'Mr. Robot S01E01 eps1.0_hellofriend.mkv'
+|_'Peaky Blinders'
+  |_'Season 01'
+    |_'peaky-blinders-s01e01.mkv'</pre>
+            <ul>
+              <li>Only <span class="badge">S01E01</span> / <span class="badge">s01e01</span> is matched — <span class="badge">1x01</span> and flat folder structures are <strong>not</strong> supported</li>
+              <li>The show title is everything before <span class="inline-code"> SxxExx</span> (trimmed)</li>
+              <li>Episode titles after the episode number are optional (the API fills them in)</li>
+              <li>Metadata (overview, cast, rating, genres, artwork) is fetched per-show from TMDB</li>
+            </ul>
+          </div>
+
+          <div class="docs-card">
+            <h3>Metadata Cache</h3>
+            <p>Fetched metadata and artwork are cached to <span class="inline-code">~/.sunset/cache/</span> to avoid repeated API calls. You can trigger a refresh from the media details panel or the admin page.</p>
+
+            <h4>Database Schema</h4>
+            <pre class="code-block"><span class="cmt">-- Movies: media_type='movie', year=YYYY</span>
+<span class="cmt">-- Episodes: media_type='episode', show_title + season + episode</span>
+
+media_items
+├── id              TEXT   PRIMARY KEY
+├── library_id      TEXT   NOT NULL
+├── title           TEXT   NOT NULL
+├── show_title      TEXT            <span class="cmt">-- NULL for movies</span>
+├── file_path       TEXT   UNIQUE
+├── media_type      TEXT   NOT NULL  <span class="cmt">-- 'movie' | 'episode'</span>
+├── year            INTEGER         <span class="cmt">-- NULL for episodes</span>
+├── season          INTEGER         <span class="cmt">-- NULL for movies</span>
+├── episode         INTEGER         <span class="cmt">-- NULL for movies</span>
+├── description     TEXT
+├── cast            TEXT
+├── genres          TEXT
+├── rating          REAL
+├── tmdb_id         TEXT
+└── added_at        DATETIME</pre>
+          </div>
+        </div>
+
+        <!-- Player Controls -->
+        <div class="docs-pane" id="doc-player">
+          <div class="docs-card">
+            <h3>Player Controls</h3>
+            <p>The web player supports a rich set of keyboard shortcuts and touch gestures for a smooth viewing experience.</p>
+
+            <h4>Keyboard Shortcuts</h4>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.5rem;margin:0.75rem 0">
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <span style="color:#999;font-size:0.82rem">Play / Pause</span>
+                <span><span class="badge">Space</span> <span class="badge">k</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <span style="color:#999;font-size:0.82rem">Fullscreen</span>
+                <span><span class="badge">f</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <span style="color:#999;font-size:0.82rem">Mute</span>
+                <span><span class="badge">m</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <span style="color:#999;font-size:0.82rem">Skip -10s / +10s</span>
+                <span><span class="badge">j</span> <span class="badge">l</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <span style="color:#999;font-size:0.82rem">Close player</span>
+                <span><span class="badge">Esc</span></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                <span style="color:#999;font-size:0.82rem">Picture-in-Picture</span>
+                <span><span class="badge blue">PiP btn</span></span>
+              </div>
+            </div>
+
+            <h4>Playback Features</h4>
+            <ul>
+              <li>Playback speed control (0.5x — 2x)</li>
+              <li>Subtitle track picker with live styling</li>
+              <li>Episode list panel for TV shows</li>
+              <li>Autoplay next episode</li>
+              <li>Cloud-synced progress (resume where you left off)</li>
+              <li>Skip Intro button</li>
+              <li>Touch controls for mobile</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="docs-pane" id="doc-config">
+          <div class="docs-card">
+            <h3>Configuration</h3>
+            <p>SunSet is configured through environment variables and the admin panel UI.</p>
+
+            <h4>Admin Panel</h4>
+            <p>The Admin panel (Settings → Admin) lets you:</p>
+            <ul>
+              <li>View storage usage and server stats</li>
+              <li>Generate invite codes for new users</li>
+              <li>Trigger library rescans</li>
+              <li>Remove media items</li>
+            </ul>
+
+            <h4>Subtitle Styling</h4>
+            <p>Configure subtitle appearance under Settings → Subtitles:</p>
+            <ul>
+              <li>Text color, size, and font family</li>
+              <li>Background color (CC mode)</li>
+              <li>Bold toggle</li>
+              <li>Live preview while adjusting</li>
+            </ul>
+
+            <h4>Themes</h4>
+            <p>Toggle between dark and light themes in Settings → Appearance.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer">
+      <a href="https://github.com/sudoloser/sunset">github.com/sudoloser/sunset</a> &middot; v0.1.0
+    </div>
+  </div>
+
+  <!-- ─── Scripts ─── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <script src="scripts/liquidGL.js" defer></script>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+
+    // ── OS tabs ──
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('os-' + btn.dataset.os).classList.add('active');
+        btn.classList.add('active');
+      });
+    });
+
+    // ── Copy command ──
+    document.getElementById('copyBtn').addEventListener('click', e => {
+      e.preventDefault();
+      const active = document.querySelector('.tab-pane.active pre');
+      if (!active) return;
+      let text = active.textContent.trim();
+      text = text.replace(/^\$\s*/, '').replace(/^PS>\s*/, '');
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      const btn = e.currentTarget;
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = orig, 2000);
+    });
+
+    // ── Docs sub-navigation ──
+    document.querySelectorAll('.docs-nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.docs-pane').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.docs-nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('doc-' + btn.dataset.doc).classList.add('active');
+        btn.classList.add('active');
+      });
+    });
+
+    // ── Page nav ──
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('page-' + btn.dataset.page).classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
+    // ── liquidGL ──
+    setTimeout(() => {
+      try {
+        const glass = liquidGL({
+          target: '#navPill',
+          snapshot: 'body',
+          resolution: 1.5,
+          refraction: 0.01,
+          bevelDepth: 0.06,
+          bevelWidth: 0.15,
+          frost: 3,
+          shadow: true,
+          specular: true,
+          reveal: 'fade',
+          tilt: false,
+        });
+      } catch (e) {
+        console.warn('liquidGL not available:', e.message);
+      }
+    }, 800);
+
+  });
+  </script>
+
+</body>
+</html>

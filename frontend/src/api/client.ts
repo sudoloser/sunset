@@ -37,4 +37,13 @@ export const api = {
   getStreamUrl: (id: string) => `${BASE_URL}/stream/${id}`,
   getSubtitles: (id: string) => request<string[]>(`/media/${id}/subtitles`),
   getSubtitleUrl: (id: string, name: string) => `${BASE_URL}/media/${id}/subtitle/${encodeURIComponent(name)}`,
+  savePlayback: (data: any) => request<boolean>('/playback', { method: 'POST', body: JSON.stringify(data) }),
+  getPlayback: (itemId: string) => request<any>(`/playback/${itemId}`),
+  getStorage: () => request<any>('/storage'),
+  updateMedia: (id: string, data: any) => request<boolean>(`/media/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  refreshMedia: (id: string) => request<boolean>(`/media/${id}/refresh`, { method: 'POST' }),
+  getGenres: () => request<string[]>('/genres'),
+  getGenreItems: (genre: string) => request<any[]>(`/genre/${encodeURIComponent(genre)}`),
+  createInvite: () => request<string>('/invite', { method: 'POST' }),
+  redeemInvite: (code: string) => request<boolean>('/invite/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
 };

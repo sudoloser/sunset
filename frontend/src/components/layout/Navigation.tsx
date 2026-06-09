@@ -4,18 +4,14 @@ import { HomeIcon, LibraryIcon, SettingsIcon } from '../common/Icons';
 interface NavigationProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  isAdmin?: boolean;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange, isAdmin }) => {
+export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const navItems = [
     { id: 'home', label: 'Home', icon: HomeIcon },
-    { id: 'libraries', label: 'Libraries', icon: LibraryIcon },
+    { id: 'libraries', label: 'My Library', icon: LibraryIcon },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
-
-  if (isAdmin) {
-    navItems.push({ id: 'settings', label: 'Settings', icon: SettingsIcon });
-  }
 
   const handleLogout = () => {
     localStorage.removeItem('sunset_user_id');

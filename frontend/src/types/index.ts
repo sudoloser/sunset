@@ -12,6 +12,25 @@ export interface MediaItem {
   file_path: string;
   description?: string;
   cast?: string;
+  genres?: string;
+  rating?: number;
+  tmdb_id?: string;
+}
+
+export interface PlaybackState {
+  id: string;
+  item_id: string;
+  user_id: string;
+  timestamp: number;
+  duration?: number;
+  updated_at?: string;
+}
+
+export interface StorageInfo {
+  total_size: number;
+  item_count: number;
+  library_count: number;
+  user_count: number;
 }
 
 export interface Library {

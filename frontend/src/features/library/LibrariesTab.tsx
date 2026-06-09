@@ -1,24 +1,56 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '../../components/common/Card';
+import { MediaRow } from '../../components/common/MediaRow';
 import { api } from '../../api/client';
-import type { Library } from '../../types';
+import type { Library, MediaItem } from '../../types';
 import { MovieIcon, TVIcon } from '../../components/common/Icons';
 
 interface LibrariesTabProps {
   onSelectLibrary: (lib: Library) => void;
+  onSelectItem?: (item: MediaItem) => void;
   isAdmin: boolean;
   onGoToSettings: () => void;
 }
 
-export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectLibrary, isAdmin, onGoToSettings }) => {
+export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectLibrary, onSelectItem, isAdmin, onGoToSettings }) => {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [continueWatching, setContinueWatching] = useState<MediaItem[]>([]);
+  const [myListItems, setMyListItems] = useState<MediaItem[]>([]);
   useEffect(() => {
-    api.getLibraries().then(libs => {
+    (async () => {
+      const libs = await api.getLibraries();
       setLibraries(libs);
       setLoading(false);
-    });
+
+      // Fetch all items for CW and My List
+      const all: MediaItem[] = [];
+      for (const lib of libs) {
+        try {
+          const items = await api.getLibraryItems(lib.id);
+          all.push(...items);
+        } catch {}
+      }
+
+      // Continue Watching
+      const cw: MediaItem[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sunset_playback_')) {
+          const itemId = key.replace('sunset_playback_', '');
+          const match = all.find(r => r.id === itemId);
+          if (match) cw.push(match);
+        }
+      }
+      setContinueWatching(cw);
+
+      // My List
+      try {
+        const ids: string[] = JSON.parse(localStorage.getItem('sunset_mylist') || '[]');
+        const found = all.filter(r => ids.includes(r.id));
+        setMyListItems(found);
+      } catch {}
+    })();
   }, []);
 
   if (loading) return <div style={{ padding: '2rem' }}>Loading libraries...</div>;
@@ -59,6 +91,18 @@ export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectLibrary, isA
 
   return (
     <div style={{ padding: '2rem 0' }}>
+      {continueWatching.length > 0 && onSelectItem && (
+        <div style={{ marginBottom: '2rem' }}>
+          <MediaRow title="Continue Watching" items={continueWatching} onPlay={onSelectItem} />
+        </div>
+      )}
+
+      {myListItems.length > 0 && onSelectItem && (
+        <div style={{ marginBottom: '2rem' }}>
+          <MediaRow title="My List" items={myListItems} onPlay={onSelectItem} />
+        </div>
+      )}
+
       <h1 style={{ fontSize: '2.5rem', marginBottom: '2rem' }}>Your Libraries</h1>
       <div style={{ 
         display: 'grid', 

@@ -11,12 +11,64 @@ interface MediaDetailsProps {
   onPlay: (item: MediaItem) => void;
 }
 
+const CastAvatar: React.FC<{ name: string }> = ({ name }) => {
+  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div style={{
+        width: '36px', height: '36px', borderRadius: '50%',
+        background: 'var(--surface-variant)', color: 'var(--text-secondary)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '0.75rem', fontWeight: 700, flexShrink: 0
+      }}>
+        {initials}
+      </div>
+      <span style={{ fontSize: '0.9rem' }}>{name}</span>
+    </div>
+  );
+};
+
 export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPlay }) => {
   const [episodes, setEpisodes] = useState<MediaItem[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const [userRating, setUserRating] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem(`sunset_rating_${item.id}`) || '0'); } catch { return 0; }
+  });
+  const [inMyList, setInMyList] = useState<boolean>(() => {
+    try {
+      const list = JSON.parse(localStorage.getItem('sunset_mylist') || '[]');
+      return list.includes(item.id);
+    } catch { return false; }
+  });
+
+  const toggleMyList = () => {
+    try {
+      const list: string[] = JSON.parse(localStorage.getItem('sunset_mylist') || '[]');
+      if (inMyList) {
+        const idx = list.indexOf(item.id);
+        if (idx >= 0) list.splice(idx, 1);
+      } else {
+        list.push(item.id);
+      }
+      localStorage.setItem('sunset_mylist', JSON.stringify(list));
+      setInMyList(!inMyList);
+    } catch {}
+  };
 
   const isShow = item.media_type === 'episode' || !!item.show_title;
   const title = item.show_title || item.title;
+  const castList = item.cast ? item.cast.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const setRating = (r: number) => {
+    setUserRating(r);
+    if (r > 0) localStorage.setItem(`sunset_rating_${item.id}`, r.toString());
+    else localStorage.removeItem(`sunset_rating_${item.id}`);
+  };
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
 
   useEffect(() => {
     if (isShow) {
@@ -36,7 +88,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
   const filteredEpisodes = episodes.filter(e => e.season === selectedSeason).sort((a, b) => (a.episode || 0) - (b.episode || 0));
 
   return (
-    <div style={{
+    <div className="media-details-outer" style={{
       position: 'fixed',
       inset: 0,
       backgroundColor: 'rgba(0,0,0,0.9)',
@@ -46,7 +98,8 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
       justifyContent: 'center',
       padding: '2rem 0'
     }} onClick={onClose}>
-      <Card 
+      <Card
+        className="media-details-card"
         style={{ 
           width: '90%', 
           maxWidth: '1000px', 
@@ -57,6 +110,26 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
         }}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
+        <style>{`
+          @media (max-width: 768px) {
+            .media-details-outer {
+              padding: 0 !important;
+              align-items: flex-start !important;
+            }
+            .media-details-card {
+              width: 100% !important;
+              max-width: 100% !important;
+              border-radius: 0 !important;
+              border: none !important;
+              min-height: 100vh !important;
+            }
+            .media-details-grid {
+              grid-template-columns: 1fr !important;
+              gap: 2rem !important;
+            }
+          }
+        `}</style>
+
         {/* Hero Area */}
         <div style={{ position: 'relative', height: '50vh', width: '100%' }}>
           <div style={{
@@ -93,16 +166,33 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
               <Button size="lg" onClick={() => onPlay(item)}>
                 <PlayIcon size={24} /> Play
               </Button>
+              <Button size="lg" variant="secondary" onClick={toggleMyList}>
+                {inMyList ? '✓ In My List' : '+ My List'}
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Content Area */}
-        <div style={{ padding: '3rem', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '4rem' }}>
+        <div className="media-details-grid" style={{ padding: '3rem', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '4rem' }}>
           <div>
-            <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <span>{item.year}</span>
               {isShow && <span>{seasons.length} Seasons</span>}
+              {item.rating ? <span>TMDB {item.rating.toFixed(1)}/10</span> : null}
+              <span style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                {[1,2,3,4,5].map(star => (
+                  <button key={star} onClick={() => setRating(userRating === star ? 0 : star)}
+                    style={{
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      color: star <= userRating ? 'var(--primary-color)' : 'var(--border-color)',
+                      fontSize: '1.4rem', padding: 0, lineHeight: 1
+                    }}
+                  >
+                    ★
+                  </button>
+                ))}
+              </span>
             </div>
             <p style={{ fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2rem' }}>
               {item.description || 'No description available for this title.'}
@@ -142,7 +232,6 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                       </span>
                       <div>
                         <div style={{ fontWeight: 700 }}>{ep.title}</div>
-                        {/* Placeholder for episode description/thumbnail if we add it later */}
                       </div>
                       <PlayIcon size={20} style={{ opacity: 0.5 }} />
                     </div>
@@ -154,10 +243,18 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
 
           <div>
             <div style={{ marginBottom: '2rem' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>Cast:</span>
-              <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
-                {item.cast || 'Cast information not available.'}
-              </div>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'block', marginBottom: '0.75rem' }}>Cast:</span>
+              {castList.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {castList.map((name, i) => (
+                    <CastAvatar key={i} name={name} />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
+                  Cast information not available.
+                </div>
+              )}
             </div>
             <div>
               <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>Genres:</span>

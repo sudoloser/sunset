@@ -6,9 +6,10 @@ import type { MediaItem } from '../../types';
 interface HeroProps {
   item?: MediaItem;
   onPlay: (item: MediaItem) => void;
+  onMoreInfo: (item: MediaItem) => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ item, onPlay }) => {
+export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
   if (!item) return (
     <div style={{ height: '70vh', backgroundColor: '#111', marginBottom: 'var(--spacing-xl)' }} />
   );
@@ -84,7 +85,7 @@ export const Hero: React.FC<HeroProps> = ({ item, onPlay }) => {
           <Button size="lg" onClick={() => onPlay(item)}>
             <PlayIcon size={24} /> Play
           </Button>
-          <Button variant="secondary" size="lg">
+          <Button variant="secondary" size="lg" onClick={() => onMoreInfo(item)}>
             <InfoIcon size={24} /> More Info
           </Button>
         </div>
