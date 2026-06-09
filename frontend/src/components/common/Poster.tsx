@@ -1,14 +1,15 @@
 import React from 'react';
+import type { MediaItem } from '../../types';
 
 interface PosterProps {
-  itemId?: string;
+  itemId: string;
   title: string;
   subtitle?: string;
-  onClick?: () => void;
-  className?: string;
+  item?: MediaItem;
+  onClick: () => void;
 }
 
-export const Poster: React.FC<PosterProps> = ({ itemId, title, subtitle, onClick }) => {
+export const Poster: React.FC<PosterProps> = ({ itemId, title, subtitle, item, onClick }) => {
   const posterUrl = itemId ? `/api/media/${itemId}/asset/folder.jpg` : null;
 
   return (
@@ -34,11 +35,11 @@ export const Poster: React.FC<PosterProps> = ({ itemId, title, subtitle, onClick
         padding: '1rem',
         boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
       }}
-      onMouseEnter={(e) => {
+      onMouseEnter={e => {
         e.currentTarget.style.transform = 'scale(1.05)';
         e.currentTarget.style.zIndex = '10';
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={e => {
         e.currentTarget.style.transform = 'scale(1)';
         e.currentTarget.style.zIndex = '1';
       }}
@@ -51,11 +52,23 @@ export const Poster: React.FC<PosterProps> = ({ itemId, title, subtitle, onClick
         zIndex: 1
       }} />
 
+      {item && (item as any).is_collection && (
+        <div style={{
+          position: 'absolute', top: '0.5rem', right: '0.5rem',
+          background: 'var(--primary-color)', color: 'white',
+          padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)',
+          fontSize: '0.7rem', fontWeight: 700, zIndex: 2,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+        }}>
+          COLLECTION
+        </div>
+      )}
+
       <div style={{ position: 'relative', zIndex: 2 }}>
         <div style={{ 
           fontWeight: 700, 
           fontSize: '0.9rem', 
-          lineHeight: '1.2',
+          lineHeight: 1.2,
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
@@ -64,11 +77,7 @@ export const Poster: React.FC<PosterProps> = ({ itemId, title, subtitle, onClick
           {title}
         </div>
         {subtitle && (
-          <div style={{ 
-            fontSize: '0.75rem', 
-            color: 'var(--text-secondary)', 
-            marginTop: '0.2rem' 
-          }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
             {subtitle}
           </div>
         )}

@@ -91,22 +91,38 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
     <div className="media-details-outer" style={{
       position: 'fixed',
       inset: 0,
-      backgroundColor: 'rgba(0,0,0,0.9)',
+      backgroundColor: 'rgba(0,0,0,0.7)',
       zIndex: 1500,
       overflowY: 'auto',
       display: 'flex',
       justifyContent: 'center',
-      padding: '2rem 0'
+      padding: '2rem 0',
+      backdropFilter: 'blur(30px) saturate(1.5)',
+      WebkitBackdropFilter: 'blur(30px) saturate(1.5)'
     }} onClick={onClose}>
+      {/* Background Image Layer */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundImage: `url(${backdropUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        opacity: 0.3,
+        zIndex: -1
+      }} />
+
       <Card
         className="media-details-card"
         style={{ 
           width: '90%', 
           maxWidth: '1000px', 
-          backgroundColor: 'var(--bg-color)', 
+          backgroundColor: 'rgba(20, 20, 20, 0.8)', 
           padding: 0, 
           overflow: 'hidden',
-          position: 'relative'
+          position: 'relative',
+          border: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
         }}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >

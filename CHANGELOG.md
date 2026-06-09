@@ -3,6 +3,21 @@
 All notable changes to the SunSet Media Server will be documented in this file.
 
 ## v0.2.0 - 6/9/2026
+- **New Features:**
+    - Mobile-first gesture controls: Double-tap to seek ±10s with visual feedback.
+    - Immersive backdrop blur in Media Details modal.
+    - Discord Rich Presence integration (Rust relay server with user settings for token and status).
+    - Automatic collection/franchise grouping in Dashboard.
+    - PWA offline caching strategy for better performance.
+- **Improvements:**
+    - Flexible episode naming support (S01E01, 1x01, S1E1).
+    - Fallback indexing for unsorted media.
+    - On-the-fly SRT to VTT subtitle conversion for browser compatibility.
+    - Improved show navigation in the video player.
+- **Fixes:**
+    - Fixed database persistence: removed `DROP TABLE` command on server restart.
+    - Fixed player control interactions for responsive mobile usage.
+    - Fixed CORS issues for external subtitle tracks.
 - Added search overlay with live filtering (episodes hidden).
 - Added cloud-synced playback progress (localStorage + API).
 - Added dark/light theme toggle (persisted in localStorage).

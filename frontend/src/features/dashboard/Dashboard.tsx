@@ -16,6 +16,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
   const [featured, setFeatured] = useState<MediaItem | undefined>();
   const [genres, setGenres] = useState<string[]>([]);
   const [genreItems, setGenreItems] = useState<Record<string, MediaItem[]>>({});
+  const [collections, setCollections] = useState<any[]>([]);
   const [pulling, setPulling] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pullStartY = useRef(0);
@@ -25,6 +26,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       api.getRecentlyAdded(),
       api.getLibraries()
     ]);
+    
     // Deduplicate by show_title for episodes
     const seen = new Set();
     const deduped = recentData.filter(r => {
@@ -38,6 +40,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
     setRecent(deduped);
     setLibraries(libsData);
     if (deduped.length > 0) setFeatured(deduped[0]);
+
+    // Handle Collections
+    const allItems: MediaItem[] = [];
+    for (const lib of libsData) {
+      const items = await api.getLibraryItems(lib.id);
+      allItems.push(...items);
+    }
+
+    const collectionGroups = allItems.reduce((acc, item) => {
+      if (item.collection_name) {
+        if (!acc[item.collection_name]) acc[item.collection_name] = [];
+        acc[item.collection_name].push(item);
+      }
+      return acc;
+    }, {} as Record<string, MediaItem[]>);
+
+    const collectionsData = Object.entries(collectionGroups)
+      .filter(([_, items]) => items.length > 1)
+      .map(([name, items]) => ({
+        ...items[0],
+        id: `collection_${items[0].id}`,
+        title: name,
+        media_type: 'movie' as const,
+        is_collection: true,
+        items: items.sort((a, b) => (a.year || 0) - (b.year || 0))
+      }));
+
+    setCollections(collectionsData);
+
     try {
       const genreList = await api.getGenres();
       setGenres(genreList.slice(0, 5));
@@ -45,11 +76,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       await Promise.all(genreList.slice(0, 5).map(async (g) => {
         try {
           const genreData = await api.getGenreItems(g);
-          const seen = new Set();
+          const gSeen = new Set();
           itemsMap[g] = genreData.filter((r: MediaItem) => {
             if (r.media_type === 'episode' && r.show_title) {
-              if (seen.has(r.show_title)) return false;
-              seen.add(r.show_title);
+              if (gSeen.has(r.show_title)) return false;
+              gSeen.add(r.show_title);
               return true;
             }
             return true;
@@ -104,6 +135,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       </div>
 
       <div style={{ position: 'relative', zIndex: 10, marginTop: '-20px' }}>
+        {collections.length > 0 && (
+          <MediaRow title="Collections" items={collections} onPlay={(c: any) => onSelectItem(c.items[0])} />
+        )}
         <MediaRow title="Recently Added" items={recent} onPlay={onSelectItem} />
 
         {genres.map(genre => genreItems[genre]?.length > 0 && (

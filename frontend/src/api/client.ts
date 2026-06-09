@@ -1,3 +1,8 @@
+import type { 
+  MediaItem, Library, OnboardRequest, LoginRequest, 
+  User, StorageInfo, PlaybackState 
+} from '../types';
+
 const BASE_URL = import.meta.env.DEV 
   ? 'http://localhost:7867/api' 
   : '/api';
@@ -22,28 +27,29 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   getStatus: () => request<any>('/status'),
   getUptime: () => request<number>('/uptime'),
-  onboard: (data: any) => request<boolean>('/onboard', { method: 'POST', body: JSON.stringify(data) }),
-  login: (data: any) => request<{ user_id: string, username: string, is_admin: boolean } | null>('/login', { method: 'POST', body: JSON.stringify(data) }),
-  getUserProfile: (id: string) => request<{ user_id: string, username: string, is_admin: boolean } | null>(`/users/${id}`),
-  getRecentlyAdded: () => request<any[]>('/recently-added'),
-  getLibraries: () => request<any[]>('/libraries'),
-  addLibrary: (data: any) => request<boolean>('/libraries', { method: 'POST', body: JSON.stringify(data) }),
-  updateLibrary: (id: string, data: any) => request<boolean>(`/libraries/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  onboard: (data: OnboardRequest) => request<boolean>('/onboard', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data: LoginRequest) => request<User | null>('/login', { method: 'POST', body: JSON.stringify(data) }),
+  getUserProfile: (id: string) => request<User | null>(`/users/${id}`),
+  getRecentlyAdded: () => request<MediaItem[]>('/recently-added'),
+  getLibraries: () => request<Library[]>('/libraries'),
+  addLibrary: (data: Omit<Library, 'id'>) => request<boolean>('/libraries', { method: 'POST', body: JSON.stringify(data) }),
+  updateLibrary: (id: string, data: Partial<Library>) => request<boolean>(`/libraries/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteLibrary: (id: string) => request<boolean>(`/libraries/${id}`, { method: 'DELETE' }),
-  getLibraryItems: (id: string) => request<any[]>(`/libraries/${id}/items`),
-  getShowEpisodes: (showTitle: string) => request<any[]>(`/shows/${encodeURIComponent(showTitle)}/episodes`),
-  search: (query: string) => request<any[]>(`/search?q=${encodeURIComponent(query)}`),
+  getLibraryItems: (id: string) => request<MediaItem[]>(`/libraries/${id}/items`),
+  getShowEpisodes: (showTitle: string) => request<MediaItem[]>(`/shows/${encodeURIComponent(showTitle)}/episodes`),
+  search: (query: string) => request<MediaItem[]>(`/search?q=${encodeURIComponent(query)}`),
   triggerScan: () => request<boolean>('/scan', { method: 'POST' }),
   getStreamUrl: (id: string) => `${BASE_URL}/stream/${id}`,
   getSubtitles: (id: string) => request<string[]>(`/media/${id}/subtitles`),
   getSubtitleUrl: (id: string, name: string) => `${BASE_URL}/media/${id}/subtitle/${encodeURIComponent(name)}`,
   savePlayback: (data: any) => request<boolean>('/playback', { method: 'POST', body: JSON.stringify(data) }),
-  getPlayback: (itemId: string) => request<any>(`/playback/${itemId}`),
-  getStorage: () => request<any>('/storage'),
+  getPlayback: (itemId: string) => request<PlaybackState>(`/playback/${itemId}`),
+  updateDiscordConfig: (id: string, token: string, status: string) => request<boolean>(`/users/${id}/discord-config`, { method: 'PUT', body: JSON.stringify({ token, status }) }),
+  getStorage: () => request<StorageInfo>('/storage'),
   updateMedia: (id: string, data: any) => request<boolean>(`/media/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   refreshMedia: (id: string) => request<boolean>(`/media/${id}/refresh`, { method: 'POST' }),
   getGenres: () => request<string[]>('/genres'),
-  getGenreItems: (genre: string) => request<any[]>(`/genre/${encodeURIComponent(genre)}`),
+  getGenreItems: (genre: string) => request<MediaItem[]>(`/genre/${encodeURIComponent(genre)}`),
   createInvite: () => request<string>('/invite', { method: 'POST' }),
   redeemInvite: (code: string) => request<boolean>('/invite/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
 };

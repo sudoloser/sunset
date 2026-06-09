@@ -12,11 +12,12 @@ import { loadSubtitleSettings, type SubtitleSettingsType } from '../settings/Sub
 interface VideoPlayerProps {
   item: MediaItem;
   onClose: () => void;
+  onSelectItem?: (item: MediaItem) => void;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelectItem }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const seekerRef = useRef<HTMLDivElement>(null);
@@ -40,6 +41,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
 
   const isShow = item.media_type === 'episode' || !!item.show_title;
   const showTitle = item.show_title || item.title;
+
+  // Reset state when item changes
+  useEffect(() => {
+    setActiveSubtitle('');
+    setShowSubtitlePicker(false);
+    setShowEpisodes(false);
+    setShowSpeedPicker(false);
+    setShowControls(true);
+  }, [item.id]);
 
   // Init video volume/muted from state
   useEffect(() => {
@@ -106,35 +116,36 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    const handler = () => {
+    
+    const updateTracks = () => {
       const tracks = el.textTracks;
       for (let i = 0; i < tracks.length; i++) {
         const track = tracks[i];
-        if (track.label === activeSubtitle || (activeSubtitle === '' && track.label === subtitleFiles[0]?.replace('.srt', '').replace('.vtt', ''))) {
-          track.mode = 'showing';
-        } else {
-          track.mode = 'hidden';
-        }
+        const isMatch = track.label === activeSubtitle || (activeSubtitle === '' && i === 0 && subtitleFiles.length > 0);
+        track.mode = isMatch ? 'showing' : 'hidden';
       }
     };
-    handler();
-    el.textTracks.addEventListener('addtrack', handler);
-    return () => el.textTracks.removeEventListener('addtrack', handler);
+
+    updateTracks();
+    // Re-run when tracks are added
+    el.textTracks.addEventListener('addtrack', updateTracks);
+    return () => el.textTracks.removeEventListener('addtrack', updateTracks);
   }, [activeSubtitle, subtitleFiles]);
 
   // Autoplay next episode
   useEffect(() => {
-    if (!videoRef.current || !isShow) return;
+    if (!videoRef.current || !isShow || !onSelectItem) return;
     const onEnded = () => {
       if (!episodes.length) return;
       const idx = episodes.findIndex(e => e.id === item.id);
       if (idx >= 0 && idx < episodes.length - 1) {
-        setShowControls(true);
+        onSelectItem(episodes[idx + 1]);
       }
     };
-    videoRef.current.addEventListener('ended', onEnded);
-    return () => videoRef.current?.removeEventListener('ended', onEnded);
-  }, [episodes, item.id, isShow]);
+    const v = videoRef.current;
+    v.addEventListener('ended', onEnded);
+    return () => v.removeEventListener('ended', onEnded);
+  }, [episodes, item.id, isShow, onSelectItem]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -234,45 +245,119 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
       }
     }, 3000);
   };
+const [seekingFeedback, setSeekingFeedback] = useState<'forward' | 'backward' | null>(null);
+const [lastTapTime, setLastTapTime] = useState(0);
+const tapTimeout = useRef<any>(null);
+const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
+  const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+  const width = window.innerWidth;
+  const now = Date.now();
 
-  const handleActivity = () => showControlsTemporarily();
-
+  if (now - lastTapTime < 300) {
+    // Double tap detected
+    clearTimeout(tapTimeout.current);
+    if (x < width * 0.3) {
+      skip(-10);
+      setSeekingFeedback('backward');
+    } else if (x > width * 0.7) {
+      skip(10);
+      setSeekingFeedback('forward');
+    }
+    setTimeout(() => setSeekingFeedback(null), 800);
+    } else {
+    setLastTapTime(now);
+    tapTimeout.current = setTimeout(() => {
+      if (showControls) {
+        if ('target' in e && e.target === e.currentTarget) {
+          setShowControls(false); 
+          setShowSubtitlePicker(false); 
+          setShowEpisodes(false); 
+          setShowSpeedPicker(false);
+        }
+      } else {
+        showControlsTemporarily();
+      }
+    }, 300);
+    }
+    };
+const handleActivity = () => {
+  showControlsTemporarily();
+};
   const subLabel = (f: string) => f.replace('.srt', '').replace('.vtt', '');
 
   return (
     <div 
       ref={containerRef}
-      style={{ 
+      style={{
         position: 'fixed', inset: 0, background: 'black', zIndex: 2000,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         cursor: showControls ? 'default' : 'none',
-        userSelect: 'none', WebkitUserSelect: 'none',
-        WebkitTouchCallout: 'none'
+        userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none'
       }}
       onMouseMove={handleActivity}
       onTouchStart={handleActivity}
-      onTouchEnd={handleActivity}
+      onTouchEnd={handleTap}
       onContextMenu={(e) => e.preventDefault()}
-      onClick={() => {
-        if (showControls) { setShowControls(false); setShowSubtitlePicker(false); setShowEpisodes(false); setShowSpeedPicker(false); }
-        else showControlsTemporarily();
-      }}
+      onClick={handleTap}
     >
+      {/* Seeking Feedback Overlays */}
+      {seekingFeedback === 'backward' && (
+        <div style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: '30%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(to right, rgba(255,255,255,0.1), transparent)',
+          zIndex: 5, pointerEvents: 'none', animation: 'fadeOut 0.8s forwards'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            <SkipBackIcon size={64} />
+            <span style={{ fontWeight: 700, fontSize: '1.2rem' }}>-10s</span>
+          </div>
+        </div>
+      )}
+      {seekingFeedback === 'forward' && (
+        <div style={{
+          position: 'absolute', right: 0, top: 0, bottom: 0, width: '30%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(to left, rgba(255,255,255,0.1), transparent)',
+          zIndex: 5, pointerEvents: 'none', animation: 'fadeOut 0.8s forwards'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            <SkipForwardIcon size={64} />
+            <span style={{ fontWeight: 700, fontSize: '1.2rem' }}>+10s</span>
+          </div>
+        </div>
+      )}
+
       <video
         ref={videoRef}
         src={api.getStreamUrl(item.id)}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         autoPlay
         playsInline
+        crossOrigin="anonymous"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => { setDuration(e.currentTarget.duration); }}
-        onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          if (showControls) togglePlay();
+          else handleTap(e);
+        }}
       >
-        {subtitleFiles.map(sub => (
-          <track key={sub} kind="subtitles" src={api.getSubtitleUrl(item.id, sub)} label={subLabel(sub)} />
-        ))}
+        {subtitleFiles.map((sub, idx) => {
+          const label = subLabel(sub);
+          const isDefault = activeSubtitle === label || (activeSubtitle === '' && idx === 0);
+          return (
+            <track 
+              key={sub} 
+              kind="subtitles" 
+              src={api.getSubtitleUrl(item.id, sub)} 
+              label={label} 
+              default={isDefault}
+            />
+          );
+        })}
       </video>
 
       <style>{`
@@ -494,19 +579,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
           </div>
           {episodes.map(ep => (
             <div key={ep.id}
-              onClick={() => { /* navigate to episode */ }}
+              onClick={() => { if (onSelectItem) onSelectItem(ep); }}
               style={{
                 padding: '0.6rem 1rem', borderRadius: 'var(--radius-md)', cursor: 'pointer',
                 display: 'flex', gap: '0.75rem', alignItems: 'center',
+                backgroundColor: ep.id === item.id ? 'var(--surface-variant)' : 'transparent',
                 fontWeight: ep.id === item.id ? 700 : 400, transition: 'var(--transition-standard)'
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              onMouseLeave={e => e.currentTarget.style.background = ep.id === item.id ? 'var(--surface-variant)' : 'transparent'}
             >
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: '2rem', textAlign: 'right' }}>
+              <span style={{ fontSize: '0.8rem', color: ep.id === item.id ? 'var(--primary-color)' : 'var(--text-secondary)', minWidth: '2rem', textAlign: 'right' }}>
                 {ep.episode}
               </span>
-              <span style={{ fontSize: '0.9rem' }}>{ep.title}</span>
+              <span style={{ fontSize: '0.9rem', color: ep.id === item.id ? 'var(--primary-color)' : 'white' }}>{ep.title}</span>
             </div>
           ))}
         </div>

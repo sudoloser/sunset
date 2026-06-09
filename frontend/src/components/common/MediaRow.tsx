@@ -34,13 +34,13 @@ export const MediaRow: React.FC<MediaRowProps> = ({ title, items, onPlay }) => {
       >
         {items.map((item) => (
           <Poster 
-            key={item.id}
-            itemId={item.id}
-            title={item.title}
+            key={item.id} 
+            itemId={item.id} 
+            title={item.title} 
             subtitle={item.year?.toString() || (item.season !== undefined && item.season !== null ? `S${String(item.season).padStart(2, '0')} E${String(item.episode || 0).padStart(2, '0')}` : undefined)}
-            onClick={() => onPlay(item)}
-          />
-        ))}
+            item={item}
+            onClick={() => onPlay(item)} 
+          />        ))}
       </div>
     </div>
   );

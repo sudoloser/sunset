@@ -1,9 +1,9 @@
 export type MediaType = 'movie' | 'episode';
-
 export interface MediaItem {
   id: string;
   title: string;
   show_title?: string;
+  collection_name?: string;
   media_type: MediaType;
   year?: number;
   season?: number;
@@ -17,8 +17,15 @@ export interface MediaItem {
   tmdb_id?: string;
 }
 
+export interface User {
+  user_id: string;
+  username: string;
+  is_admin: boolean;
+  discord_token?: string;
+  discord_status?: string;
+}
+
 export interface PlaybackState {
-  id: string;
   item_id: string;
   user_id: string;
   timestamp: number;

@@ -19,7 +19,9 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ library, onSelectItem,
     api.getLibraryItems(library.id).then(setItems);
   }, [library.id]);
 
-  const groupedShows = items.filter(i => i.media_type === 'episode').reduce((acc, item) => {
+  const groupedShows = items.reduce((acc, item) => {
+    // If it's a shows library, we group everything.
+    // Use show_title if available, otherwise use title as the show name.
     const title = item.show_title || item.title;
     if (!acc[title]) acc[title] = [];
     acc[title].push(item);

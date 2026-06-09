@@ -126,6 +126,7 @@ function App() {
           <VideoPlayer 
             item={playingMedia} 
             onClose={() => setStep(previousStep)} 
+            onSelectItem={item => setPlayingMedia(item)}
           />
         )}
 

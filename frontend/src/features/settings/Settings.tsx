@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Admin } from '../dashboard/Admin';
 import { SubtitleSettings } from './SubtitleSettings';
 import { AppearanceSettings } from './AppearanceSettings';
+import { DiscordSettings } from './DiscordSettings';
 
 interface SettingsProps {
   isAdmin: boolean;
 }
 
-type SettingsTab = 'subtitles' | 'appearance' | 'admin';
+type SettingsTab = 'subtitles' | 'appearance' | 'discord' | 'admin';
 
 export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
   const [tab, setTab] = useState<SettingsTab>('subtitles');
@@ -15,6 +16,7 @@ export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'subtitles', label: 'Subtitles' },
     { id: 'appearance', label: 'Appearance' },
+    { id: 'discord', label: 'Discord' },
   ];
   if (isAdmin) {
     tabs.push({ id: 'admin', label: 'Admin' });
@@ -42,6 +44,7 @@ export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
 
       {tab === 'subtitles' && <SubtitleSettings />}
       {tab === 'appearance' && <AppearanceSettings />}
+      {tab === 'discord' && <DiscordSettings />}
       {tab === 'admin' && <Admin />}
     </div>
   );

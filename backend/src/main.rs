@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use tracing::info;
+use tracing::{info, error};
 use sqlx::sqlite::{SqlitePoolOptions};
 use sqlx::{SqlitePool, Row};
 use tower_http::cors::CorsLayer;
@@ -15,6 +15,10 @@ use regex::Regex;
 use walkdir::WalkDir;
 use std::time::Instant;
 use std::sync::Arc;
+use tokio::sync::Mutex;
+use chrono;
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use futures_util::{StreamExt, SinkExt};
 use notify::{Watcher, RecursiveMode, Config};
 use std::path::Path as StdPath;
 use http::{StatusCode, header};
@@ -22,6 +26,54 @@ use tokio::io::AsyncReadExt;
 use rust_embed::RustEmbed;
 use std::fs::File as StdFile;
 use std::io::Write;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct DiscordActivity {
+    name: String,
+    #[serde(rename = "type")]
+    activity_type: u8,
+    details: Option<String>,
+    state: Option<String>,
+    assets: Option<DiscordAssets>,
+    timestamps: Option<DiscordTimestamps>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct DiscordAssets {
+    large_image: Option<String>,
+    large_text: Option<String>,
+    small_image: Option<String>,
+    small_text: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct DiscordTimestamps {
+    start: Option<u64>,
+    end: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct DiscordPresence {
+    status: String,
+    since: Option<u64>,
+    activities: Vec<DiscordActivity>,
+    afk: bool,
+}
+
+struct DiscordRpcSession {
+    token: String,
+    presence_tx: tokio::sync::mpsc::UnboundedSender<DiscordPresence>,
+}
+
+struct RpcManager {
+    sessions: std::collections::HashMap<String, DiscordRpcSession>,
+}
+
+impl RpcManager {
+    fn new() -> Self {
+        Self { sessions: std::collections::HashMap::new() }
+    }
+}
 
 const TMDB_API_KEY: &str = "fb7bb23f03b6994dafc674c074d01761";
 const IMDB_API_KEY: &str = "4b447405";
@@ -261,6 +313,8 @@ struct LoginResponse {
     user_id: String,
     username: String,
     is_admin: bool,
+    discord_token: Option<String>,
+    discord_status: Option<String>,
 }
 
 async fn static_handler(uri: axum::http::Uri) -> Response {
@@ -335,11 +389,12 @@ struct LoginRequest {
     password_hash: String,
 }
 
-#[derive(Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Serialize, Deserialize, sqlx::FromRow, Clone)]
 struct MediaItem {
     id: String,
     title: String,
     show_title: Option<String>,
+    collection_name: Option<String>,
     media_type: String,
     year: Option<i32>,
     season: Option<i32>,
@@ -371,10 +426,93 @@ struct StorageInfo {
     user_count: i64,
 }
 
+async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedReceiver<DiscordPresence>) {
+    let url = "wss://gateway.discord.gg/?v=10&encoding=json";
+    
+    loop {
+        info!("Connecting to Discord Gateway...");
+        let (ws_stream, _) = match connect_async(url).await {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Failed to connect to Discord Gateway: {}", e);
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                continue;
+            }
+        };
+
+        let (mut write, mut read) = ws_stream.split();
+        let mut heartbeat_interval = 41250;
+        let mut sequence: Option<u64> = None;
+
+        // Discord HELLO
+        if let Some(Ok(Message::Text(msg))) = read.next().await {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&msg) {
+                heartbeat_interval = val["d"]["heartbeat_interval"].as_u64().unwrap_or(41250);
+            }
+        }
+
+        // Identify
+        let identify = serde_json::json!({
+            "op": 2,
+            "d": {
+                "token": token.clone(),
+                "properties": {
+                    "os": "linux",
+                    "browser": "SunSet Media Server",
+                    "device": "SunSet"
+                },
+                "presence": {
+                    "status": "online",
+                    "afk": false,
+                    "since": 0,
+                    "activities": []
+                },
+                "intents": 0,
+                "capabilities": 65
+            }
+        });
+        if let Err(e) = write.send(Message::Text(identify.to_string())).await {
+            error!("Failed to send identify to Discord: {}", e);
+            continue;
+        }
+
+        let mut heartbeat_timer = tokio::time::interval(std::time::Duration::from_millis(heartbeat_interval));
+        
+        loop {
+            tokio::select! {
+                _ = heartbeat_timer.tick() => {
+                    let hb = serde_json::json!({"op": 1, "d": sequence});
+                    if let Err(_) = write.send(Message::Text(hb.to_string())).await { break; }
+                }
+                Some(presence) = rx.recv() => {
+                    let update = serde_json::json!({
+                        "op": 3,
+                        "d": presence
+                    });
+                    if let Err(_) = write.send(Message::Text(update.to_string())).await { break; }
+                }
+                msg = read.next() => {
+                    match msg {
+                        Some(Ok(Message::Text(text))) => {
+                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+                                if let Some(s) = val["s"].as_u64() { sequence = Some(s); }
+                                if val["op"] == 7 { break; } // Reconnect
+                            }
+                        }
+                        _ => break,
+                    }
+                }
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    }
+}
+
 struct AppState {
     pool: SqlitePool,
     start_time: Instant,
     client: reqwest::Client,
+    rpc_manager: Arc<Mutex<RpcManager>>,
 }
 
 #[tokio::main]
@@ -423,12 +561,10 @@ async fn main() {
     // Table Creation
     info!("Verifying database schema...");
     sqlx::query("CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK (id = 1), server_name TEXT, setup_complete BOOLEAN DEFAULT 0)").execute(&pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, is_admin BOOLEAN DEFAULT 0)").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, is_admin BOOLEAN DEFAULT 0, discord_token TEXT, discord_status TEXT DEFAULT 'online')").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS libraries (id TEXT PRIMARY KEY, name TEXT NOT NULL, path TEXT NOT NULL, lib_type TEXT NOT NULL)").execute(&pool).await.unwrap();
 
-    // Drop and recreate media_items to ensure it has all columns
-    sqlx::query("DROP TABLE IF EXISTS media_items").execute(&pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, \"cast\" TEXT, genres TEXT, rating REAL, tmdb_id TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, collection_name TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, \"cast\" TEXT, genres TEXT, rating REAL, tmdb_id TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS playback_state (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, user_id TEXT DEFAULT 'default', timestamp REAL NOT NULL, duration REAL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(item_id, user_id))").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS invite_codes (code TEXT PRIMARY KEY, used BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await.unwrap();
     info!("Database schema verified.");
@@ -438,6 +574,7 @@ async fn main() {
         pool: pool.clone(),
         start_time: Instant::now(),
         client: reqwest::Client::new(),
+        rpc_manager: Arc::new(Mutex::new(RpcManager::new())),
     });
 
     info!("Configuring API routes and serving embedded frontend...");
@@ -447,6 +584,7 @@ async fn main() {
         .route("/api/onboard", post(onboard))
         .route("/api/login", post(login))
         .route("/api/users/:id", get(get_user_profile))
+        .route("/api/users/:id/discord-config", put(update_discord_config))
         .route("/api/recently-added", get(get_recently_added))
         .route("/api/libraries", get(get_libraries).post(add_library))
         .route("/api/libraries/:id", put(update_library).delete(delete_library))
@@ -546,7 +684,7 @@ async fn onboard(State(state): State<Arc<AppState>>, Json(payload): Json<Onboard
 }
 
 async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequest>) -> Json<Option<LoginResponse>> {
-    let row = sqlx::query("SELECT id, username, password_hash, is_admin FROM users WHERE username = ?")
+    let row = sqlx::query("SELECT id, username, password_hash, is_admin, discord_token, discord_status FROM users WHERE username = ?")
         .bind(&payload.username)
         .fetch_optional(&state.pool).await.unwrap();
 
@@ -557,6 +695,8 @@ async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequ
                 user_id: user.get("id"),
                 username: user.get("username"),
                 is_admin: user.get("is_admin"),
+                discord_token: user.get("discord_token"),
+                discord_status: user.get("discord_status"),
             }));
         }
     }
@@ -564,7 +704,7 @@ async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequ
 }
 
 async fn get_user_profile(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Option<LoginResponse>> {
-    let row = sqlx::query("SELECT id, username, is_admin FROM users WHERE id = ?")
+    let row = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status FROM users WHERE id = ?")
         .bind(id)
         .fetch_optional(&state.pool).await.unwrap();
 
@@ -573,6 +713,8 @@ async fn get_user_profile(Path(id): Path<String>, State(state): State<Arc<AppSta
             user_id: user.get("id"),
             username: user.get("username"),
             is_admin: user.get("is_admin"),
+            discord_token: user.get("discord_token"),
+            discord_status: user.get("discord_status"),
         }));
     }
     Json(None)
@@ -587,7 +729,7 @@ async fn download_image(client: &reqwest::Client, url: &str, path: &StdPath) -> 
     Ok(())
 }
 
-async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_type: &str, folder_path: &StdPath) -> (Option<String>, Option<String>, Option<String>, Option<f64>, Option<String>) {
+async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_type: &str, folder_path: &StdPath) -> (Option<String>, Option<String>, Option<String>, Option<f64>, Option<String>, Option<String>) {
     let search_type = if media_type == "movie" { "movie" } else { "tv" };
     let url = format!(
         "https://api.themoviedb.org/3/search/{}?api_key={}&query={}{}",
@@ -602,6 +744,7 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
     let mut genres = None;
     let mut rating = None;
     let mut tmdb_id = None;
+    let mut collection_name = None;
 
     if let Ok(resp) = state.client.get(&url).send().await {
         if let Ok(json) = resp.json::<serde_json::Value>().await {
@@ -622,7 +765,7 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
                     let _ = download_image(&state.client, &format!("https://image.tmdb.org/t/p/w1280{}", backdrop_path), &folder_path.join("landscape.jpg")).await;
                 }
 
-                // Fetch extra assets (logo), credits, and details (for genres)
+                // Fetch extra assets (logo)
                 let images_url = format!("https://api.themoviedb.org/3/{}/{}/images?api_key={}", search_type, id, TMDB_API_KEY);
                 if let Ok(img_resp) = state.client.get(&images_url).send().await {
                     if let Ok(img_json) = img_resp.json::<serde_json::Value>().await {
@@ -636,7 +779,7 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
                     }
                 }
 
-                // Fetch details for genres
+                // Fetch details for genres and collection
                 let details_url = format!("https://api.themoviedb.org/3/{}/{}?api_key={}", search_type, id, TMDB_API_KEY);
                 if let Ok(detail_resp) = state.client.get(&details_url).send().await {
                     if let Ok(detail_json) = detail_resp.json::<serde_json::Value>().await {
@@ -647,6 +790,9 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
                             if !genre_names.is_empty() {
                                 genres = Some(genre_names.join(", "));
                             }
+                        }
+                        if let Some(collection) = detail_json["belongs_to_collection"].as_object() {
+                            collection_name = collection["name"].as_str().map(|s| s.to_string());
                         }
                     }
                 }
@@ -666,7 +812,7 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
             }
         }
     }
-    (overview, cast, genres, rating, tmdb_id)
+    (overview, cast, genres, rating, tmdb_id, collection_name)
 }
 
 async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
@@ -801,15 +947,24 @@ async fn get_media_subtitle_file(
     if let Some(r) = row {
         let path: String = r.get("file_path");
         let folder = std::path::Path::new(&path).parent().unwrap();
-        let sub_path = folder.join(name);
+        let sub_path = folder.join(&name);
         if sub_path.exists() {
             let mut file = tokio::fs::File::open(sub_path).await.unwrap();
-            let mut contents = Vec::new();
-            file.read_to_end(&mut contents).await.unwrap();
-            return (
-                [(header::CONTENT_TYPE, "text/vtt")], // Usually better for browsers
-                contents,
-            ).into_response();
+            let mut contents = String::new();
+            if let Ok(_) = file.read_to_string(&mut contents).await {
+                // If it's an SRT, do a simple conversion to VTT
+                if name.ends_with(".srt") {
+                    let vtt_content = format!("WEBVTT\n\n{}", contents.replace(",", "."));
+                    return (
+                        [(header::CONTENT_TYPE, "text/vtt")],
+                        vtt_content,
+                    ).into_response();
+                }
+                return (
+                    [(header::CONTENT_TYPE, "text/vtt")],
+                    contents,
+                ).into_response();
+            }
         }
     }
     StatusCode::NOT_FOUND.into_response()
@@ -886,12 +1041,97 @@ struct InviteRequest {
     code: String,
 }
 
+#[derive(Deserialize)]
+struct DiscordConfigPayload {
+    token: String,
+    status: String,
+}
+
+async fn update_discord_config(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<DiscordConfigPayload>,
+) -> Json<bool> {
+    sqlx::query("UPDATE users SET discord_token = ?, discord_status = ? WHERE id = ?")
+        .bind(&payload.token)
+        .bind(&payload.status)
+        .bind(&id)
+        .execute(&state.pool)
+        .await
+        .unwrap();
+    
+    // Close existing session if any to force reconnect with new config
+    let mut manager = state.rpc_manager.lock().await;
+    manager.sessions.remove(&id);
+    
+    Json(true)
+}
+
 async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<PlaybackPayload>) -> Json<bool> {
-    let user_id = payload.user_id.unwrap_or_else(|| "default".to_string());
+    let user_id = payload.user_id.clone().unwrap_or_else(|| "default".to_string());
     let id = format!("{}_{}", user_id, payload.item_id);
     sqlx::query("INSERT OR REPLACE INTO playback_state (id, item_id, user_id, timestamp, duration, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)")
         .bind(&id).bind(&payload.item_id).bind(&user_id).bind(payload.timestamp).bind(payload.duration)
         .execute(&state.pool).await.unwrap();
+
+    // Trigger Discord RPC update if user has a token
+    let user_row = sqlx::query("SELECT discord_token, discord_status FROM users WHERE id = ?").bind(&user_id).fetch_optional(&state.pool).await.unwrap();
+    if let Some(row) = user_row {
+        if let Some(token) = row.get::<Option<String>, _>("discord_token") {
+            let status = row.get::<Option<String>, _>("discord_status").unwrap_or_else(|| "online".to_string());
+            let mut manager = state.rpc_manager.lock().await;
+            let session = if let Some(s) = manager.sessions.get(&user_id) {
+                s
+            } else {
+                let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+                let token_clone = token.clone();
+                tokio::spawn(async move { run_discord_rpc(token_clone, rx).await; });
+                manager.sessions.insert(user_id.clone(), DiscordRpcSession { token, presence_tx: tx });
+                manager.sessions.get(&user_id).unwrap()
+            };
+
+            // Fetch item details for presence
+            if let Ok(item) = sqlx::query("SELECT title, show_title, media_type FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
+                let title: String = item.get("title");
+                let show_title: Option<String> = item.get("show_title");
+                let media_type: String = item.get("media_type");
+
+                let name = if media_type == "episode" {
+                    format!("Watching {}", show_title.unwrap_or(title.clone()))
+                } else {
+                    format!("Watching {}", title)
+                };
+
+                let progress = if let Some(dur) = payload.duration {
+                    if dur > 0.0 { (payload.timestamp / dur * 100.0) as i32 } else { 0 }
+                } else { 0 };
+
+                let presence = DiscordPresence {
+                    status: status,
+                    since: None,
+                    activities: vec![DiscordActivity {
+                        name: "SunSet".to_string(),
+                        activity_type: 3, // Watching
+                        details: Some(name),
+                        state: Some(format!("Progress: {}%", progress)),
+                        assets: Some(DiscordAssets {
+                            large_image: Some(format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)),
+                            large_text: Some(title),
+                            small_image: None,
+                            small_text: None,
+                        }),
+                        timestamps: Some(DiscordTimestamps {
+                            start: Some(chrono::Utc::now().timestamp() as u64 - payload.timestamp as u64),
+                            end: None,
+                        }),
+                    }],
+                    afk: false,
+                };
+                let _ = session.presence_tx.send(presence);
+            }
+        }
+    }
+
     Json(true)
 }
 
@@ -949,9 +1189,9 @@ async fn refresh_media_item(Path(id): Path<String>, State(state): State<Arc<AppS
         let media_type: String = r.get("media_type");
         let folder_path = std::path::Path::new(&file_path).parent().unwrap().to_path_buf();
         let search_type = if media_type == "movie" { "movie" } else { "tv" };
-        let (overview, cast, genres, rating, tmdb_id) = fetch_metadata(&state, &title, year, search_type, &folder_path).await;
-        sqlx::query("UPDATE media_items SET description = ?, \"cast\" = ?, genres = ?, rating = ?, tmdb_id = ? WHERE id = ?")
-            .bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(&id).execute(&state.pool).await.unwrap();
+        let (overview, cast, genres, rating, tmdb_id, collection) = fetch_metadata(&state, &title, year, search_type, &folder_path).await;
+        sqlx::query("UPDATE media_items SET description = ?, \"cast\" = ?, genres = ?, rating = ?, tmdb_id = ?, collection_name = ? WHERE id = ?")
+            .bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(collection).bind(&id).execute(&state.pool).await.unwrap();
         return Json(true);
     }
     Json(false)
@@ -1006,7 +1246,8 @@ async fn scan_all_libraries(state: Arc<AppState>) {
 async fn scan_library(state: Arc<AppState>, lib: Library) {
     info!("Scanning library '{}' at {}...", lib.name, lib.path);
     let movie_regex = Regex::new(r"^(.*)\s\((\d{4})\)$").unwrap();
-    let show_regex = Regex::new(r"(?i)^(.*?)\s*S(\d{2})E(\d{2})").unwrap();
+    // More flexible show regex: S01E01, 1x01, S1E1, etc.
+    let show_regex = Regex::new(r"(?i)^(.*?)\s*(?:S(\d{1,2})E(\d{1,2})|(\d{1,2})x(\d{1,2}))").unwrap();
     let mut count = 0;
 
     for entry in WalkDir::new(&lib.path).into_iter().filter_map(|e| e.ok()) {
@@ -1025,26 +1266,34 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 };
 
                 // Fetch metadata and assets
-                let (overview, cast, genres, rating, tmdb_id) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
+                let (overview, cast, genres, rating, tmdb_id, collection) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
 
-                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, year, description, \"cast\", genres, rating, tmdb_id) VALUES (?, ?, ?, NULL, ?, 'movie', ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(&file_path).bind(year).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).execute(&state.pool).await {
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, year, description, \"cast\", genres, rating, tmdb_id) VALUES (?, ?, ?, NULL, ?, ?, 'movie', ?, ?, ?, ?, ?, ?)")
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(collection).bind(&file_path).bind(year).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).execute(&state.pool).await {
                         count += 1;
                     }
             } else {
-                if let Some(caps) = show_regex.captures(file_name) {
-                    let show_title = caps[1].trim().to_string();
-                    let season = caps[2].parse::<i32>().unwrap_or(0);
-                    let episode = caps[3].parse::<i32>().unwrap_or(0);
+                let (show_title, season, episode) = match show_regex.captures(file_name) {
+                    Some(caps) => {
+                        let title = caps[1].trim().to_string();
+                        // Either S01E01 style or 1x01 style
+                        let s = caps.get(2).or(caps.get(4)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(0);
+                        let e = caps.get(3).or(caps.get(5)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(0);
+                        (title, s, e)
+                    },
+                    None => {
+                        // Fallback: use filename as show title, season 1, episode 1 (or try to find numbers)
+                        (file_name.to_string(), 1, 1)
+                    }
+                };
 
-                    // Fetch metadata and assets for the show if not already done
-                    let (overview, cast, genres, rating, tmdb_id) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
+                // Fetch metadata and assets for the show if not already done
+                let (overview, cast, genres, rating, tmdb_id, _) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
-                    if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id) VALUES (?, ?, ?, ?, ?, 'episode', ?, ?, ?, ?, ?, ?, ?)")
-                        .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).execute(&state.pool).await {
-                            count += 1;
-                        }
-                }
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id) VALUES (?, ?, ?, ?, NULL, ?, 'episode', ?, ?, ?, ?, ?, ?, ?)")
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).execute(&state.pool).await {
+                        count += 1;
+                    }
             }
         }
     }
