@@ -395,7 +395,7 @@ async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
 }
 
 async fn get_recently_added(State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path FROM media_items ORDER BY added_at DESC LIMIT 15")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items ORDER BY added_at DESC LIMIT 15")
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
@@ -437,14 +437,14 @@ async fn delete_library(Path(id): Path<String>, State(state): State<Arc<AppState
 }
 
 async fn get_library_items(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path FROM media_items WHERE library_id = ? ORDER BY title ASC")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE library_id = ? ORDER BY title ASC")
         .bind(id)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
 
 async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
         .bind(show_title)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -453,7 +453,7 @@ async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<A
 async fn search_media(Query(params): Query<std::collections::HashMap<String, String>>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
     let query = params.get("q").cloned().unwrap_or_default();
     let search_pattern = format!("%{}%", query);
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path FROM media_items WHERE title LIKE ? LIMIT 20")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, media_type, year, season, episode, added_at, file_path, description, cast FROM media_items WHERE title LIKE ? LIMIT 20")
         .bind(search_pattern)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
