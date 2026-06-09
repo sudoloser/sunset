@@ -158,15 +158,18 @@ fn check_and_update() {
     let binary_name = if cfg!(windows) { format!("{}.exe", asset_name) } else { asset_name.clone() };
     let binary_in_zip = extracted_dir.join(&binary_name);
 
-    // If not found at root, search subdirectories
+    // If not found at root, search subdirectories for any sunset-server binary
     let binary_path = if binary_in_zip.exists() {
         binary_in_zip
     } else {
         let mut found = None;
         for entry in walkdir::WalkDir::new(&extracted_dir).into_iter().filter_map(|e| e.ok()) {
-            if entry.file_name().to_str() == Some(&binary_name) {
-                found = Some(entry.path().to_path_buf());
-                break;
+            if entry.file_type().is_file() {
+                let fname = entry.file_name().to_str().unwrap_or("");
+                if fname.starts_with("sunset-server") {
+                    found = Some(entry.path().to_path_buf());
+                    break;
+                }
             }
         }
         match found {
@@ -175,7 +178,7 @@ fn check_and_update() {
         }
     };
 
-    let install_target = bin_dir.join(&binary_name);
+    let install_target = bin_dir.join(binary_path.file_name().unwrap_or(std::ffi::OsStr::new(&binary_name)));
     println!("[Updater] Installing to {}", install_target.display());
 
     // Remove existing binary first (handles replacement cleanly)

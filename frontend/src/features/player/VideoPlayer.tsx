@@ -41,6 +41,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
   const isShow = item.media_type === 'episode' || !!item.show_title;
   const showTitle = item.show_title || item.title;
 
+  // Init video volume/muted from state
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v) {
+      v.volume = volume;
+      v.muted = isMuted;
+    }
+  }, []);
+
+  // Sync muted to video element
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.muted = isMuted;
+  }, [isMuted]);
+
+  // Sync volume to video element
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.volume = volume;
+  }, [volume]);
+
   // Cloud sync: load remote playback state
   useEffect(() => {
     api.getPlayback(item.id).then(state => {
@@ -85,16 +104,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
 
   // Toggle subtitle track
   useEffect(() => {
-    if (!videoRef.current) return;
-    const tracks = videoRef.current.textTracks;
-    for (let i = 0; i < tracks.length; i++) {
-      const track = tracks[i];
-      if (track.label === activeSubtitle || (activeSubtitle === '' && track.label === subtitleFiles[0]?.replace('.srt', '').replace('.vtt', ''))) {
-        track.mode = 'showing';
-      } else {
-        track.mode = 'hidden';
+    const el = videoRef.current;
+    if (!el) return;
+    const handler = () => {
+      const tracks = el.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        if (track.label === activeSubtitle || (activeSubtitle === '' && track.label === subtitleFiles[0]?.replace('.srt', '').replace('.vtt', ''))) {
+          track.mode = 'showing';
+        } else {
+          track.mode = 'hidden';
+        }
       }
-    }
+    };
+    handler();
+    el.textTracks.addEventListener('addtrack', handler);
+    return () => el.textTracks.removeEventListener('addtrack', handler);
   }, [activeSubtitle, subtitleFiles]);
 
   // Autoplay next episode
@@ -119,7 +144,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
         case ' ':
         case 'k': e.preventDefault(); togglePlay(); break;
         case 'f': e.preventDefault(); toggleFullscreen(); break;
-        case 'm': e.preventDefault(); setIsMuted(v => !v); break;
+        case 'm': e.preventDefault(); setIsMuted(v => { if (videoRef.current) videoRef.current.muted = !v; return !v; }); break;
         case 'j': e.preventDefault(); skip(-10); break;
         case 'l': e.preventDefault(); skip(10); break;
         case 'Escape': e.preventDefault(); onClose(); break;
@@ -190,10 +215,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
     setShowSpeedPicker(false);
   };
 
-  const introSkip = () => {
-    skip(85);
-  };
-
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -242,10 +263,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
         src={api.getStreamUrl(item.id)}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         autoPlay
+        playsInline
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onLoadedMetadata={(e) => { setDuration(e.currentTarget.duration); }}
         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
       >
         {subtitleFiles.map(sub => (
@@ -355,22 +377,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
 
         {/* Bottom Controls */}
         <div style={{ width: '100%' }}>
-          {/* Intro Skip */}
-          {currentTime < 120 && (
-            <button onClick={(e) => { e.stopPropagation(); introSkip(); }}
-              style={{
-                position: 'absolute', bottom: '80px', right: 'var(--spacing-xl)',
-                background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white',
-                padding: '0.5rem 1.2rem', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                fontWeight: 700, fontSize: '0.85rem', backdropFilter: 'blur(10px)',
-                transition: 'var(--transition-standard)'
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-            >
-              Skip Intro
-            </button>
-          )}
 
           {/* Seeker Bar */}
           <div 
@@ -403,17 +409,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xl)' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-                 <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
-                   {isMuted || volume === 0 ? <VolumeMutedIcon size={28} /> : <VolumeHighIcon size={28} />}
-                 </button>
-                 <input 
-                   type="range" min="0" max="1" step="0.1" 
-                   value={isMuted ? 0 : volume} 
-                   onChange={(e) => { e.stopPropagation(); const v = parseFloat(e.target.value); setVolume(v); setIsMuted(false); if (videoRef.current) videoRef.current.volume = v; }}
-                   style={{ width: '80px', accentColor: 'white' }}
-                 />
-               </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+                  <button onClick={(e) => { e.stopPropagation(); setIsMuted(v => !v); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                    {isMuted || volume === 0 ? <VolumeMutedIcon size={28} /> : <VolumeHighIcon size={28} />}
+                  </button>
+                  <input 
+                    type="range" min="0" max="1" step="0.05" 
+                    value={isMuted ? 0 : volume} 
+                    onChange={(e) => { e.stopPropagation(); const v = parseFloat(e.target.value); setVolume(v); setIsMuted(false); if (videoRef.current) { videoRef.current.volume = v; videoRef.current.muted = false; } }}
+                    style={{ width: '100px', accentColor: 'white', cursor: 'pointer' }}
+                  />
+                </div>
                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'white', minWidth: '100px' }}>
                  {formatTime(currentTime)} / {formatTime(duration)}
                </span>

@@ -25,10 +25,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       api.getRecentlyAdded(),
       api.getLibraries()
     ]);
-    const filtered = recentData.filter((r: MediaItem) => r.media_type !== 'episode');
-    setRecent(filtered);
+    // Deduplicate by show_title for episodes
+    const seen = new Set();
+    const deduped = recentData.filter(r => {
+      if (r.media_type === 'episode' && r.show_title) {
+        if (seen.has(r.show_title)) return false;
+        seen.add(r.show_title);
+        return true;
+      }
+      return true;
+    });
+    setRecent(deduped);
     setLibraries(libsData);
-    if (filtered.length > 0) setFeatured(filtered[0]);
+    if (deduped.length > 0) setFeatured(deduped[0]);
     try {
       const genreList = await api.getGenres();
       setGenres(genreList.slice(0, 5));
@@ -36,7 +45,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       await Promise.all(genreList.slice(0, 5).map(async (g) => {
         try {
           const genreData = await api.getGenreItems(g);
-          itemsMap[g] = genreData.filter((r: MediaItem) => r.media_type !== 'episode');
+          const seen = new Set();
+          itemsMap[g] = genreData.filter((r: MediaItem) => {
+            if (r.media_type === 'episode' && r.show_title) {
+              if (seen.has(r.show_title)) return false;
+              seen.add(r.show_title);
+              return true;
+            }
+            return true;
+          });
         } catch {}
       }));
       setGenreItems(itemsMap);

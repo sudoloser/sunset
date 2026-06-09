@@ -83,15 +83,25 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSelect 
                 display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                 gap: '1rem'
               }}>
-                {(libraryItems[lib.id] || []).filter(item => item.media_type !== 'episode').map(item => (
-                  <Poster
-                    key={item.id}
-                    itemId={item.id}
-                    title={item.title}
-                    subtitle={item.year?.toString()}
-                    onClick={() => { onSelect(item); onClose(); }}
-                  />
-                ))}
+                {(() => {
+                  const seen = new Set();
+                  return (libraryItems[lib.id] || []).filter(item => {
+                    if (item.media_type === 'episode' && item.show_title) {
+                      if (seen.has(item.show_title)) return false;
+                      seen.add(item.show_title);
+                      return true;
+                    }
+                    return true;
+                  }).map(item => (
+                    <Poster
+                      key={item.id}
+                      itemId={item.id}
+                      title={item.title}
+                      subtitle={item.year?.toString()}
+                      onClick={() => { onSelect(item); onClose(); }}
+                    />
+                  ));
+                })()}
               </div>
             </div>
           ))}
@@ -105,15 +115,25 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSelect 
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
           gap: '1.5rem', overflowY: 'auto', flex: 1, paddingBottom: '2rem'
         }}>
-          {results.filter(item => item.media_type !== 'episode').map(item => (
-            <Poster
-              key={item.id}
-              itemId={item.id}
-              title={item.title}
-              subtitle={item.year?.toString()}
-              onClick={() => { onSelect(item); onClose(); }}
-            />
-          ))}
+          {(() => {
+            const seen = new Set();
+            return results.filter(item => {
+              if (item.media_type === 'episode' && item.show_title) {
+                if (seen.has(item.show_title)) return false;
+                seen.add(item.show_title);
+                return true;
+              }
+              return true;
+            }).map(item => (
+              <Poster
+                key={item.id}
+                itemId={item.id}
+                title={item.title}
+                subtitle={item.year?.toString()}
+                onClick={() => { onSelect(item); onClose(); }}
+              />
+            ));
+          })()}
         </div>
       )}
 
