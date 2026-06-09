@@ -140,13 +140,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
     if (videoRef.current) videoRef.current.currentTime += seconds;
   };
 
-  const handleSeek = (e: React.MouseEvent | React.TouchEvent) => {
+  const [seeking, setSeeking] = useState(false);
+
+  const calcSeek = (clientX: number) => {
     if (!seekerRef.current || !videoRef.current) return;
     const rect = seekerRef.current.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const x = clientX;
     const pos = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
     videoRef.current.currentTime = pos * videoRef.current.duration;
   };
+
+  const handleSeek = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    calcSeek(x);
+    setSeeking(true);
+  };
+
+  const handleSeekMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!seeking) return;
+    e.preventDefault();
+    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    calcSeek(x);
+  };
+
+  const handleSeekEnd = () => setSeeking(false);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -257,10 +275,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
           padding: 'var(--spacing-xl)'
         }}
       >
-        {/* Top Header */}
+          {/* Top Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
-            <Button variant="ghost" size="icon" onClick={onClose} style={{ color: 'white' }}>
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onClose(); }} style={{ color: 'white' }}>
               <BackIcon size={32} />
             </Button>
             <div>
@@ -274,16 +292,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {isShow && episodes.length > 0 && (
-              <Button variant="ghost" size="icon" onClick={() => { setShowEpisodes(v => !v); setShowSubtitlePicker(false); setShowSpeedPicker(false); }} style={{ color: showEpisodes ? 'var(--primary-color)' : 'white' }}>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setShowEpisodes(v => !v); setShowSubtitlePicker(false); setShowSpeedPicker(false); clearTimeout(controlsTimeout.current); }} style={{ color: showEpisodes ? 'var(--primary-color)' : 'white' }}>
                 <EpisodesIcon size={26} />
               </Button>
             )}
             {subtitleFiles.length > 0 && (
-              <Button variant="ghost" size="icon" onClick={() => { setShowSubtitlePicker(v => !v); setShowEpisodes(false); setShowSpeedPicker(false); }} style={{ color: showSubtitlePicker ? 'var(--primary-color)' : 'white' }}>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setShowSubtitlePicker(v => !v); setShowEpisodes(false); setShowSpeedPicker(false); clearTimeout(controlsTimeout.current); }} style={{ color: showSubtitlePicker ? 'var(--primary-color)' : 'white' }}>
                 <SubtitlesIcon size={26} />
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => { setShowSpeedPicker(v => !v); setShowSubtitlePicker(false); setShowEpisodes(false); }} style={{ color: showSpeedPicker ? 'var(--primary-color)' : 'white', fontWeight: 700, fontSize: '0.9rem' }}>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setShowSpeedPicker(v => !v); setShowSubtitlePicker(false); setShowEpisodes(false); clearTimeout(controlsTimeout.current); }} style={{ color: showSpeedPicker ? 'var(--primary-color)' : 'white', fontWeight: 700, fontSize: '0.9rem' }}>
               {playbackRate}x
             </Button>
           </div>
@@ -324,13 +342,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
             display: 'flex', gap: 'var(--spacing-xxl)', alignItems: 'center'
           }}
         >
-           <button onClick={() => skip(-10)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+           <button onClick={(e) => { e.stopPropagation(); skip(-10); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
              <SkipBackIcon size={48} />
            </button>
-           <button onClick={togglePlay} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+           <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
              {isPlaying ? <PauseIcon size={84} /> : <PlayIcon size={84} />}
            </button>
-           <button onClick={() => skip(10)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+           <button onClick={(e) => { e.stopPropagation(); skip(10); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
              <SkipForwardIcon size={48} />
            </button>
         </div>
@@ -339,7 +357,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
         <div style={{ width: '100%' }}>
           {/* Intro Skip */}
           {currentTime < 120 && (
-            <button onClick={introSkip}
+            <button onClick={(e) => { e.stopPropagation(); introSkip(); }}
               style={{
                 position: 'absolute', bottom: '80px', right: 'var(--spacing-xl)',
                 background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white',
@@ -359,6 +377,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
             ref={seekerRef}
             onMouseDown={handleSeek}
             onTouchStart={handleSeek}
+            onMouseMove={handleSeekMove}
+            onTouchMove={handleSeekMove}
+            onMouseUp={handleSeekEnd}
+            onTouchEnd={handleSeekEnd}
+            onMouseLeave={handleSeekEnd}
             style={{ 
               height: '6px', width: '100%', background: 'rgba(255,255,255,0.3)', 
               borderRadius: '3px', marginBottom: 'var(--spacing-lg)', cursor: 'pointer',
@@ -381,13 +404,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xl)' }}>
                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-                 <button onClick={() => setIsMuted(!isMuted)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                 <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
                    {isMuted || volume === 0 ? <VolumeMutedIcon size={28} /> : <VolumeHighIcon size={28} />}
                  </button>
                  <input 
                    type="range" min="0" max="1" step="0.1" 
                    value={isMuted ? 0 : volume} 
-                   onChange={(e) => { const v = parseFloat(e.target.value); setVolume(v); setIsMuted(false); if (videoRef.current) videoRef.current.volume = v; }}
+                   onChange={(e) => { e.stopPropagation(); const v = parseFloat(e.target.value); setVolume(v); setIsMuted(false); if (videoRef.current) videoRef.current.volume = v; }}
                    style={{ width: '80px', accentColor: 'white' }}
                  />
                </div>
@@ -396,10 +419,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose }) => {
                </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
-               <button onClick={togglePiP} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+               <button onClick={(e) => { e.stopPropagation(); togglePiP(); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
                  {showPip ? 'Exit PiP' : 'PiP'}
                </button>
-               <button onClick={toggleFullscreen} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+               <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
                  <MaximizeIcon size={28} />
                </button>
             </div>

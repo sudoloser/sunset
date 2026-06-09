@@ -83,7 +83,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSelect 
                 display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                 gap: '1rem'
               }}>
-                {(libraryItems[lib.id] || []).map(item => (
+                {(libraryItems[lib.id] || []).filter(item => item.media_type !== 'episode').map(item => (
                   <Poster
                     key={item.id}
                     itemId={item.id}
@@ -105,7 +105,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSelect 
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
           gap: '1.5rem', overflowY: 'auto', flex: 1, paddingBottom: '2rem'
         }}>
-          {results.map(item => (
+          {results.filter(item => item.media_type !== 'episode').map(item => (
             <Poster
               key={item.id}
               itemId={item.id}

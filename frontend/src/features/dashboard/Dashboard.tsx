@@ -25,15 +25,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       api.getRecentlyAdded(),
       api.getLibraries()
     ]);
-    setRecent(recentData);
+    const filtered = recentData.filter((r: MediaItem) => r.media_type !== 'episode');
+    setRecent(filtered);
     setLibraries(libsData);
-    if (recentData.length > 0) setFeatured(recentData[0]);
+    if (filtered.length > 0) setFeatured(filtered[0]);
     try {
       const genreList = await api.getGenres();
       setGenres(genreList.slice(0, 5));
       const itemsMap: Record<string, MediaItem[]> = {};
       await Promise.all(genreList.slice(0, 5).map(async (g) => {
-        try { itemsMap[g] = await api.getGenreItems(g); } catch {}
+        try {
+          const genreData = await api.getGenreItems(g);
+          itemsMap[g] = genreData.filter((r: MediaItem) => r.media_type !== 'episode');
+        } catch {}
       }));
       setGenreItems(itemsMap);
     } catch {}

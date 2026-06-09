@@ -102,37 +102,6 @@ export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectLibrary, onS
           <MediaRow title="My List" items={myListItems} onPlay={onSelectItem} />
         </div>
       )}
-
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '2rem' }}>Your Libraries</h1>
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-        gap: '2rem' 
-      }}>
-        {libraries.map(lib => (
-          <Card 
-            key={lib.id} 
-            style={{ 
-              textAlign: 'center', 
-              cursor: 'pointer', 
-              padding: '3rem',
-              backgroundColor: 'var(--surface-color)',
-              transition: 'var(--transition-standard)'
-            }}
-            onClick={() => onSelectLibrary(lib)}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface-variant)')}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface-color)')}
-          >
-            <div style={{ color: 'var(--primary-color)', marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-              {lib.lib_type === 'movies' ? <MovieIcon size={64} /> : <TVIcon size={64} />}
-            </div>
-            <div style={{ fontWeight: 800, fontSize: '1.5rem' }}>{lib.name}</div>
-            <div style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem' }}>
-              {lib.lib_type.toUpperCase()}
-            </div>
-          </Card>
-        ))}
-      </div>
     </div>
   );
 };
