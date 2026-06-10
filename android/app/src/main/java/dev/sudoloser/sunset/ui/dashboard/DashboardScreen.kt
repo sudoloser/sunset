@@ -21,6 +21,7 @@ fun DashboardScreen(
     baseUrl: String,
     onPlayItem: (MediaItem) -> Unit,
     onSearch: () -> Unit,
+    onSelectItem: ((MediaItem) -> Unit)? = null,
     onShowClicked: ((String, List<MediaItem>) -> Unit)? = null
 ) {
     var recentlyAdded by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -103,7 +104,7 @@ fun DashboardScreen(
                     title = "Collections",
                     items = collectionItems,
                     baseUrl = baseUrl,
-                    onPlay = onPlayItem
+                    onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
                 )
             }
         }
@@ -113,7 +114,7 @@ fun DashboardScreen(
                 title = "Recently Added",
                 items = recentlyAdded,
                 baseUrl = baseUrl,
-                onPlay = onPlayItem
+                onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
             )
         }
 
@@ -125,7 +126,7 @@ fun DashboardScreen(
                         title = genre,
                         items = items,
                         baseUrl = baseUrl,
-                        onPlay = onPlayItem
+                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
                     )
                 }
             }
@@ -142,12 +143,12 @@ fun DashboardScreen(
                             title = lib.name,
                             items = showCards,
                             baseUrl = baseUrl,
-                            onPlay = { clicked ->
+                            onClick = { clicked ->
                                 val showTitle = clicked.showTitle
                                 if (showTitle != null && onShowClicked != null) {
                                     onShowClicked(showTitle, grouped[showTitle] ?: emptyList())
                                 } else {
-                                    onPlayItem(clicked)
+                                    onSelectItem?.invoke(clicked) ?: onPlayItem(clicked)
                                 }
                             },
                             getSubtitle = { item -> "${grouped[item.showTitle ?: item.title]?.size ?: 0} episodes" }
@@ -159,7 +160,7 @@ fun DashboardScreen(
                             title = lib.name,
                             items = allItems,
                             baseUrl = baseUrl,
-                            onPlay = onPlayItem
+                            onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
                         )
                     }
                 }

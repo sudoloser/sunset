@@ -72,7 +72,8 @@ fun LibrariesScreen(
             apiClient = apiClient,
             baseUrl = baseUrl,
             onPlayItem = onPlayItem,
-            onBack = { selectedLibrary = null }
+            onBack = { selectedLibrary = null },
+            onSelectItem = onSelectItem
         )
         return
     }
@@ -97,7 +98,7 @@ fun LibrariesScreen(
                 title = "Continue Watching",
                 items = continueWatching,
                 baseUrl = baseUrl,
-                onPlay = onPlayItem,
+                onClick = { item -> onSelectItem(item) },
                 getProgress = { playbackProgress[it.id] ?: 0f }
             )
         }
@@ -107,7 +108,7 @@ fun LibrariesScreen(
                 title = "My List",
                 items = myListItems,
                 baseUrl = baseUrl,
-                onPlay = onPlayItem
+                onClick = { item -> onSelectItem(item) }
             )
         }
 

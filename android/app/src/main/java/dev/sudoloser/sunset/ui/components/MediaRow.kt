@@ -17,7 +17,7 @@ fun MediaRow(
     title: String,
     items: List<MediaItem>,
     baseUrl: String,
-    onPlay: (MediaItem) -> Unit,
+    onClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
     getProgress: ((MediaItem) -> Float)? = null,
     getSubtitle: ((MediaItem) -> String?)? = null
@@ -43,7 +43,7 @@ fun MediaRow(
                 Poster(
                     item = item,
                     baseUrl = baseUrl,
-                    onClick = { onPlay(item) },
+                    onClick = { onClick(item) },
                     progress = getProgress?.invoke(item),
                     subtitle = getSubtitle?.invoke(item)
                 )

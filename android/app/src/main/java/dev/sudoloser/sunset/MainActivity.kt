@@ -263,85 +263,72 @@ fun AppContent(activity: ComponentActivity) {
                 }
 
                 SunsetTheme(darkTheme = darkTheme) {
-                    Scaffold(
-                    bottomBar = {
-                        NavigationBar {
-                            NavigationBarItem(
-                                selected = activeTab == "home",
-                                onClick = { activeTab = "home" },
-                                icon = { Icon(SunsetIcons.Home, contentDescription = null) },
-                                label = { Text("Home") }
-                            )
-                            NavigationBarItem(
-                                selected = activeTab == "library",
-                                onClick = { activeTab = "library" },
-                                icon = { Icon(SunsetIcons.Library, contentDescription = null) },
-                                label = { Text("Library") }
-                            )
-                            NavigationBarItem(
-                                selected = activeTab == "settings",
-                                onClick = { activeTab = "settings" },
-                                icon = { Icon(SunsetIcons.Settings, contentDescription = null) },
-                                label = { Text("Settings") }
-                            )
-                        }
-                    }
-                ) { padding ->
-                    Box(modifier = Modifier.padding(padding)) {
-                        when (activeTab) {
-                            "home" -> DashboardScreen(
-                                apiClient = client,
-                                baseUrl = baseUrl,
-                                onPlayItem = { item ->
-                                startPlayer(activity, client, item.id, item.title, baseUrl, userId)
-                                },
-                                onSearch = { showSearch = true },
-                                onShowClicked = { title, episodes ->
-                                    showEpisodesTitle = title
-                                    showEpisodesItems = episodes
-                                }
-                            )
-                            "library" -> LibrariesScreen(
-                                apiClient = client,
-                                baseUrl = baseUrl,
-                                userId = userId,
-                                isAdmin = user?.isAdmin == true,
-                                onPlayItem = { item ->
-                                startPlayer(activity, client, item.id, item.title, baseUrl, userId)
-                                },
-                                onSelectItem = { selectedItem = it },
-                                onGoToSettings = { activeTab = "settings" }
-                            )
-                            "settings" -> SettingsScreen(
-                                apiClient = client,
-                                baseUrl = baseUrl,
-                                userId = userId,
-                                currentUsername = user?.username,
-                                isAdmin = user?.isAdmin == true,
-                                darkTheme = darkTheme,
-                                onDarkThemeChange = { newVal ->
-                                    darkTheme = newVal
-                                    scope.launch {
-                                        activity.dataStore.edit { it[DARK_MODE_KEY] = newVal }
+                    val tabs = listOf(
+                        "home" to { Icon(SunsetIcons.Home, contentDescription = "Home") },
+                        "library" to { Icon(SunsetIcons.Library, contentDescription = "Library") },
+                        "settings" to { Icon(SunsetIcons.Settings, contentDescription = "Settings") }
+                    )
+                    NavigationSuite(
+                        tabs = tabs,
+                        activeTab = activeTab,
+                        onTabSelected = { activeTab = it }
+                    ) { padding ->
+                        Box(modifier = Modifier.padding(padding)) {
+                            when (activeTab) {
+                                "home" -> DashboardScreen(
+                                    apiClient = client,
+                                    baseUrl = baseUrl,
+                                    onPlayItem = { item ->
+                                    startPlayer(activity, client, item.id, item.title, baseUrl, userId)
+                                    },
+                                    onSearch = { showSearch = true },
+                                    onSelectItem = { item -> selectedItem = item },
+                                    onShowClicked = { title, episodes ->
+                                        showEpisodesTitle = title
+                                        showEpisodesItems = episodes
                                     }
-                                },
-                                onLogout = {
-                                    scope.launch {
-                                        activity.dataStore.edit {
-                                            it.remove(USER_ID_KEY)
-                                            it.remove(USERNAME_KEY)
-                                            it.remove(IS_ADMIN_KEY)
+                                )
+                                "library" -> LibrariesScreen(
+                                    apiClient = client,
+                                    baseUrl = baseUrl,
+                                    userId = userId,
+                                    isAdmin = user?.isAdmin == true,
+                                    onPlayItem = { item ->
+                                    startPlayer(activity, client, item.id, item.title, baseUrl, userId)
+                                    },
+                                    onSelectItem = { selectedItem = it },
+                                    onGoToSettings = { activeTab = "settings" }
+                                )
+                                "settings" -> SettingsScreen(
+                                    apiClient = client,
+                                    baseUrl = baseUrl,
+                                    userId = userId,
+                                    currentUsername = user?.username,
+                                    isAdmin = user?.isAdmin == true,
+                                    darkTheme = darkTheme,
+                                    onDarkThemeChange = { newVal ->
+                                        darkTheme = newVal
+                                        scope.launch {
+                                            activity.dataStore.edit { it[DARK_MODE_KEY] = newVal }
                                         }
-                                        user = null
-                                        step = "login"
-                                    }
-                                },
-                                onGoToAdmin = { showAdmin = true }
-                            )
+                                    },
+                                    onLogout = {
+                                        scope.launch {
+                                            activity.dataStore.edit {
+                                                it.remove(USER_ID_KEY)
+                                                it.remove(USERNAME_KEY)
+                                                it.remove(IS_ADMIN_KEY)
+                                            }
+                                            user = null
+                                            step = "login"
+                                        }
+                                    },
+                                    onGoToAdmin = { showAdmin = true }
+                                )
+                            }
                         }
                     }
                 }
-            }
         }
     }
 }

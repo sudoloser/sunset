@@ -13,6 +13,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.source.SingleSampleMediaSource
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import dev.sudoloser.sunset.R
 import kotlinx.coroutines.*
@@ -62,7 +63,10 @@ class PlayerActivity : ComponentActivity() {
         val url = videoUrl ?: return
         val id = itemId ?: return
 
-        player = ExoPlayer.Builder(this).build().also { exoPlayer ->
+        val trackSelector = DefaultTrackSelector(this).also { selector ->
+            selector.setParameters(selector.buildUponParameters().setPreferredTextRoleFlags(C.ROLE_FLAG_SUBTITLE))
+        }
+        player = ExoPlayer.Builder(this).setTrackSelector(trackSelector).build().also { exoPlayer ->
             playerView.player = exoPlayer
 
             val dataSourceFactory = DefaultHttpDataSource.Factory()
@@ -119,9 +123,10 @@ class PlayerActivity : ComponentActivity() {
         saveJob = scope.launch {
             while (isActive) {
                 delay(15000)
-                if (exoPlayer.isPlaying) {
-                    savePlayback(id, exoPlayer.currentPosition.toDouble(), exoPlayer.duration.toDouble(), isPlaying = true)
-                }
+                val pos = exoPlayer.currentPosition.toDouble()
+                val dur = exoPlayer.duration.toDouble()
+                val playing = exoPlayer.isPlaying
+                savePlayback(id, pos, dur, isPlaying = playing)
             }
         }
     }
@@ -154,15 +159,16 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        scope.cancel()
-        player?.let {
-            if (itemId != null) {
-                savePlayback(itemId!!, it.currentPosition.toDouble(), it.duration.toDouble(), isPlaying = false)
-            }
-            it.release()
-        }
+        val pos = player?.currentPosition?.toDouble()
+        val dur = player?.duration?.toDouble()
+        player?.release()
         player = null
+        saveJob?.cancel()
+        if (itemId != null && pos != null) {
+            savePlayback(itemId!!, pos, dur ?: 0.0, isPlaying = false)
+        }
+        scope.cancel()
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        super.onDestroy()
     }
 }

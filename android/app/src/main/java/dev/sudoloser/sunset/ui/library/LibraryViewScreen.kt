@@ -29,7 +29,8 @@ fun LibraryViewScreen(
     apiClient: ApiClient,
     baseUrl: String,
     onPlayItem: (MediaItem) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onSelectItem: ((MediaItem) -> Unit)? = null
 ) {
     var items by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -88,7 +89,7 @@ fun LibraryViewScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(items) { item ->
-                    Poster(item = item, baseUrl = baseUrl, onClick = { onPlayItem(item) })
+                    Poster(item = item, baseUrl = baseUrl, onClick = { onSelectItem?.invoke(item) ?: onPlayItem(item) })
                 }
             }
         } else {
