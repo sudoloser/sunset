@@ -1,4 +1,4 @@
-package com.sunset.player
+package dev.sudoloser.sunset.player
 
 import android.app.PictureInPictureParams
 import android.content.pm.ActivityInfo
@@ -13,7 +13,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import com.sunset.R
+import dev.sudoloser.sunset.R
 
 @OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {

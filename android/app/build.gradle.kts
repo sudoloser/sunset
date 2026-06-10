@@ -1,14 +1,15 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
-    namespace = "com.sunset"
+    namespace = "dev.sudoloser.sunset"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.sunset"
+        applicationId = "dev.sudoloser.sunset"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -67,6 +68,15 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("androidx.media3:media3-common:1.4.1")
+
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.8.4")
+
+    // Kotlinx Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // Coil (image loading)
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
