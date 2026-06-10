@@ -92,7 +92,7 @@ const CastAvatar: React.FC<{ name: string }> = ({ name }) => {
 
 export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPlay }) => {
   const [episodes, setEpisodes] = useState<MediaItem[]>([]);
-  const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [userRating, setUserRating] = useState<number>(() => {
     try { return parseInt(localStorage.getItem(`sunset_rating_${item.id}`) || '0'); } catch { return 0; }
   });
@@ -138,7 +138,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
       api.getShowEpisodes(title).then(data => {
         setEpisodes(data);
         if (data.length > 0) {
-          setSelectedSeason(data[0].season || 1);
+          setSelectedSeason(data[0].season ?? 1);
         }
       });
     }
@@ -147,8 +147,8 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
   const backdropUrl = `/api/media/${item.id}/asset/backdrop.jpg`;
   const logoUrl = `/api/media/${item.id}/asset/logo.png`;
 
-  const seasons = Array.from(new Set(episodes.map(e => e.season || 1))).sort((a, b) => a - b);
-  const filteredEpisodes = episodes.filter(e => e.season === selectedSeason).sort((a, b) => (a.episode || 0) - (b.episode || 0));
+  const seasons = Array.from(new Set(episodes.map(e => e.season ?? 1))).sort((a, b) => a - b);
+  const filteredEpisodes = episodes.filter(e => (e.season ?? 1) === selectedSeason).sort((a, b) => (a.episode || 0) - (b.episode || 0));
 
   return (
     <div className="media-details-outer" style={{
@@ -159,7 +159,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
       overflowY: 'auto',
       display: 'flex',
       justifyContent: 'center',
-      padding: '2rem 0',
+      alignItems: 'flex-start',
       backdropFilter: 'blur(30px) saturate(1.5)',
       WebkitBackdropFilter: 'blur(30px) saturate(1.5)'
     }} onClick={onClose}>
@@ -181,7 +181,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
           maxWidth: '1000px', 
           backgroundColor: 'rgba(20, 20, 20, 0.8)', 
           padding: 0, 
-          overflow: 'hidden',
+          margin: '2rem auto',
           position: 'relative',
           border: '1px solid rgba(255,255,255,0.1)',
           backdropFilter: 'blur(10px)',
@@ -193,11 +193,11 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
           @media (max-width: 768px) {
             .media-details-outer {
               padding: 0 !important;
-              align-items: flex-start !important;
             }
             .media-details-card {
               width: 100% !important;
               max-width: 100% !important;
+              margin: 0 !important;
               border-radius: 0 !important;
               border: none !important;
               min-height: 100vh !important;

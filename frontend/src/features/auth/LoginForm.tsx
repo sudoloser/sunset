@@ -6,7 +6,7 @@ import { api } from '../../api/client';
 
 interface LoginFormProps {
   serverName: string;
-  onLogin: (userId: string, isAdmin: boolean) => void;
+  onLogin: (userId: string, isAdmin: boolean, username: string) => void;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ serverName, onLogin }) => {
@@ -23,8 +23,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ serverName, onLogin }) => 
         if (rememberMe) {
           localStorage.setItem('sunset_user_id', data.user_id);
           localStorage.setItem('sunset_is_admin', data.is_admin ? 'true' : 'false');
+          localStorage.setItem('sunset_username', data.username);
         }
-        onLogin(data.user_id, data.is_admin);
+        onLogin(data.user_id, data.is_admin, data.username);
       } else {
         setError('Invalid credentials');
       }

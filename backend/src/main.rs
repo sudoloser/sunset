@@ -316,6 +316,30 @@ struct LoginResponse {
     is_admin: bool,
     discord_token: Option<String>,
     discord_status: Option<String>,
+    profile_picture: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct CreateUserPayload {
+    username: String,
+    password_hash: String,
+    is_admin: bool,
+}
+
+#[derive(Deserialize)]
+struct ChangePasswordPayload {
+    current_password: String,
+    new_password: String,
+}
+
+#[derive(Deserialize)]
+struct ChangeUsernamePayload {
+    new_username: String,
+}
+
+#[derive(Deserialize)]
+struct ProfilePicturePayload {
+    image: String, // base64
 }
 
 async fn static_handler(uri: axum::http::Uri) -> Response {
@@ -568,7 +592,10 @@ struct AppState {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+        )
         .init();
 
     // ASCII Banner
@@ -611,10 +638,11 @@ async fn main() {
     // Table Creation
     info!("Verifying database schema...");
     sqlx::query("CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK (id = 1), server_name TEXT, setup_complete BOOLEAN DEFAULT 0)").execute(&pool).await.unwrap();
-    sqlx::query("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, is_admin BOOLEAN DEFAULT 0, discord_token TEXT, discord_status TEXT DEFAULT 'online')").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, is_admin BOOLEAN DEFAULT 0, discord_token TEXT, discord_status TEXT DEFAULT 'online', profile_picture TEXT)").execute(&pool).await.unwrap();
     // Migrations for existing databases
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN discord_token TEXT").execute(&pool).await;
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN discord_status TEXT DEFAULT 'online'").execute(&pool).await;
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN profile_picture TEXT").execute(&pool).await;
     // Migrations for media_items table
     let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN collection_name TEXT").execute(&pool).await;
     sqlx::query("CREATE TABLE IF NOT EXISTS libraries (id TEXT PRIMARY KEY, name TEXT NOT NULL, path TEXT NOT NULL, lib_type TEXT NOT NULL)").execute(&pool).await.unwrap();
@@ -663,6 +691,10 @@ async fn main() {
         .route("/api/invite/redeem", post(redeem_invite))
         .route("/api/media/:id/token", post(generate_media_token))
         .route("/api/media/:id/download", get(download_media))
+        .route("/api/users", get(list_users).post(create_user))
+        .route("/api/users/:id/password", put(change_password))
+        .route("/api/users/:id/username", put(change_username))
+        .route("/api/users/:id/profile-picture", get(get_profile_picture).post(upload_profile_picture))
         .fallback(static_handler)
         .layer(CorsLayer::permissive())
         .with_state(state.clone());
@@ -742,7 +774,7 @@ async fn onboard(State(state): State<Arc<AppState>>, Json(payload): Json<Onboard
 }
 
 async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequest>) -> Json<Option<LoginResponse>> {
-    let row = sqlx::query("SELECT id, username, password_hash, is_admin, discord_token, discord_status FROM users WHERE username = ?")
+    let row = sqlx::query("SELECT id, username, password_hash, is_admin, discord_token, discord_status, profile_picture FROM users WHERE username = ?")
         .bind(&payload.username)
         .fetch_optional(&state.pool).await.unwrap();
 
@@ -755,6 +787,7 @@ async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequ
                 is_admin: user.get("is_admin"),
                 discord_token: user.get("discord_token"),
                 discord_status: user.get("discord_status"),
+                profile_picture: user.get("profile_picture"),
             }));
         }
     }
@@ -762,7 +795,7 @@ async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequ
 }
 
 async fn get_user_profile(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Option<LoginResponse>> {
-    let row = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status FROM users WHERE id = ?")
+    let row = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status, profile_picture FROM users WHERE id = ?")
         .bind(id)
         .fetch_optional(&state.pool).await.unwrap();
 
@@ -773,6 +806,7 @@ async fn get_user_profile(Path(id): Path<String>, State(state): State<Arc<AppSta
             is_admin: user.get("is_admin"),
             discord_token: user.get("discord_token"),
             discord_status: user.get("discord_status"),
+            profile_picture: user.get("profile_picture"),
         }));
     }
     Json(None)
@@ -1207,6 +1241,98 @@ async fn update_discord_config(
     Json(true)
 }
 
+async fn list_users(State(state): State<Arc<AppState>>) -> Json<Vec<LoginResponse>> {
+    let rows = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status, profile_picture FROM users ORDER BY username")
+        .fetch_all(&state.pool).await.unwrap();
+    Json(rows.iter().map(|r| LoginResponse {
+        user_id: r.get("id"),
+        username: r.get("username"),
+        is_admin: r.get("is_admin"),
+        discord_token: r.get("discord_token"),
+        discord_status: r.get("discord_status"),
+        profile_picture: r.get("profile_picture"),
+    }).collect())
+}
+
+async fn create_user(State(state): State<Arc<AppState>>, Json(payload): Json<CreateUserPayload>) -> Json<bool> {
+    let hashed = bcrypt::hash(&payload.password_hash, bcrypt::DEFAULT_COST).unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    sqlx::query("INSERT INTO users (id, username, password_hash, is_admin) VALUES (?, ?, ?, ?)")
+        .bind(&id).bind(&payload.username).bind(hashed).bind(payload.is_admin)
+        .execute(&state.pool).await.unwrap();
+    Json(true)
+}
+
+async fn change_password(Path(id): Path<String>, State(state): State<Arc<AppState>>, Json(payload): Json<ChangePasswordPayload>) -> Json<bool> {
+    let row = sqlx::query("SELECT password_hash FROM users WHERE id = ?").bind(&id).fetch_optional(&state.pool).await.unwrap();
+    match row {
+        Some(r) => {
+            let hash: String = r.get("password_hash");
+            if bcrypt::verify(&payload.current_password, &hash).unwrap() {
+                let new_hash = bcrypt::hash(&payload.new_password, bcrypt::DEFAULT_COST).unwrap();
+                sqlx::query("UPDATE users SET password_hash = ? WHERE id = ?").bind(new_hash).bind(&id).execute(&state.pool).await.unwrap();
+                Json(true)
+            } else {
+                Json(false)
+            }
+        }
+        None => Json(false),
+    }
+}
+
+async fn change_username(Path(id): Path<String>, State(state): State<Arc<AppState>>, Json(payload): Json<ChangeUsernamePayload>) -> Json<bool> {
+    sqlx::query("UPDATE users SET username = ? WHERE id = ?").bind(&payload.new_username).bind(&id).execute(&state.pool).await.unwrap();
+    Json(true)
+}
+
+async fn upload_profile_picture(Path(id): Path<String>, State(state): State<Arc<AppState>>, Json(payload): Json<ProfilePicturePayload>) -> Json<bool> {
+    let sunset_dir = dirs::home_dir().unwrap().join(".sunset");
+    let avatars_dir = sunset_dir.join("avatars");
+    let _ = std::fs::create_dir_all(&avatars_dir);
+    let avatar_path = avatars_dir.join(format!("{}.jpg", id));
+
+    use base64::Engine;
+    let parts: Vec<&str> = payload.image.split(',').collect();
+    let data = if parts.len() > 1 {
+        base64::engine::general_purpose::STANDARD.decode(parts[1]).unwrap_or_default()
+    } else {
+        base64::engine::general_purpose::STANDARD.decode(parts[0]).unwrap_or_default()
+    };
+
+    if data.is_empty() { return Json(false); }
+    let _ = std::fs::write(&avatar_path, &data);
+    let path_str = avatar_path.to_str().unwrap_or("").to_string();
+    sqlx::query("UPDATE users SET profile_picture = ? WHERE id = ?").bind(&path_str).bind(&id).execute(&state.pool).await.unwrap();
+    Json(true)
+}
+
+async fn get_profile_picture(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Response {
+    let row = sqlx::query("SELECT profile_picture FROM users WHERE id = ?").bind(&id).fetch_optional(&state.pool).await.unwrap();
+    if let Some(r) = row {
+        if let Some(path) = r.get::<Option<String>, _>("profile_picture") {
+            let p = std::path::Path::new(&path);
+            if p.exists() {
+                let data = std::fs::read(p).unwrap_or_default();
+                return Response::builder()
+                    .header(header::CONTENT_TYPE, "image/jpeg")
+                    .body(Body::from(data))
+                    .unwrap();
+            }
+        }
+    }
+    // Fallback: generate a simple SVG avatar with initial
+    let name = sqlx::query_scalar::<_, String>("SELECT username FROM users WHERE id = ?").bind(&id).fetch_optional(&state.pool).await.unwrap_or(None);
+    let initial = name.as_deref().and_then(|n| n.chars().next()).unwrap_or('?').to_uppercase().to_string();
+    let svg = format!(
+        "<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' rx='50' fill='#333'/><text x='50' y='50' text-anchor='middle' dy='.35em' fill='white' font-size='40' font-family='sans-serif'>{}</text></svg>",
+        initial
+    );
+    Response::builder()
+        .header(header::CONTENT_TYPE, "image/svg+xml")
+        .body(Body::from(svg))
+        .unwrap()
+}
+
 async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<PlaybackPayload>) -> Json<bool> {
     let user_id = payload.user_id.clone().unwrap_or_else(|| "default".to_string());
     let id = format!("{}_{}", user_id, payload.item_id);
@@ -1430,14 +1556,18 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 let (show_title, season, episode) = match show_regex.captures(file_name) {
                     Some(caps) => {
                         let title = caps[1].trim().to_string();
-                        // Either S01E01 style or 1x01 style
                         let s = caps.get(2).or(caps.get(4)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(0);
                         let e = caps.get(3).or(caps.get(5)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(0);
                         (title, s, e)
                     },
                     None => {
-                        // Fallback: use filename as show title, season 1, episode 1 (or try to find numbers)
-                        (file_name.to_string(), 1, 1)
+                        // Fallback: use parent directory as show title so files in the same
+                        // folder are grouped together, instead of each filename becoming its own show.
+                        let dir = folder_path.file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or(file_name)
+                            .to_string();
+                        (dir, 1, 1)
                     }
                 };
 

@@ -33,3 +33,4 @@ tungstenite = { version = "0.21", features = ["rustls-tls-native-roots"] }
 rustls = "0.21"
 tokio-rustls = "0.24"
 webpki-roots = "0.25"
+base64 = "0.22"

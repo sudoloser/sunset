@@ -23,6 +23,7 @@ export interface User {
   is_admin: boolean;
   discord_token?: string;
   discord_status?: string;
+  profile_picture?: string;
 }
 
 export interface PlaybackState {

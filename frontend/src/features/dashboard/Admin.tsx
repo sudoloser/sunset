@@ -3,7 +3,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { api } from '../../api/client';
-import type { Library, StorageInfo } from '../../types';
+import type { Library, StorageInfo, User } from '../../types';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -21,6 +21,9 @@ export const Admin: React.FC = () => {
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [inviteCode, setInviteCode] = useState('');
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [showNewUser, setShowNewUser] = useState(false);
+  const [newUser, setNewUser] = useState({ username: '', password_hash: '', is_admin: false });
 
   const loadData = useCallback(async () => {
     const [libs, storageData] = await Promise.all([
@@ -29,6 +32,7 @@ export const Admin: React.FC = () => {
     ]);
     setLibraries(libs);
     setStorage(storageData);
+    api.getUsers().then(setUsers).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -182,6 +186,62 @@ export const Admin: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      <Card style={{ backgroundColor: 'var(--surface-color)', marginTop: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.4rem' }}>Users</h3>
+          {!showNewUser && <Button variant="secondary" size="sm" onClick={() => setShowNewUser(true)}>+ New User</Button>}
+        </div>
+
+        {showNewUser && (
+          <div style={{ marginBottom: '2rem', padding: '1.5rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', backgroundColor: 'var(--surface-variant)' }}>
+            <Input label="Username" value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} />
+            <Input label="Password" type="password" value={newUser.password_hash} onChange={e => setNewUser({...newUser, password_hash: e.target.value})} />
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-xs)', fontWeight: 600 }}>Account Type</label>
+              <select
+                value={newUser.is_admin ? 'admin' : 'user'}
+                onChange={e => setNewUser({...newUser, is_admin: e.target.value === 'admin'})}
+                style={{
+                  width: '100%', padding: '0.9rem 1.2rem', borderRadius: 'var(--radius-md)',
+                  background: 'rgba(255, 255, 255, 0.05)', border: 'none', color: 'white', outline: 'none'
+                }}
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <Button onClick={async () => {
+                await api.createUser(newUser);
+                setNewUser({ username: '', password_hash: '', is_admin: false });
+                setShowNewUser(false);
+                api.getUsers().then(setUsers).catch(() => {});
+              }} style={{ flex: 1 }}>Create User</Button>
+              <Button variant="ghost" onClick={() => setShowNewUser(false)} style={{ flex: 1 }}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {users.map(u => (
+            <div key={u.user_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--surface-variant)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <img
+                  src={api.getProfilePictureUrl(u.user_id)}
+                  alt=""
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', background: 'var(--surface-color)' }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{u.username}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{u.is_admin ? 'Admin' : 'User'}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 };

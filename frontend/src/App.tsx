@@ -56,6 +56,7 @@ function App() {
             if (profile) {
               setIsAdmin(profile.is_admin);
               localStorage.setItem('sunset_is_admin', profile.is_admin ? 'true' : 'false');
+              localStorage.setItem('sunset_username', profile.username);
               setStep('dashboard');
             } else {
               setStep('login');
@@ -81,7 +82,7 @@ function App() {
 
   if (step === 'loading') return <div style={{ color: 'white', padding: '2rem' }}>Loading...</div>;
   if (step === 'onboarding') return <OnboardingWizard onComplete={checkStatus} />;
-  if (step === 'login') return <LoginForm serverName={status?.server_name || 'SunSet'} onLogin={(_, admin) => { setIsAdmin(admin); setStep('dashboard'); }} />;
+  if (step === 'login') return <LoginForm serverName={status?.server_name || 'SunSet'} onLogin={(_, admin, username) => { setIsAdmin(admin); localStorage.setItem('sunset_username', username); setStep('dashboard'); }} />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

@@ -53,4 +53,10 @@ export const api = {
   createInvite: () => request<string>('/invite', { method: 'POST' }),
   redeemInvite: (code: string) => request<boolean>('/invite/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
   generateMediaToken: (id: string) => request<string>(`/media/${id}/token`, { method: 'POST' }),
+  getUsers: () => request<User[]>('/users'),
+  createUser: (data: { username: string; password_hash: string; is_admin: boolean }) => request<boolean>('/users', { method: 'POST', body: JSON.stringify(data) }),
+  changePassword: (id: string, current_password: string, new_password: string) => request<boolean>(`/users/${id}/password`, { method: 'PUT', body: JSON.stringify({ current_password, new_password }) }),
+  changeUsername: (id: string, new_username: string) => request<boolean>(`/users/${id}/username`, { method: 'PUT', body: JSON.stringify({ new_username }) }),
+  getProfilePictureUrl: (id: string) => `${BASE_URL}/users/${id}/profile-picture`,
+  uploadProfilePicture: (id: string, image: string) => request<boolean>(`/users/${id}/profile-picture`, { method: 'POST', body: JSON.stringify({ image }) }),
 };
