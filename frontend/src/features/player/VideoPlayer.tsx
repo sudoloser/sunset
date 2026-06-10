@@ -71,6 +71,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelec
     if (videoRef.current) videoRef.current.volume = volume;
   }, [volume]);
 
+  // Android Bridge Integration
+  useEffect(() => {
+    const bridge = (window as any).SunSetAndroid;
+    const useNative = localStorage.getItem('sunset_use_native_player') === 'true';
+    if (bridge && useNative && item.id) {
+      const videoUrl = api.getStreamUrl(item.id);
+      bridge.playVideo(videoUrl, item.title, item.id);
+      // Close the web player view as the native player is now handling it
+      onClose();
+    }
+  }, [item, onClose]);
+
   // Cloud sync: load remote playback state
   useEffect(() => {
     api.getPlayback(item.id).then(state => {
@@ -88,11 +100,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelec
         const dur = videoRef.current.duration;
         const state = { itemId: item.id, timestamp: ts, duration: dur, updatedAt: Date.now() };
         localStorage.setItem(`sunset_playback_${item.id}`, JSON.stringify(state));
-        api.savePlayback({ item_id: item.id, timestamp: ts, duration: dur, user_id: userId }).catch(() => {});
+        api.savePlayback({ 
+          item_id: item.id, 
+          timestamp: ts, 
+          duration: dur, 
+          user_id: userId,
+          is_playing: true 
+        }).catch(() => {});
       }
     }, 5000);
-    return () => clearInterval(interval);
-  }, [item.id, isPlaying]);
+    return () => {
+      clearInterval(interval);
+      // Send one last update to stop RPC
+      if (videoRef.current) {
+        api.savePlayback({ 
+          item_id: item.id, 
+          timestamp: videoRef.current.currentTime, 
+          duration: videoRef.current.duration, 
+          user_id: userId, 
+          is_playing: false 
+        }).catch(() => {});
+      }
+    };
+  }, [item.id, isPlaying, userId]);
 
   // Load subtitle files
   useEffect(() => {

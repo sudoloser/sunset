@@ -431,6 +431,8 @@ struct MediaItem {
     genres: Option<String>,
     rating: Option<f64>,
     tmdb_id: Option<String>,
+    poster_path: Option<String>,
+    backdrop_path: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
@@ -589,12 +591,39 @@ struct AppState {
     rpc_manager: Arc<Mutex<RpcManager>>,
 }
 
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Enable detailed logs
+    #[arg(short, long)]
+    logs: bool,
+
+    /// Print version information
+    #[arg(short, long)]
+    version: bool,
+}
+
 #[tokio::main]
 async fn main() {
+    let args = Args::parse();
+
+    if args.version {
+        println!("SunSet Server {}", VERSION);
+        return;
+    }
+
+    let filter = if args.logs {
+        "info"
+    } else {
+        "warn,sunset_backend=info"
+    };
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(filter))
         )
         .init();
 
@@ -645,9 +674,11 @@ async fn main() {
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN profile_picture TEXT").execute(&pool).await;
     // Migrations for media_items table
     let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN collection_name TEXT").execute(&pool).await;
+    let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN poster_path TEXT").execute(&pool).await;
+    let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN backdrop_path TEXT").execute(&pool).await;
     sqlx::query("CREATE TABLE IF NOT EXISTS libraries (id TEXT PRIMARY KEY, name TEXT NOT NULL, path TEXT NOT NULL, lib_type TEXT NOT NULL)").execute(&pool).await.unwrap();
 
-    sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, collection_name TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, \"cast\" TEXT, genres TEXT, rating REAL, tmdb_id TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS media_items (id TEXT PRIMARY KEY, library_id TEXT NOT NULL, title TEXT NOT NULL, show_title TEXT, collection_name TEXT, file_path TEXT UNIQUE NOT NULL, media_type TEXT NOT NULL, year INTEGER, season INTEGER, episode INTEGER, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, description TEXT, \"cast\" TEXT, genres TEXT, rating REAL, tmdb_id TEXT, poster_path TEXT, backdrop_path TEXT, FOREIGN KEY(library_id) REFERENCES libraries(id))").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS playback_state (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, user_id TEXT DEFAULT 'default', timestamp REAL NOT NULL, duration REAL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(item_id, user_id))").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS invite_codes (code TEXT PRIMARY KEY, used BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS temp_tokens (id TEXT PRIMARY KEY, media_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, expires_at DATETIME NOT NULL)").execute(&pool).await.unwrap();
@@ -691,6 +722,7 @@ async fn main() {
         .route("/api/invite/redeem", post(redeem_invite))
         .route("/api/media/:id/token", post(generate_media_token))
         .route("/api/media/:id/download", get(download_media))
+        .route("/api/media/:id/download-zip", get(download_media_zip))
         .route("/api/users", get(list_users).post(create_user))
         .route("/api/users/:id/password", put(change_password))
         .route("/api/users/:id/username", put(change_username))
@@ -719,6 +751,32 @@ async fn main() {
             }
         } else {
             info!("Server is awaiting onboarding setup.");
+        }
+    });
+
+    // Periodic cleanup of temporary downloads (every hour, delete files older than 3 hours)
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            let home_dir = dirs::home_dir().expect("Could not find home directory");
+            let dl_dir = home_dir.join(".sunset").join("tmp").join("downloads");
+            if dl_dir.exists() {
+                if let Ok(entries) = std::fs::read_dir(dl_dir) {
+                    for entry in entries.filter_map(|e| e.ok()) {
+                        if let Ok(meta) = entry.metadata() {
+                            if let Ok(modified) = meta.modified() {
+                                if let Ok(elapsed) = modified.elapsed() {
+                                    if elapsed.as_secs() > 3 * 3600 {
+                                        info!("Cleaning up expired download: {:?}", entry.path());
+                                        let _ = std::fs::remove_file(entry.path());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     });
 
@@ -821,7 +879,7 @@ async fn download_image(client: &reqwest::Client, url: &str, path: &StdPath) -> 
     Ok(())
 }
 
-async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_type: &str, folder_path: &StdPath) -> (Option<String>, Option<String>, Option<String>, Option<f64>, Option<String>, Option<String>) {
+async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_type: &str, folder_path: &StdPath) -> (Option<String>, Option<String>, Option<String>, Option<f64>, Option<String>, Option<String>, Option<String>, Option<String>) {
     let search_type = if media_type == "movie" { "movie" } else { "tv" };
     let url = format!(
         "https://api.themoviedb.org/3/search/{}?api_key={}&query={}{}",
@@ -837,6 +895,8 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
     let mut rating = None;
     let mut tmdb_id = None;
     let mut collection_name = None;
+    let mut poster_path_out = None;
+    let mut backdrop_path_out = None;
 
     if let Ok(resp) = state.client.get(&url).send().await {
         if let Ok(json) = resp.json::<serde_json::Value>().await {
@@ -847,6 +907,8 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
                 rating = result["vote_average"].as_f64();
                 let poster_path = result["poster_path"].as_str().unwrap_or("");
                 let backdrop_path = result["backdrop_path"].as_str().unwrap_or("");
+                poster_path_out = if !poster_path.is_empty() { Some(poster_path.to_string()) } else { None };
+                backdrop_path_out = if !backdrop_path.is_empty() { Some(backdrop_path.to_string()) } else { None };
 
                 // Download basic art
                 if !poster_path.is_empty() {
@@ -904,7 +966,7 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
             }
         }
     }
-    (overview, cast, genres, rating, tmdb_id, collection_name)
+    (overview, cast, genres, rating, tmdb_id, collection_name, poster_path_out, backdrop_path_out)
 }
 
 async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
@@ -914,7 +976,7 @@ async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
 }
 
 async fn get_recently_added(State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id FROM media_items ORDER BY added_at DESC LIMIT 15")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items ORDER BY added_at DESC LIMIT 15")
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
@@ -956,14 +1018,14 @@ async fn delete_library(Path(id): Path<String>, State(state): State<Arc<AppState
 }
 
 async fn get_library_items(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id FROM media_items WHERE library_id = ? ORDER BY title ASC")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items WHERE library_id = ? ORDER BY title ASC")
         .bind(id)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
 
 async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
         .bind(show_title)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -972,7 +1034,7 @@ async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<A
 async fn search_media(Query(params): Query<std::collections::HashMap<String, String>>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
     let query = params.get("q").cloned().unwrap_or_default();
     let search_pattern = format!("%{}%", query);
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id FROM media_items WHERE title LIKE ? LIMIT 20")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items WHERE title LIKE ? LIMIT 20")
         .bind(search_pattern)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -1188,6 +1250,101 @@ async fn download_media(Path(id): Path<String>, State(state): State<Arc<AppState
     StatusCode::NOT_FOUND.into_response()
 }
 
+async fn download_media_zip(Path(id): Path<String>, State(state): State<Arc<AppState>>, req: axum::http::Request<Body>) -> Response {
+    let token = req.uri().query().and_then(|q| {
+        q.split('&').find_map(|pair| {
+            let mut parts = pair.splitn(2, '=');
+            if parts.next()? == "token" { parts.next() } else { None }
+        })
+    });
+
+    match token {
+        Some(token) => {
+            let valid = sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM temp_tokens WHERE id = ? AND media_id = ? AND expires_at > datetime('now')"
+            )
+            .bind(token)
+            .bind(&id)
+            .fetch_one(&state.pool)
+            .await.unwrap_or(0);
+            if valid == 0 {
+                return StatusCode::UNAUTHORIZED.into_response();
+            }
+        }
+        None => return StatusCode::UNAUTHORIZED.into_response(),
+    }
+
+    let row = sqlx::query("SELECT file_path, title FROM media_items WHERE id = ?").bind(&id).fetch_optional(&state.pool).await.unwrap();
+    if let Some(r) = row {
+        let file_path: String = r.get("file_path");
+        let title: String = r.get("title");
+        let path = std::path::Path::new(&file_path);
+        if let Some(parent) = path.parent() {
+            if parent.exists() {
+                let home_dir = dirs::home_dir().expect("Could not find home directory");
+                let dl_dir = home_dir.join(".sunset").join("tmp").join("downloads");
+                if !dl_dir.exists() {
+                    let _ = std::fs::create_dir_all(&dl_dir);
+                }
+                
+                let zip_name = format!("{}_{}.zip", id, uuid::Uuid::new_v4().to_string()[..8].to_string());
+                let zip_path = dl_dir.join(&zip_name);
+                
+                // Perform zipping (blocking in spawn_blocking)
+                let parent_buf = parent.to_path_buf();
+                let zip_path_buf = zip_path.clone();
+                let zip_res = tokio::task::spawn_blocking(move || {
+                    zip_folder(&parent_buf, &zip_path_buf)
+                }).await.unwrap();
+
+                if zip_res.is_ok() {
+                    let file = tokio::fs::File::open(&zip_path).await.unwrap();
+                    let metadata = file.metadata().await.unwrap();
+                    let size = metadata.len();
+
+                    use tokio_util::io::ReaderStream;
+                    let stream = ReaderStream::new(file);
+                    let filename = format!("{}.zip", title.replace(" ", "_"));
+
+                    return Response::builder()
+                        .header(header::CONTENT_TYPE, "application/zip")
+                        .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", filename))
+                        .header(header::CONTENT_LENGTH, size)
+                        .body(Body::from_stream(stream))
+                        .unwrap();
+                } else {
+                    error!("Failed to create ZIP: {:?}", zip_res.err());
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            }
+        }
+    }
+    StatusCode::NOT_FOUND.into_response()
+}
+
+fn zip_folder(source: &std::path::Path, target: &std::path::Path) -> zip::result::ZipResult<()> {
+    let file = std::fs::File::create(target)?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = zip::write::FileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .unix_permissions(0o755);
+
+    for entry in walkdir::WalkDir::new(source).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        let name = path.strip_prefix(source).unwrap();
+
+        if path.is_file() {
+            zip.start_file(name.to_string_lossy(), options)?;
+            let mut f = std::fs::File::open(path)?;
+            std::io::copy(&mut f, &mut zip)?;
+        } else if !name.as_os_str().is_empty() {
+            zip.add_directory(name.to_string_lossy(), options)?;
+        }
+    }
+    zip.finish()?;
+    Ok(())
+}
+
 #[derive(Deserialize)]
 struct UpdateMediaPayload {
     title: Option<String>,
@@ -1204,6 +1361,7 @@ struct PlaybackPayload {
     timestamp: f64,
     duration: Option<f64>,
     user_id: Option<String>,
+    is_playing: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -1335,9 +1493,11 @@ async fn get_profile_picture(Path(id): Path<String>, State(state): State<Arc<App
 
 async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<PlaybackPayload>) -> Json<bool> {
     let user_id = payload.user_id.clone().unwrap_or_else(|| "default".to_string());
-    debug!("Saving playback for user {}: item={}, ts={}", user_id, payload.item_id, payload.timestamp);
+    debug!("Saving playback for user {}: item={}, ts={}, playing={:?}", user_id, payload.item_id, payload.timestamp, payload.is_playing);
     let id = format!("{}_{}", user_id, payload.item_id);
-    sqlx::query("INSERT OR REPLACE INTO playback_state (id, item_id, user_id, timestamp, duration, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)")
+    
+    // Refresh updated_at on every save so it jumps to top of Continue Watching
+    sqlx::query("INSERT INTO playback_state (id, item_id, user_id, timestamp, duration, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET timestamp = excluded.timestamp, duration = excluded.duration, updated_at = CURRENT_TIMESTAMP")
         .bind(&id).bind(&payload.item_id).bind(&user_id).bind(payload.timestamp).bind(payload.duration)
         .execute(&state.pool).await.unwrap();
 
@@ -1358,16 +1518,28 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                 manager.sessions.get(&user_id).unwrap()
             };
 
+            if payload.is_playing == Some(false) {
+                let presence = DiscordPresence {
+                    status: status,
+                    since: None,
+                    activities: vec![],
+                    afk: false,
+                };
+                let _ = session.presence_tx.send(presence);
+                return Json(true);
+            }
+
             // Fetch item details for presence
-            if let Ok(item) = sqlx::query("SELECT title, show_title, media_type FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
+            if let Ok(item) = sqlx::query("SELECT title, show_title, media_type, poster_path FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
                 let title: String = item.get("title");
                 let show_title: Option<String> = item.get("show_title");
                 let media_type: String = item.get("media_type");
+                let poster_path: Option<String> = item.get("poster_path");
 
                 let name = if media_type == "episode" {
-                    format!("Watching {}", show_title.unwrap_or(title.clone()))
+                    show_title.unwrap_or(title.clone())
                 } else {
-                    format!("Watching {}", title)
+                    title.clone()
                 };
 
                 let progress = if let Some(dur) = payload.duration {
@@ -1375,6 +1547,12 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                 } else { 0 };
 
                 debug!("Sending Discord presence: {} ({}%)", name, progress);
+
+                let image_url = if let Some(path) = poster_path {
+                    format!("https://image.tmdb.org/t/p/w500{}", path)
+                } else {
+                    format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)
+                };
 
                 let presence = DiscordPresence {
                     status: status,
@@ -1385,13 +1563,14 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                         details: Some(name),
                         state: Some(format!("Progress: {}%", progress)),
                         assets: Some(DiscordAssets {
-                            large_image: Some(format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)),
+                            large_image: Some(image_url),
                             large_text: Some(title),
                             small_image: None,
                             small_text: None,
                         }),
                         timestamps: Some(DiscordTimestamps {
-                            start: Some(chrono::Utc::now().timestamp() as u64 - payload.timestamp as u64),
+                            // Discord expects timestamps in milliseconds for activities
+                            start: Some((chrono::Utc::now().timestamp() as u64 - payload.timestamp as u64) * 1000),
                             end: None,
                         }),
                     }],
@@ -1465,9 +1644,9 @@ async fn refresh_media_item(Path(id): Path<String>, State(state): State<Arc<AppS
         let media_type: String = r.get("media_type");
         let folder_path = std::path::Path::new(&file_path).parent().unwrap().to_path_buf();
         let search_type = if media_type == "movie" { "movie" } else { "tv" };
-        let (overview, cast, genres, rating, tmdb_id, collection) = fetch_metadata(&state, &title, year, search_type, &folder_path).await;
-        sqlx::query("UPDATE media_items SET description = ?, \"cast\" = ?, genres = ?, rating = ?, tmdb_id = ?, collection_name = ? WHERE id = ?")
-            .bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(collection).bind(&id).execute(&state.pool).await.unwrap();
+        let (overview, cast, genres, rating, tmdb_id, collection, poster, backdrop) = fetch_metadata(&state, &title, year, search_type, &folder_path).await;
+        sqlx::query("UPDATE media_items SET description = ?, \"cast\" = ?, genres = ?, rating = ?, tmdb_id = ?, collection_name = ?, poster_path = ?, backdrop_path = ? WHERE id = ?")
+            .bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(collection).bind(poster).bind(backdrop).bind(&id).execute(&state.pool).await.unwrap();
         return Json(true);
     }
     Json(false)
@@ -1508,7 +1687,7 @@ async fn get_genres(State(state): State<Arc<AppState>>) -> Json<Vec<String>> {
 
 async fn get_genre_items(Path(genre): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
     let pattern = format!("%{}%", genre);
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id FROM media_items WHERE genres LIKE ? LIMIT 30")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items WHERE genres LIKE ? LIMIT 30")
         .bind(pattern).fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
@@ -1542,10 +1721,10 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 };
 
                 // Fetch metadata and assets
-                let (overview, cast, genres, rating, tmdb_id, collection) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
+                let (overview, cast, genres, rating, tmdb_id, collection, poster, backdrop) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
 
-                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, year, description, \"cast\", genres, rating, tmdb_id) VALUES (?, ?, ?, NULL, ?, ?, 'movie', ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(collection).bind(&file_path).bind(year).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).execute(&state.pool).await {
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, year, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path) VALUES (?, ?, ?, NULL, ?, ?, 'movie', ?, ?, ?, ?, ?, ?, ?, ?)")
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(collection).bind(&file_path).bind(year).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).execute(&state.pool).await {
                         count += 1;
                     }
             } else {
@@ -1568,10 +1747,10 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 };
 
                 // Fetch metadata and assets for the show if not already done
-                let (overview, cast, genres, rating, tmdb_id, _) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
+                let (overview, cast, genres, rating, tmdb_id, _, poster, backdrop) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
-                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id) VALUES (?, ?, ?, ?, NULL, ?, 'episode', ?, ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).execute(&state.pool).await {
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path) VALUES (?, ?, ?, ?, NULL, ?, 'episode', ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).execute(&state.pool).await {
                         count += 1;
                     }
             }

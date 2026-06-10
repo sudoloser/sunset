@@ -28,31 +28,69 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             suffix: "-windows-x64.exe"
+          - os: ubuntu-latest
+            target: android
+            suffix: ".apk"
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
+      - name: set up JDK 17 (Android only)
+        if: matrix.target == 'android'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Gradle (Android only)
+        if: matrix.target == 'android'
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.5
+
+      - name: Build Android Release
+        if: matrix.target == 'android'
+        run: |
+          cd android
+          gradle assembleRelease
+
+      - name: Sign Android APK
+        if: matrix.target == 'android'
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE }}
+          alias: ${{ secrets.KEYSTORE_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEYSTORE_PASSWORD }}
+
+      - name: Install pnpm (Non-Android)
+        if: matrix.target != 'android'
         uses: pnpm/action-setup@v3
         with:
           version: 10
 
-      - name: Setup Node.js
+      - name: Setup Node.js (Non-Android)
+        if: matrix.target != 'android'
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Build Frontend
+      - name: Build Frontend (Non-Android)
+        if: matrix.target != 'android'
         run: |
           cd frontend
           pnpm install
           pnpm build
 
-      - name: Setup Rust
+      - name: Setup Rust (Non-Android)
+        if: matrix.target != 'android'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -62,7 +100,7 @@ jobs:
         run: cargo install cross
 
       - name: Build Backend (Standard)
-        if: matrix.target != 'aarch64-unknown-linux-gnu'
+        if: matrix.target != 'android' && matrix.target != 'aarch64-unknown-linux-gnu'
         run: |
           cp -r frontend/dist backend/dist
           cd backend
@@ -79,7 +117,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p bin
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          if [ "${{ matrix.target }}" = "android" ]; then
+            cp ${{ steps.sign_app.outputs.signedReleaseFile }} bin/sunset-android.apk
+          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             cp backend/target/${{ matrix.target }}/release/sunset-backend.exe bin/sunset-server${{ matrix.suffix }}
           else
             cp backend/target/${{ matrix.target }}/release/sunset-backend bin/sunset-server${{ matrix.suffix }}
@@ -88,12 +128,12 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sunset-server-${{ matrix.target }}
+          name: sunset-artifact-${{ matrix.target }}
           path: bin/
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -118,6 +158,7 @@ jobs:
         with:
           body_path: release_notes.md
           files: |
-            artifacts/sunset-server-x86_64-unknown-linux-gnu/sunset-server-linux-x86_64
-            artifacts/sunset-server-aarch64-unknown-linux-gnu/sunset-server-linux-aarch64
-            artifacts/sunset-server-x86_64-pc-windows-msvc/sunset-server-windows-x64.exe
+            artifacts/sunset-artifact-x86_64-unknown-linux-gnu/sunset-server-linux-x86_64
+            artifacts/sunset-artifact-aarch64-unknown-linux-gnu/sunset-server-linux-aarch64
+            artifacts/sunset-artifact-x86_64-pc-windows-msvc/sunset-server-windows-x64.exe
+            artifacts/sunset-artifact-android/sunset-android.apk

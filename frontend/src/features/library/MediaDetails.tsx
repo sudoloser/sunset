@@ -5,7 +5,12 @@ import { api } from '../../api/client';
 import { PlayIcon } from '../../components/common/Icons';
 import type { MediaItem } from '../../types';
 
-const ContextMenu: React.FC<{ item: MediaItem; onClose: () => void }> = ({ item, onClose }) => {
+const ContextMenu: React.FC<{ 
+  item: MediaItem; 
+  onClose: () => void; 
+  align?: 'left' | 'right';
+  zip?: boolean;
+}> = ({ item, onClose, align = 'right', zip = false }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,35 +24,52 @@ const ContextMenu: React.FC<{ item: MediaItem; onClose: () => void }> = ({ item,
   const handleAction = async (action: 'stream' | 'download') => {
     try {
       const token = await api.generateMediaToken(item.id);
-      const base = action === 'stream' ? `/api/stream/${item.id}` : `/api/media/${item.id}/download`;
+      let base = '';
+      if (action === 'stream') {
+        base = `/api/stream/${item.id}`;
+      } else {
+        base = zip ? `/api/media/${item.id}/download-zip` : `/api/media/${item.id}/download`;
+      }
       window.open(`${base}?token=${encodeURIComponent(token)}`, '_blank');
     } catch {}
     onClose();
   };
 
+  const isShow = item.media_type === 'episode' || !!item.show_title;
+
+  const actions = [];
+  if (!isShow) {
+    actions.push({
+      label: 'Direct Stream', action: 'stream' as const, icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+      )
+    });
+  }
+  actions.push({
+    label: 'Download', action: 'download' as const, icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    )
+  });
+
   return (
     <div
       ref={menuRef}
       style={{
-        position: 'absolute', top: '100%', right: 0, zIndex: 100,
+        position: 'absolute', 
+        top: '100%', 
+        right: align === 'right' ? 0 : 'auto',
+        left: align === 'left' ? 0 : 'auto',
+        zIndex: 100,
         background: 'var(--surface-color)', border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-        minWidth: '180px', overflow: 'hidden'
+        minWidth: '180px', overflow: 'hidden', marginTop: '0.5rem'
       }}
     >
-      {[{
-        label: 'Direct Stream', action: 'stream' as const, icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="5 3 19 12 5 21 5 3"/>
-          </svg>
-        )
-      }, {
-        label: 'Download', action: 'download' as const, icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-        )
-      }].map(({ label, action, icon }) => (
+      {actions.map(({ label, action, icon }) => (
         <div
           key={action}
           onClick={() => handleAction(action)}
@@ -264,7 +286,14 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                     <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
                   </svg>
                 </button>
-                {menuOpen === item.id && <ContextMenu item={item} onClose={() => setMenuOpen(null)} />}
+                {menuOpen === item.id && (
+                  <ContextMenu 
+                    item={item} 
+                    onClose={() => setMenuOpen(null)} 
+                    align="left" 
+                    zip={isShow} 
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -345,7 +374,14 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                             <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
                           </svg>
                         </button>
-                        {menuOpen === ep.id && <ContextMenu item={ep} onClose={() => setMenuOpen(null)} />}
+                        {menuOpen === ep.id && (
+                          <ContextMenu 
+                            item={ep} 
+                            onClose={() => setMenuOpen(null)} 
+                            align="right" 
+                            zip={false} 
+                          />
+                        )}
                       </div>
                     </div>
                   ))}
