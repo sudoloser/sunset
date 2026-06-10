@@ -135,11 +135,13 @@ fun AppContent(activity: ComponentActivity) {
                             status = s
                             step = if (s.setupComplete) "login" else "onboarding"
                         } catch (e: Exception) {
+                            val type = e::class.simpleName ?: "Exception"
                             val detail = when {
                                 e.message?.contains("timeout", ignoreCase = true) == true -> "Connection timed out"
                                 e.message?.contains("refused", ignoreCase = true) == true -> "Connection refused (server not running on this port)"
                                 e.message?.contains("resolve", ignoreCase = true) == true -> "Could not resolve hostname"
-                                else -> e.message?.take(80) ?: "Unknown error"
+                                e.message?.contains("not permitted", ignoreCase = true) == true -> "Cleartext HTTP blocked by system"
+                                else -> "${e.message?.take(80) ?: "no message"} ($type)"
                             }
                             errorMessage = "Can't connect: $detail"
                         } finally {
