@@ -179,9 +179,9 @@ fun ShowEpisodesView(
                                     overflow = TextOverflow.Ellipsis,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
-                                if (!ep.overview.isNullOrBlank()) {
+                                if (!ep.description.isNullOrBlank()) {
                                     Text(
-                                        ep.overview,
+                                        ep.description,
                                         fontSize = 12.sp,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
