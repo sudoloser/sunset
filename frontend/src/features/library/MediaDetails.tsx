@@ -10,7 +10,9 @@ const ContextMenu: React.FC<{
   onClose: () => void; 
   align?: 'left' | 'right';
   zip?: boolean;
-}> = ({ item, onClose, align = 'right', zip = false }) => {
+  top: number;
+  left: number;
+}> = ({ item, onClose, align = 'right', zip = false, top, left }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,27 +57,13 @@ const ContextMenu: React.FC<{
     )
   });
 
-  const [position, setPosition] = useState({ top: 0, left: 0 });
-  const triggerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setPosition({ 
-        top: rect.bottom, 
-        left: align === 'right' ? rect.right - 180 : rect.left 
-      });
-    }
-  }, [align]);
-
-  // ... inside render:
   return (
     <div
       ref={menuRef}
       style={{
         position: 'fixed', 
-        top: position.top,
-        left: position.left,
+        top: top,
+        left: left,
         zIndex: 2000,
         background: 'var(--surface-color)', border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
@@ -138,6 +126,8 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
     } catch { return false; }
   });
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const heroTriggerRef = useRef<HTMLDivElement>(null);
+  const episodeTriggerRef = useRef<HTMLDivElement>(null);
 
   const toggleMyList = () => {
     try {
@@ -284,9 +274,9 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                 {inMyList ? '✓ In My List' : '+ My List'}
               </Button>
               <div style={{ position: 'relative' }}>
-                <div ref={triggerRef}>
+                <div ref={heroTriggerRef}>
                   <button
-                    onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === item.id ? null : item.id); }}
+                    onClick={e => { e.stopPropagation(); updatePosition(heroTriggerRef, 'left'); setMenuOpen(menuOpen === item.id ? null : item.id); }}
                     style={{
                       background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
                       width: '44px', height: '44px', borderRadius: 'var(--radius-md)',
@@ -306,7 +296,9 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                     item={item} 
                     onClose={() => setMenuOpen(null)} 
                     align="left" 
-                    zip={isShow} 
+                    zip={isShow}
+                    top={position.top}
+                    left={position.left}
                   />
                 )}
               </div>
@@ -375,9 +367,9 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                         <div style={{ fontWeight: 700 }}>{ep.title}</div>
                       </div>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-                        <div ref={triggerRef}>
+                        <div ref={episodeTriggerRef}>
                           <button
-                            onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
+                            onClick={e => { e.stopPropagation(); updatePosition(episodeTriggerRef, 'right'); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
                             style={{
                               background: 'transparent', border: 'none', color: 'var(--text-secondary)',
                               cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: 'var(--radius-sm)',
@@ -397,6 +389,8 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                             onClose={() => setMenuOpen(null)} 
                             align="right" 
                             zip={false} 
+                            top={position.top}
+                            left={position.left}
                           />
                         )}
                       </div>
