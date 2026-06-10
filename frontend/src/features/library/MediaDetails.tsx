@@ -93,6 +93,7 @@ interface MediaDetailsProps {
   item: MediaItem;
   onClose: () => void;
   onPlay: (item: MediaItem) => void;
+  userId?: string;
 }
 
 const CastAvatar: React.FC<{ name: string }> = ({ name }) => {
@@ -112,18 +113,21 @@ const CastAvatar: React.FC<{ name: string }> = ({ name }) => {
   );
 };
 
-export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPlay }) => {
+export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPlay, userId }) => {
   const [episodes, setEpisodes] = useState<MediaItem[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [userRating, setUserRating] = useState<number>(() => {
     try { return parseInt(localStorage.getItem(`sunset_rating_${item.id}`) || '0'); } catch { return 0; }
   });
-  const [inMyList, setInMyList] = useState<boolean>(() => {
-    try {
-      const list = JSON.parse(localStorage.getItem('sunset_mylist') || '[]');
-      return list.includes(item.id);
-    } catch { return false; }
-  });
+  const [inMyList, setInMyList] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (userId) {
+      api.getUserItems(userId).then(items => {
+        setInMyList(items.some(i => i.id === item.id));
+      }).catch(() => {});
+    }
+  }, [userId, item.id]);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const heroTriggerRef = useRef<HTMLDivElement>(null);
   const episodeTriggerRef = useRef<HTMLDivElement>(null);
@@ -140,17 +144,12 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
   };
 
   const toggleMyList = () => {
-    try {
-      const list: string[] = JSON.parse(localStorage.getItem('sunset_mylist') || '[]');
-      if (inMyList) {
-        const idx = list.indexOf(item.id);
-        if (idx >= 0) list.splice(idx, 1);
-      } else {
-        list.push(item.id);
-      }
-      localStorage.setItem('sunset_mylist', JSON.stringify(list));
-      setInMyList(!inMyList);
-    } catch {}
+    if (!userId) return;
+    if (inMyList) {
+      api.removeUserItem(userId, item.id).then(() => setInMyList(false)).catch(() => {});
+    } else {
+      api.addUserItem(userId, item.id).then(() => setInMyList(true)).catch(() => {});
+    }
   };
 
   const isShow = item.media_type === 'episode' || !!item.show_title;

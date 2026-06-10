@@ -59,4 +59,8 @@ export const api = {
   changeUsername: (id: string, new_username: string) => request<boolean>(`/users/${id}/username`, { method: 'PUT', body: JSON.stringify({ new_username }) }),
   getProfilePictureUrl: (id: string) => `${BASE_URL}/users/${id}/profile-picture`,
   uploadProfilePicture: (id: string, image: string) => request<boolean>(`/users/${id}/profile-picture`, { method: 'POST', body: JSON.stringify({ image }) }),
+  getContinueWatching: (userId: string) => request<MediaItem[]>(`/continue-watching/${userId}`),
+  getUserItems: (userId: string) => request<MediaItem[]>(`/user-items/${userId}`),
+  addUserItem: (userId: string, itemId: string) => request<boolean>(`/user-items/${userId}`, { method: 'POST', body: JSON.stringify({ item_id: itemId }) }),
+  removeUserItem: (userId: string, itemId: string) => request<boolean>(`/user-items/${userId}/${itemId}`, { method: 'DELETE' }),
 };

@@ -111,6 +111,7 @@ function App() {
               isAdmin={isAdmin}
               onSelectItem={item => setSelectedItem(item)}
               onGoToSettings={() => handleTabChange('settings')}
+              userId={userId}
             />
           )}
 
@@ -122,6 +123,7 @@ function App() {
             item={selectedItem} 
             onClose={() => setSelectedItem(null)} 
             onPlay={item => { setPlayingMedia(item); setPreviousStep(step); setStep('player'); setSelectedItem(null); }} 
+            userId={userId}
           />
         )}
 

@@ -1,5 +1,5 @@
 use axum::{
-    routing::{get, post, put},
+    routing::{get, post, put, delete},
     Json, Router,
     extract::{State, Path, Query},
     response::{IntoResponse, Response},
@@ -520,17 +520,25 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                         break;
                     }
                 }
-                Some(presence) = rx.recv() => {
-                    let status = &presence.status;
-                    let detail = presence.activities.first().map(|a| a.details.as_deref().unwrap_or("")).unwrap_or("");
-                    debug!("Sending Discord presence: status={}, details={}", status, detail);
-                    let update = serde_json::json!({
-                        "op": 3,
-                        "d": presence
-                    });
-                    if let Err(e) = write.send(Message::Text(update.to_string())).await {
-                        warn!("Discord presence send failed: {}", e);
-                        break;
+                recv = rx.recv() => {
+                    match recv {
+                        Some(presence) => {
+                            let status = &presence.status;
+                            let detail = presence.activities.first().map(|a| a.details.as_deref().unwrap_or("")).unwrap_or("");
+                            debug!("Sending Discord presence: status={}, details={}", status, detail);
+                            let update = serde_json::json!({
+                                "op": 3,
+                                "d": presence
+                            });
+                            if let Err(e) = write.send(Message::Text(update.to_string())).await {
+                                warn!("Discord presence send failed: {}", e);
+                                break;
+                            }
+                        }
+                        None => {
+                            debug!("Discord RPC channel closed, shutting down session");
+                            return;
+                        }
                     }
                 }
                 msg = read.next() => {
@@ -682,6 +690,7 @@ async fn main() {
     sqlx::query("CREATE TABLE IF NOT EXISTS playback_state (id TEXT PRIMARY KEY, item_id TEXT NOT NULL, user_id TEXT DEFAULT 'default', timestamp REAL NOT NULL, duration REAL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(item_id, user_id))").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS invite_codes (code TEXT PRIMARY KEY, used BOOLEAN DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS temp_tokens (id TEXT PRIMARY KEY, media_id TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, expires_at DATETIME NOT NULL)").execute(&pool).await.unwrap();
+    sqlx::query("CREATE TABLE IF NOT EXISTS user_items (user_id TEXT NOT NULL, item_id TEXT NOT NULL, added_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, item_id))").execute(&pool).await.unwrap();
     info!("Database schema verified.");
 
     info!("Initializing application state...");
@@ -715,6 +724,9 @@ async fn main() {
         .route("/api/media/:id/refresh", post(refresh_media_item))
         .route("/api/playback", post(save_playback))
         .route("/api/playback/:item_id", get(get_playback))
+        .route("/api/continue-watching/:user_id", get(get_continue_watching))
+        .route("/api/user-items/:user_id", get(get_user_items).post(add_user_item))
+        .route("/api/user-items/:user_id/:item_id", delete(remove_user_item))
         .route("/api/storage", get(get_storage))
         .route("/api/genres", get(get_genres))
         .route("/api/genre/:genre", get(get_genre_items))
@@ -1519,13 +1531,8 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
             };
 
             if payload.is_playing == Some(false) {
-                let presence = DiscordPresence {
-                    status: status,
-                    since: None,
-                    activities: vec![],
-                    afk: false,
-                };
-                let _ = session.presence_tx.send(presence);
+                manager.sessions.remove(&user_id);
+                info!("Closed Discord RPC session for user {} (playback stopped)", user_id);
                 return Json(true);
             }
 
@@ -1602,6 +1609,48 @@ async fn get_playback(Path(item_id): Path<String>, State(state): State<Arc<AppSt
     let state_row = sqlx::query_as::<_, PlaybackState>("SELECT id, item_id, user_id, timestamp, duration, updated_at FROM playback_state WHERE item_id = ? ORDER BY updated_at DESC LIMIT 1")
         .bind(item_id).fetch_optional(&state.pool).await.unwrap();
     Json(state_row)
+}
+
+async fn get_continue_watching(Path(user_id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
+    let items = sqlx::query_as::<_, MediaItem>(
+        "SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path FROM media_items mi INNER JOIN playback_state ps ON ps.item_id = mi.id WHERE ps.user_id = ? ORDER BY ps.updated_at DESC"
+    )
+    .bind(user_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    Json(items)
+}
+
+async fn get_user_items(Path(user_id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
+    let items = sqlx::query_as::<_, MediaItem>(
+        "SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path FROM media_items mi INNER JOIN user_items ui ON ui.item_id = mi.id WHERE ui.user_id = ? ORDER BY ui.added_at DESC"
+    )
+    .bind(user_id)
+    .fetch_all(&state.pool)
+    .await
+    .unwrap_or_default();
+    Json(items)
+}
+
+async fn add_user_item(Path(user_id): Path<String>, State(state): State<Arc<AppState>>, Json(payload): Json<serde_json::Value>) -> Json<bool> {
+    let item_id = payload["item_id"].as_str().unwrap_or("");
+    if item_id.is_empty() { return Json(false); }
+    let _ = sqlx::query("INSERT OR IGNORE INTO user_items (user_id, item_id, added_at) VALUES (?, ?, CURRENT_TIMESTAMP)")
+        .bind(&user_id)
+        .bind(item_id)
+        .execute(&state.pool)
+        .await;
+    Json(true)
+}
+
+async fn remove_user_item(Path((user_id, item_id)): Path<(String, String)>, State(state): State<Arc<AppState>>) -> Json<bool> {
+    let _ = sqlx::query("DELETE FROM user_items WHERE user_id = ? AND item_id = ?")
+        .bind(&user_id)
+        .bind(&item_id)
+        .execute(&state.pool)
+        .await;
+    Json(true)
 }
 
 async fn get_storage(State(state): State<Arc<AppState>>) -> Json<StorageInfo> {

@@ -8,9 +8,10 @@ interface LibrariesTabProps {
   onSelectItem?: (item: MediaItem) => void;
   isAdmin: boolean;
   onGoToSettings: () => void;
+  userId?: string;
 }
 
-export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmin, onGoToSettings }) => {
+export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmin, onGoToSettings, userId }) => {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [loading, setLoading] = useState(true);
   const [continueWatching, setContinueWatching] = useState<MediaItem[]>([]);
@@ -23,35 +24,18 @@ export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmi
       setLibraries(libs);
       setLoading(false);
 
-      // Fetch all items for CW and My List
-      const all: MediaItem[] = [];
-      for (const lib of libs) {
+      if (userId) {
         try {
-          const items = await api.getLibraryItems(lib.id);
-          all.push(...items);
+          const [cw, myList] = await Promise.all([
+            api.getContinueWatching(userId),
+            api.getUserItems(userId),
+          ]);
+          setContinueWatching(cw);
+          setMyListItems(myList);
         } catch {}
       }
-
-      // Continue Watching
-      const cw: MediaItem[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('sunset_playback_')) {
-          const itemId = key.replace('sunset_playback_', '');
-          const match = all.find(r => r.id === itemId);
-          if (match) cw.push(match);
-        }
-      }
-      setContinueWatching(cw);
-
-      // My List
-      try {
-        const ids: string[] = JSON.parse(localStorage.getItem('sunset_mylist') || '[]');
-        const found = all.filter(r => ids.includes(r.id));
-        setMyListItems(found);
-      } catch {}
     })();
-  }, []);
+  }, [userId]);
 
   if (loading) return <div style={{ padding: '2rem' }}>Loading libraries...</div>;
 
