@@ -40,7 +40,7 @@ jobs:
       - name: Build Release APK
         run: |
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --warning-mode all
         
       - name: Sign APK
         uses: r0adkll/sign-android-release@v1
@@ -56,39 +56,8 @@ jobs:
         run: |
           mv ${{ steps.sign_app.outputs.signedReleaseFile }} android/app/build/outputs/apk/sunset-android.apk
 
-      - name: Extract Release Notes
-        id: extract_notes
-        run: |
-          # Extract first section from CHANGELOG.md (everything until the second #)
-          sed -n '/^# /{p;n;:a;n;/^# /q;p;ba}' CHANGELOG.md > release_notes.md
-          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
-
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: android/app/build/outputs/apk/sunset-android.apk
-
-      - name: Get version
-        id: get_version
-        env:
-          INPUT_VERSION: ${{ github.event.inputs.version }}
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "VERSION=$INPUT_VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create Release and Upload Assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          name: Release ${{ steps.get_version.outputs.VERSION }}
-          body_path: release_notes.md
-          files: android/app/build/outputs/apk/sunset-android.apk
-
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

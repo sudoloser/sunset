@@ -521,12 +521,6 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                     }
                 }
                 Some(presence) = rx.recv() => {
-                    if presence.activities.is_empty() {
-                        info!("Presence cleared, logging out of Discord RPC");
-                        let _ = write.send(Message::Close(None)).await;
-                        return; // Exit loop and terminate task
-                    }
-
                     let status = &presence.status;
                     let detail = presence.activities.first().map(|a| a.details.as_deref().unwrap_or("")).unwrap_or("");
                     debug!("Sending Discord presence: status={}, details={}", status, detail);
