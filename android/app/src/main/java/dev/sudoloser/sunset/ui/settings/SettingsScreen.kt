@@ -57,10 +57,7 @@ fun SettingsScreen(
 
         ScrollableTabRow(
             selectedTabIndex = tabs.indexOf(tab),
-            divider = {},
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(tabPositions[tabs.indexOf(tab)]))
-            }
+            divider = {}
         ) {
             tabs.forEach { t ->
                 Tab(
