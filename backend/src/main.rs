@@ -1530,7 +1530,7 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
             }
 
             // Fetch item details for presence
-            if let Ok(item) = sqlx::query("SELECT title, show_title, media_type, poster_path FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
+            if let Ok(item) = sqlx::query("SELECT title, show_title, media_type, poster_path, season, episode FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
                 let title: String = item.get("title");
                 let show_title: Option<String> = item.get("show_title");
                 let media_type: String = item.get("media_type");
@@ -1549,9 +1549,17 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                 debug!("Sending Discord presence: {} ({}%)", name, progress);
 
                 let image_url = if let Some(path) = poster_path {
-                    format!("https://image.tmdb.org/t/p/w500{}", path)
+                    format!("https://image.tmdb.org/t/p/original{}", path)
                 } else {
                     format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)
+                };
+
+                let state_text = if media_type == "episode" {
+                    let ep = item.get::<Option<i32>, _>("episode").unwrap_or(1);
+                    let season = item.get::<Option<i32>, _>("season").unwrap_or(1);
+                    format!("Season {} Episode {} ({}%)", season, ep, progress)
+                } else {
+                    format!("Progress: {}%", progress)
                 };
 
                 let presence = DiscordPresence {
@@ -1561,7 +1569,7 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                         name: "SunSet".to_string(),
                         activity_type: 3, // Watching
                         details: Some(name),
-                        state: Some(format!("Progress: {}%", progress)),
+                        state: Some(state_text),
                         assets: Some(DiscordAssets {
                             large_image: Some(image_url),
                             large_text: Some(title),

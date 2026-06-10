@@ -55,15 +55,28 @@ const ContextMenu: React.FC<{
     )
   });
 
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPosition({ 
+        top: rect.bottom, 
+        left: align === 'right' ? rect.right - 180 : rect.left 
+      });
+    }
+  }, [align]);
+
+  // ... inside render:
   return (
     <div
       ref={menuRef}
       style={{
-        position: 'absolute', 
-        top: '100%', 
-        right: align === 'right' ? 0 : 'auto',
-        left: align === 'left' ? 0 : 'auto',
-        zIndex: 100,
+        position: 'fixed', 
+        top: position.top,
+        left: position.left,
+        zIndex: 2000,
         background: 'var(--surface-color)', border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         minWidth: '180px', overflow: 'hidden', marginTop: '0.5rem'
@@ -271,21 +284,23 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                 {inMyList ? '✓ In My List' : '+ My List'}
               </Button>
               <div style={{ position: 'relative' }}>
-                <button
-                  onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === item.id ? null : item.id); }}
-                  style={{
-                    background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
-                    width: '44px', height: '44px', borderRadius: 'var(--radius-md)',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.2rem', transition: 'var(--transition-standard)'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
-                  </svg>
-                </button>
+                <div ref={triggerRef}>
+                  <button
+                    onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === item.id ? null : item.id); }}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
+                      width: '44px', height: '44px', borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '1.2rem', transition: 'var(--transition-standard)'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                    </svg>
+                  </button>
+                </div>
                 {menuOpen === item.id && (
                   <ContextMenu 
                     item={item} 
@@ -360,20 +375,22 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                         <div style={{ fontWeight: 700 }}>{ep.title}</div>
                       </div>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-                        <button
-                          onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
-                          style={{
-                            background: 'transparent', border: 'none', color: 'var(--text-secondary)',
-                            cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: 'var(--radius-sm)',
-                            transition: 'var(--transition-standard)'
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                            <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
-                          </svg>
-                        </button>
+                        <div ref={triggerRef}>
+                          <button
+                            onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
+                            style={{
+                              background: 'transparent', border: 'none', color: 'var(--text-secondary)',
+                              cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: 'var(--radius-sm)',
+                              transition: 'var(--transition-standard)'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                              <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                            </svg>
+                          </button>
+                        </div>
                         {menuOpen === ep.id && (
                           <ContextMenu 
                             item={ep} 
