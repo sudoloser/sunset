@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalOrientation = Arrangement.Center
+            verticalArrangement = Arrangement.Center
         ) {
             Text("SunSet", style = MaterialTheme.typography.headlineLarge)
             Spacer(Modifier.height(32.dp))
