@@ -174,12 +174,13 @@ fun MediaDetailsScreen(
                     )
                 }
 
-                if (item.cast != null && item.cast!!.isNotEmpty()) {
+                val castList = item.cast?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+                if (castList.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
                     Text("Cast", style = MaterialTheme.typography.titleMedium, color = Color.White)
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item.cast!!.take(5).forEach { actor ->
+                        castList.take(5).forEach { actor ->
                             val initials = actor.split(" ").take(2)
                                 .mapNotNull { it.firstOrNull()?.uppercase() }
                                 .joinToString("")

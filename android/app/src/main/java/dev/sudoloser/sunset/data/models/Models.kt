@@ -28,10 +28,10 @@ data class MediaItem(
     @SerialName("added_at") val addedAt: String? = null,
     @SerialName("file_path") val filePath: String? = null,
     val description: String? = null,
-    val cast: List<String>? = null,
-    val genres: List<String>? = null,
+    val cast: String? = null,
+    val genres: String? = null,
     val rating: Double? = null,
-    @SerialName("tmdb_id") val tmdbId: Int? = null
+    @SerialName("tmdb_id") val tmdbId: String? = null
 )
 
 @Serializable
@@ -48,8 +48,8 @@ data class User(
 data class PlaybackState(
     @SerialName("item_id") val itemId: String,
     @SerialName("user_id") val userId: String? = null,
-    val timestamp: Long,
-    val duration: Long? = null,
+    val timestamp: Double,
+    val duration: Double? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )
 

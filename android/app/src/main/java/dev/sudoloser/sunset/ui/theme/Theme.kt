@@ -6,9 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = NetflixRed,
-    onPrimary = Color.White,
+    primary = Color(0xFFE0E0E0),
+    onPrimary = Color(0xFF1A1A1A),
     secondary = Color(0xFF808080),
+    tertiary = NetflixRed,
     background = DarkBackground,
     surface = DarkSurface,
     surfaceVariant = DarkSurfaceVariant,
@@ -20,9 +21,10 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = NetflixRed,
-    onPrimary = Color.White,
+    primary = Color(0xFF1A1A1A),
+    onPrimary = Color(0xFFFFFFFF),
     secondary = Color(0xFF666666),
+    tertiary = Color(0xFFE50914),
     background = LightBackground,
     surface = LightSurface,
     surfaceVariant = LightSurfaceVariant,
