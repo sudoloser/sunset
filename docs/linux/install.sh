@@ -72,8 +72,12 @@ if [ "$(uname -o)" = "Android" ]; then
     done
   fi
   chmod +x "$LIB_DIR"/*.so* "$LIB_DIR"/ld-linux-aarch64.so.1 2>/dev/null
+  cp "$LIB_DIR/libc.so.6" "$LIB_DIR/libc.so"
+  cp "$LIB_DIR/libm.so.6" "$LIB_DIR/libm.so"
+  # Use --force-rpath for DT_RPATH (transitive, works for dlopen from any library)
   patchelf --set-interpreter "$LIB_DIR/ld-linux-aarch64.so.1" \
            --set-rpath "$LIB_DIR" \
+           --force-rpath \
            "$INSTALL_PATH"
   echo "  Patched binary for Termux"
 fi
