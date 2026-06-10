@@ -269,12 +269,10 @@ const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
     setLastTapTime(now);
     tapTimeout.current = setTimeout(() => {
       if (showControls) {
-        if ('target' in e && e.target === e.currentTarget) {
-          setShowControls(false); 
-          setShowSubtitlePicker(false); 
-          setShowEpisodes(false); 
-          setShowSpeedPicker(false);
-        }
+        setShowControls(false); 
+        setShowSubtitlePicker(false); 
+        setShowEpisodes(false); 
+        setShowSpeedPicker(false);
       } else {
         showControlsTemporarily();
       }
@@ -282,7 +280,7 @@ const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
     }
     };
 const handleActivity = () => {
-  showControlsTemporarily();
+  if (!showControls) showControlsTemporarily();
 };
   const subLabel = (f: string) => f.replace('.srt', '').replace('.vtt', '');
 
@@ -342,8 +340,7 @@ const handleActivity = () => {
         onLoadedMetadata={(e) => { setDuration(e.currentTarget.duration); }}
         onClick={(e) => { 
           e.stopPropagation(); 
-          if (showControls) togglePlay();
-          else handleTap(e);
+          handleTap(e);
         }}
       >
         {subtitleFiles.map((sub, idx) => {

@@ -36,7 +36,7 @@ function App() {
   const [previousStep, setPreviousStep] = useState<AppStep>('dashboard');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const userId = localStorage.getItem('sunset_user_id') || undefined;
+  const [userId, setUserId] = useState<string | undefined>(localStorage.getItem('sunset_user_id') || undefined);
 
   useEffect(() => {
     checkStatus();
@@ -55,6 +55,7 @@ function App() {
           try {
             const profile = await api.getUserProfile(savedUserId);
             if (profile) {
+              setUserId(savedUserId);
               setIsAdmin(profile.is_admin);
               localStorage.setItem('sunset_is_admin', profile.is_admin ? 'true' : 'false');
               localStorage.setItem('sunset_username', profile.username);
@@ -83,7 +84,7 @@ function App() {
 
   if (step === 'loading') return <div style={{ color: 'white', padding: '2rem' }}>Loading...</div>;
   if (step === 'onboarding') return <OnboardingWizard onComplete={checkStatus} />;
-  if (step === 'login') return <LoginForm serverName={status?.server_name || 'SunSet'} onLogin={(_, admin, username) => { setIsAdmin(admin); localStorage.setItem('sunset_username', username); setStep('dashboard'); }} />;
+  if (step === 'login') return <LoginForm serverName={status?.server_name || 'SunSet'} onLogin={(uid, admin, username) => { setUserId(uid); setIsAdmin(admin); localStorage.setItem('sunset_username', username); setStep('dashboard'); }} />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>

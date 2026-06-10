@@ -1335,6 +1335,7 @@ async fn get_profile_picture(Path(id): Path<String>, State(state): State<Arc<App
 
 async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<PlaybackPayload>) -> Json<bool> {
     let user_id = payload.user_id.clone().unwrap_or_else(|| "default".to_string());
+    debug!("Saving playback for user {}: item={}, ts={}", user_id, payload.item_id, payload.timestamp);
     let id = format!("{}_{}", user_id, payload.item_id);
     sqlx::query("INSERT OR REPLACE INTO playback_state (id, item_id, user_id, timestamp, duration, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)")
         .bind(&id).bind(&payload.item_id).bind(&user_id).bind(payload.timestamp).bind(payload.duration)
@@ -1343,12 +1344,9 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
     // Trigger Discord RPC update if user has a token
     let user_row = sqlx::query("SELECT discord_token, discord_status FROM users WHERE id = ?").bind(&user_id).fetch_optional(&state.pool).await.unwrap();
     if let Some(row) = user_row {
-        if let Some(token) = row.get::<Option<String>, _>("discord_token") {
-            if token.is_empty() {
-                debug!("User {} has empty discord_token, skipping RPC", user_id);
-            } else {
+        match row.get::<Option<String>, _>("discord_token") {
+            Some(token) if !token.is_empty() => {
                 let status = row.get::<Option<String>, _>("discord_status").unwrap_or_else(|| "online".to_string());
-                debug!("Discord RPC triggered for user {} (status: {})", user_id, status);
                 let mut manager = state.rpc_manager.lock().await;
                 let session = if let Some(s) = manager.sessions.get(&user_id) {
                     s
