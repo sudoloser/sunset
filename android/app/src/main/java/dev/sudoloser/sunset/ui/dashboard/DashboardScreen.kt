@@ -10,6 +10,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.models.Library
+import dev.sudoloser.sunset.data.models.LibraryType
 import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.launch
@@ -130,15 +131,29 @@ fun DashboardScreen(
         }
 
         libraries.forEach { lib ->
-            val items = libraryItems[lib.id].orEmpty()
-            if (items.isNotEmpty()) {
-                item {
-                    MediaRow(
-                        title = lib.name,
-                        items = items,
-                        baseUrl = baseUrl,
-                        onPlay = onPlayItem
-                    )
+            val allItems = libraryItems[lib.id].orEmpty()
+            if (allItems.isNotEmpty()) {
+                if (lib.libType == LibraryType.SHOWS) {
+                    val grouped = allItems.groupBy { it.showTitle ?: it.title }
+                    val showCards = grouped.map { (_, eps) -> eps.first() }
+                    item {
+                        MediaRow(
+                            title = lib.name,
+                            items = showCards,
+                            baseUrl = baseUrl,
+                            onPlay = { clicked -> onPlayItem(clicked) },
+                            getSubtitle = { item -> "${grouped[item.showTitle ?: item.title]?.size ?: 0} episodes" }
+                        )
+                    }
+                } else {
+                    item {
+                        MediaRow(
+                            title = lib.name,
+                            items = allItems,
+                            baseUrl = baseUrl,
+                            onPlay = onPlayItem
+                        )
+                    }
                 }
             }
         }

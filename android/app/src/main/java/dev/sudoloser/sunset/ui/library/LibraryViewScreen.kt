@@ -5,10 +5,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,106 +48,140 @@ fun LibraryViewScreen(
         return
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        SunsetButton(
-            text = "< Back",
-            onClick = onBack,
-            variant = ButtonVariant.Ghost
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text(
-            text = library.name,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        if (library.libType == LibraryType.MOVIES) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(items) { item ->
-                    Poster(
-                        item = item,
-                        baseUrl = baseUrl,
-                        onClick = { onPlayItem(item) }
-                    )
-                }
-            }
-        } else {
-            val shows = items.groupBy { it.showTitle ?: it.title }
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                shows.forEach { (showTitle, episodeItems) ->
-                    val first = episodeItems.first()
-                    item {
-                        Poster(
-                            item = first,
-                            baseUrl = baseUrl,
-                            onClick = {
-                                selectedShow = showTitle
-                            },
-                            subtitle = "${episodeItems.size} episodes"
-                        )
-                    }
-                }
-            }
-        }
-    }
-
     if (selectedShow != null) {
         LaunchedEffect(selectedShow) {
             try {
                 showEpisodes = apiClient.getShowEpisodes(selectedShow!!)
             } catch (_: Exception) {}
         }
+        ShowEpisodesView(
+            showTitle = selectedShow!!,
+            episodes = showEpisodes,
+            onPlayItem = onPlayItem,
+            onBack = { selectedShow = null; showEpisodes = emptyList() }
+        )
+        return
+    }
 
-        AlertDialog(
-            onDismissRequest = { selectedShow = null; showEpisodes = emptyList() },
-            title = { Text(selectedShow!!) },
-            text = {
-                Column {
-                    val seasons = showEpisodes.groupBy { it.season ?: 1 }
-                    seasons.toSortedMap().forEach { (season, eps) ->
-                        Text(
-                            "Season $season",
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onBack) { Text("< Back") }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = library.name,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        val columnCount = adaptiveGridColumns()
+        if (library.libType == LibraryType.MOVIES) {
+            LazyVerticalGrid(
+                columns = columnCount,
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(items) { item ->
+                    Poster(item = item, baseUrl = baseUrl, onClick = { onPlayItem(item) })
+                }
+            }
+        } else {
+            val grouped = items.groupBy { it.showTitle ?: it.title }
+            LazyVerticalGrid(
+                columns = columnCount,
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                grouped.forEach { (showTitle, eps) ->
+                    item {
+                        Poster(
+                            item = eps.first(),
+                            baseUrl = baseUrl,
+                            onClick = { selectedShow = showTitle },
+                            subtitle = "${eps.size} episodes"
                         )
-                        eps.sortedBy { it.episode }.forEach { ep ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onPlayItem(ep) }
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun adaptiveGridColumns(): GridCells {
+    val width = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+    return when {
+        width > 1000.dp -> GridCells.Fixed(6)
+        width > 700.dp -> GridCells.Fixed(5)
+        width > 500.dp -> GridCells.Fixed(4)
+        else -> GridCells.Fixed(3)
+    }
+}
+
+@Composable
+private fun ShowEpisodesView(
+    showTitle: String,
+    episodes: List<MediaItem>,
+    onPlayItem: (MediaItem) -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onBack) { Text("< Back to Shows") }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = showTitle,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        val seasons = episodes.groupBy { it.season ?: 1 }
+        seasons.toSortedMap().forEach { (season, eps) ->
+            Text(
+                "Season $season",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                eps.sortedBy { it.episode }.forEach { ep ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        onClick = { onPlayItem(ep) }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     "${ep.episode}. ${ep.title}",
-                                    modifier = Modifier.weight(1f),
-                                    fontSize = 14.sp
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
-                                Text(">", color = MaterialTheme.colorScheme.primary)
                             }
+                            Text("▶", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedShow = null; showEpisodes = emptyList() }) {
-                    Text("Close")
-                }
             }
-        )
+        }
+        Spacer(Modifier.height(32.dp))
     }
 }
