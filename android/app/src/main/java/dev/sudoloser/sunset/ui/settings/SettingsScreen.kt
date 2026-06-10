@@ -1,11 +1,13 @@
 package dev.sudoloser.sunset.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,16 +17,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
-import dev.sudoloser.sunset.ui.components.*
-import dev.sudoloser.sunset.ui.theme.DarkBorder
 import dev.sudoloser.sunset.ui.theme.NetflixRed
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     apiClient: ApiClient,
@@ -32,39 +36,45 @@ fun SettingsScreen(
     userId: String?,
     currentUsername: String?,
     isAdmin: Boolean,
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
     onLogout: () -> Unit,
     onGoToAdmin: () -> Unit
 ) {
     var tab by remember { mutableStateOf("account") }
     val tabs = buildList {
-        add("account")
-        add("appearance")
-        add("subtitles")
-        add("discord")
+        add("account"); add("appearance"); add("subtitles"); add("discord")
         if (isAdmin) add("admin")
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Text(
             text = "Settings",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(16.dp),
-            color = MaterialTheme.colorScheme.onSurface
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+            color = MaterialTheme.colorScheme.onBackground
         )
 
-        TabRow(selectedTabIndex = tabs.indexOf(tab)) {
+        ScrollableTabRow(selectedTabIndex = tabs.indexOf(tab)) {
             tabs.forEach { t ->
                 Tab(
                     selected = tab == t,
                     onClick = { tab = t },
-                    text = { Text(t.replaceFirstChar { it.uppercase() }) }
+                    text = {
+                        Text(
+                            t.replaceFirstChar { it.uppercase() },
+                            fontWeight = if (tab == t) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
                 )
             }
         }
 
+        HorizontalDivider()
+
         when (tab) {
-            "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, isAdmin, onLogout)
-            "appearance" -> AppearanceSettings()
+            "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
+            "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange)
             "subtitles" -> SubtitleSettings()
             "discord" -> DiscordSettings(apiClient, userId)
             "admin" -> onGoToAdmin()
@@ -78,7 +88,6 @@ fun AccountSettings(
     baseUrl: String,
     userId: String?,
     currentUsername: String?,
-    isAdmin: Boolean,
     onLogout: () -> Unit
 ) {
     var username by remember { mutableStateOf(currentUsername ?: "") }
@@ -92,10 +101,14 @@ fun AccountSettings(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 if (userId != null) {
                     AsyncImage(
                         model = apiClient.getProfilePictureUrl(userId),
@@ -111,138 +124,133 @@ fun AccountSettings(
                     ) {
                         Text(
                             (currentUsername?.take(2)?.uppercase() ?: "U"),
-                            fontSize = 28.sp, fontWeight = FontWeight.Bold
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-
                 Spacer(Modifier.height(12.dp))
+                FilledTonalButton(onClick = {
+                    scope.launch {
+                        try { if (userId != null) apiClient.uploadProfilePicture(userId, "") } catch (_: Exception) {}
+                    }
+                }) {
+                    Text("Upload Photo")
+                }
+            }
+        }
 
-                SunsetButton(
-                    text = "Upload Photo",
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (usernameMsg != null) {
+                    Text(usernameMsg!!, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                }
+                Button(
                     onClick = {
                         scope.launch {
                             try {
                                 if (userId != null) {
-                                    apiClient.uploadProfilePicture(userId, "")
+                                    apiClient.changeUsername(userId, username)
+                                    usernameMsg = "Username updated!"
                                 }
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                usernameMsg = e.message
+                            }
                         }
                     },
-                    variant = ButtonVariant.Secondary
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Save")
+                }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = currentPassword,
+                    onValueChange = { currentPassword = it },
+                    label = { Text("Current Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
                 )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            SunsetInput(
-                value = username,
-                onValueChange = { username = it },
-                label = "Username",
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-            if (usernameMsg != null) {
-                Text(usernameMsg!!, fontSize = 12.sp, color = NetflixRed)
-                Spacer(Modifier.height(8.dp))
-            }
-            SunsetButton(
-                text = "Save",
-                onClick = {
-                    scope.launch {
-                        try {
-                            if (userId != null) {
-                                apiClient.changeUsername(userId, username)
-                                usernameMsg = "Username updated!"
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("New Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (passwordMsg != null) {
+                    Text(passwordMsg!!, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            try {
+                                if (userId != null) {
+                                    apiClient.changePassword(userId, currentPassword, newPassword)
+                                    passwordMsg = "Password updated!"
+                                    currentPassword = ""; newPassword = ""
+                                }
+                            } catch (e: Exception) {
+                                passwordMsg = e.message
                             }
-                        } catch (e: Exception) {
-                            usernameMsg = e.message
                         }
-                    }
-                },
-                variant = ButtonVariant.Secondary
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            SunsetInput(
-                value = currentPassword,
-                onValueChange = { currentPassword = it },
-                label = "Current Password",
-                password = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-            SunsetInput(
-                value = newPassword,
-                onValueChange = { newPassword = it },
-                label = "New Password",
-                password = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-            if (passwordMsg != null) {
-                Text(passwordMsg!!, fontSize = 12.sp, color = NetflixRed)
-                Spacer(Modifier.height(8.dp))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Change Password")
+                }
             }
-            SunsetButton(
-                text = "Change Password",
-                onClick = {
-                    scope.launch {
-                        try {
-                            if (userId != null) {
-                                apiClient.changePassword(userId, currentPassword, newPassword)
-                                passwordMsg = "Password updated!"
-                                currentPassword = ""
-                                newPassword = ""
-                            }
-                        } catch (e: Exception) {
-                            passwordMsg = e.message
-                        }
-                    }
-                },
-                variant = ButtonVariant.Secondary
-            )
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        SunsetButton(
-            text = "Log Out",
+        OutlinedButton(
             onClick = onLogout,
-            variant = ButtonVariant.Danger,
-            fullWidth = true
-        )
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        ) {
+            Text("Log Out")
+        }
     }
 }
 
 @Composable
-fun AppearanceSettings() {
-    var theme by remember { mutableStateOf("dark") }
-
+fun AppearanceSettings(
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Theme", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SunsetButton(
-                    text = "Dark",
-                    onClick = { theme = "dark" },
-                    variant = if (theme == "dark") ButtonVariant.Primary else ButtonVariant.Secondary
-                )
-                SunsetButton(
-                    text = "Light",
-                    onClick = { theme = "light" },
-                    variant = if (theme == "light") ButtonVariant.Primary else ButtonVariant.Secondary
-                )
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Dark Mode", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        "Use dark color theme",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = darkTheme, onCheckedChange = onDarkThemeChange)
             }
         }
     }
@@ -252,114 +260,132 @@ fun AppearanceSettings() {
 @Composable
 fun SubtitleSettings() {
     var color by remember { mutableStateOf("#FFFFFF") }
-    var bgOpacity by remember { mutableStateOf(0) }
+    var bgOpacity by remember { mutableIntStateOf(0) }
     var size by remember { mutableIntStateOf(100) }
     var font by remember { mutableStateOf("Inter") }
     var bold by remember { mutableStateOf(false) }
 
-    val colors = listOf("#FFFFFF", "#FFFF00", "#00FF00", "#00FFFF", "#FF0000", "#FF00FF", "#0000FF", "#000000")
+    val colors = listOf(
+        "#FFFFFF" to "White", "#FFFF00" to "Yellow", "#00FF00" to "Green",
+        "#00FFFF" to "Cyan", "#FF0000" to "Red", "#FF00FF" to "Magenta",
+        "#0000FF" to "Blue", "#000000" to "Black"
+    )
     val fonts = listOf("Inter", "Arial", "Helvetica", "Times New Roman", "Courier New", "Georgia", "Verdana")
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Color", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                colors.forEach { c ->
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(Color(android.graphics.Color.parseColor(c)))
-                            .clickable { color = c }
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Background", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SunsetButton(
-                    text = "None",
-                    onClick = { bgOpacity = 0 },
-                    variant = if (bgOpacity == 0) ButtonVariant.Primary else ButtonVariant.Secondary
-                )
-                SunsetButton(
-                    text = "Black",
-                    onClick = { bgOpacity = 85 },
-                    variant = if (bgOpacity == 85) ButtonVariant.Primary else ButtonVariant.Secondary
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Size: $size%", style = MaterialTheme.typography.titleMedium)
-            Slider(
-                value = size.toFloat(),
-                onValueChange = { size = it.toInt() },
-                valueRange = 50f..200f,
-                steps = 29
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Font", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                OutlinedTextField(
-                    value = font,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
-                )
-                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    fonts.forEach { f ->
-                        DropdownMenuItem(
-                            text = { Text(f) },
-                            onClick = { font = f; expanded = false }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Color", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    colors.forEach { (hex, _) ->
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .border(
+                                    width = if (color == hex) 2.dp else 0.dp,
+                                    color = if (color == hex) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .background(Color(android.graphics.Color.parseColor(hex)))
+                                .clickable { color = hex }
                         )
                     }
                 }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Background", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = bgOpacity == 0,
+                        onClick = { bgOpacity = 0 },
+                        label = { Text("None") }
+                    )
+                    FilterChip(
+                        selected = bgOpacity == 85,
+                        onClick = { bgOpacity = 85 },
+                        label = { Text("Black") }
+                    )
+                }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Size: $size%", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Slider(
+                    value = size.toFloat(),
+                    onValueChange = { size = it.toInt() },
+                    valueRange = 50f..200f,
+                    steps = 29
+                )
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Font", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                var expanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+                    OutlinedTextField(
+                        value = font,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        fonts.forEach { f ->
+                            DropdownMenuItem(
+                                text = { Text(f) },
+                                onClick = { font = f; expanded = false }
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = bold, onCheckedChange = { bold = it })
             Text("Bold", color = MaterialTheme.colorScheme.onSurface)
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(8.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF111111)),
-            contentAlignment = Alignment.Center
+        val previewSize = (14 + (size - 50) * 0.12f).coerceIn(10f, 40f)
+        val previewColor = try { Color(android.graphics.Color.parseColor(color)) } catch (_: Exception) { Color.White }
+        val previewBg = if (bgOpacity > 0) Color.Black.copy(alpha = bgOpacity / 100f) else Color.Transparent
+
+        Card(
+            modifier = Modifier.fillMaxWidth().height(120.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF111111))
         ) {
-            Text(
-                text = "Preview text",
-                color = Color.White,
-                fontSize = 16.sp
-            )
+            Box(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Preview subtitle text",
+                    color = previewColor,
+                    fontSize = previewSize.sp,
+                    fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Default,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .background(previewBg, RoundedCornerShape(2.dp))
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+            }
         }
     }
 }
@@ -390,126 +416,101 @@ fun DiscordSettings(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Discord RPC",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                "Rich Presence",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Sync your \"Watching SunSet\" status to Discord. You'll need your Discord User Token (not a bot token). Keep this token private!",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp
-            )
-            Spacer(Modifier.height(20.dp))
-
-            SunsetInput(
-                value = token,
-                onValueChange = { token = it },
-                label = "Discord User Token",
-                password = true,
-                placeholder = "PASTE_TOKEN_HERE",
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                "Presence Status",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                OutlinedTextField(
-                    value = status.replaceFirstChar { it.uppercase() },
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Rich Presence", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Sync your \"Watching SunSet\" status to Discord. You'll need your Discord User Token (not a bot token). Keep this token private!",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp
                 )
-                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    listOf("online", "dnd", "idle", "invisible").forEach { s ->
-                        DropdownMenuItem(
-                            text = { Text(s.replaceFirstChar { it.uppercase() }) },
-                            onClick = { status = s; expanded = false }
-                        )
+
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = token,
+                    onValueChange = { token = it },
+                    label = { Text("Discord User Token") },
+                    placeholder = { Text("PASTE_TOKEN_HERE") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Presence Status", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                var expanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+                    OutlinedTextField(
+                        value = status.replaceFirstChar { it.uppercase() },
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        listOf("online", "dnd", "idle", "invisible").forEach { s ->
+                            DropdownMenuItem(
+                                text = { Text(s.replaceFirstChar { it.uppercase() }) },
+                                onClick = { status = s; expanded = false }
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(8.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SunsetButton(
-                    text = when {
-                        loading -> "Saving..."
-                        saveStatus == "success" -> "✓ Saved"
-                        else -> "Save Config"
-                    },
-                    onClick = {
-                        if (userId == null) return@SunsetButton
-                        loading = true
-                        saveStatus = null
-                        scope.launch {
-                            try {
-                                apiClient.updateDiscordConfig(userId, token, status)
-                                saveStatus = "success"
-                                delay(3000)
-                                saveStatus = null
-                            } catch (_: Exception) {
-                                saveStatus = "error"
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = {
+                            if (userId == null) return@Button
+                            loading = true; saveStatus = null
+                            scope.launch {
+                                try {
+                                    apiClient.updateDiscordConfig(userId, token, status)
+                                    saveStatus = "success"
+                                    delay(3000); saveStatus = null
+                                } catch (_: Exception) { saveStatus = "error" }
+                                loading = false
                             }
-                            loading = false
-                        }
-                    },
-                    enabled = token.isNotBlank() && !loading
-                )
-                if (saveStatus == "error") {
-                    Text("Failed to save config", color = NetflixRed, fontSize = 12.sp)
+                        },
+                        enabled = token.isNotBlank() && !loading
+                    ) {
+                        Text(
+                            when {
+                                loading -> "Saving..."
+                                saveStatus == "success" -> "✓ Saved"
+                                else -> "Save Config"
+                            }
+                        )
+                    }
+                    if (saveStatus == "error") {
+                        Text("Failed to save config", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.height(24.dp))
-
-        SunsetCard(
-            modifier = Modifier.fillMaxWidth(),
-            glass = true
-        ) {
-            Text(
-                "How to find your token?",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(12.dp))
-            val steps = listOf(
-                "Open Discord in your browser and log in.",
-                "Press Ctrl+Shift+I to open Developer Tools.",
-                "Go to the Network tab and type /api in the filter.",
-                "Refresh the page or click a channel.",
-                "Click on an entry like science or messages.",
-                "Find the authorization header in the request headers — that's your token."
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("How to find your token?", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                val steps = listOf(
+                    "Open Discord in your browser and log in.",
+                    "Press Ctrl+Shift+I to open Developer Tools.",
+                    "Go to the Network tab and type /api in the filter.",
+                    "Refresh the page or click a channel.",
+                    "Click on an entry like science or messages.",
+                    "Find the authorization header in the request headers — that's your token."
+                )
                 steps.forEachIndexed { i, step ->
                     Text(
                         "${i + 1}. $step",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 13.sp
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
                     )
                 }
             }

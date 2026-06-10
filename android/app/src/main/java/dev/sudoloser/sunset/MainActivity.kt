@@ -49,6 +49,7 @@ private val SERVER_URL_KEY = stringPreferencesKey("server_url")
 private val USER_ID_KEY = stringPreferencesKey("user_id")
 private val USERNAME_KEY = stringPreferencesKey("username")
 private val IS_ADMIN_KEY = stringPreferencesKey("is_admin")
+private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,9 +57,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            SunsetTheme(darkTheme = true) {
-                AppContent(this)
-            }
+            AppContent(this)
         }
     }
 }
@@ -74,10 +73,12 @@ fun AppContent(activity: ComponentActivity) {
     var showSearch by remember { mutableStateOf(false) }
     var showAdmin by remember { mutableStateOf(false) }
     var activeTab by remember { mutableStateOf("home") }
+    var darkTheme by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
     // Load saved state
     LaunchedEffect(Unit) {
+        darkTheme = activity.dataStore.data.first()[DARK_MODE_KEY] ?: true
         val url = activity.dataStore.data.first()[SERVER_URL_KEY]
         if (url != null) {
             serverUrl = url
@@ -109,7 +110,8 @@ fun AppContent(activity: ComponentActivity) {
         }
     }
 
-    when (step) {
+    SunsetTheme(darkTheme = darkTheme) {
+        when (step) {
         "loading" -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = NetflixRed)
@@ -298,6 +300,13 @@ fun AppContent(activity: ComponentActivity) {
                                 userId = userId,
                                 currentUsername = user?.username,
                                 isAdmin = user?.isAdmin == true,
+                                darkTheme = darkTheme,
+                                onDarkThemeChange = { newVal ->
+                                    darkTheme = newVal
+                                    scope.launch {
+                                        activity.dataStore.edit { it[DARK_MODE_KEY] = newVal }
+                                    }
+                                },
                                 onLogout = {
                                     scope.launch {
                                         activity.dataStore.edit {
