@@ -78,8 +78,12 @@ class PlayerActivity : ComponentActivity() {
                         val subtitleNames = fetchSubtitles(id)
                         subtitleNames.forEach { name ->
                             val subUrl = "$baseUrl/api/media/$id/subtitle/${java.net.URLEncoder.encode(name, "UTF-8")}"
+                            val mimeType = if (name.endsWith(".vtt")) "text/vtt" else "application/x-subrip"
+                            val subConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUrl))
+                                .setMimeType(mimeType)
+                                .build()
                             val subSource = SingleSampleMediaSource.Factory(dataSourceFactory)
-                                .createMediaSource(Uri.parse(subUrl), C.TEXT_EXOPLAYER_CUES, 0L)
+                                .createMediaSource(subConfig, 0L)
                             sources.add(subSource)
                         }
                     } catch (_: Exception) {}
