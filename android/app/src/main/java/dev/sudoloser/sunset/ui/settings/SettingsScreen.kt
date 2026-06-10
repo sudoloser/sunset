@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
-import dev.sudoloser.sunset.ui.theme.NetflixRed
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -55,7 +55,13 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        ScrollableTabRow(selectedTabIndex = tabs.indexOf(tab)) {
+        ScrollableTabRow(
+            selectedTabIndex = tabs.indexOf(tab),
+            divider = {},
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(tabPositions[tabs.indexOf(tab)]))
+            }
+        ) {
             tabs.forEach { t ->
                 Tab(
                     selected = tab == t,
@@ -65,7 +71,9 @@ fun SettingsScreen(
                             t.replaceFirstChar { it.uppercase() },
                             fontWeight = if (tab == t) FontWeight.SemiBold else FontWeight.Normal
                         )
-                    }
+                    },
+                    selectedContentColor = MaterialTheme.colorScheme.onSurface,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

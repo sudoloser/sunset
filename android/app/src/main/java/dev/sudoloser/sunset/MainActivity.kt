@@ -183,7 +183,6 @@ fun AppContent(activity: ComponentActivity) {
             apiClient?.let { client ->
                 SunsetTheme(darkTheme = darkTheme) {
                     LoginScreen(
-                        serverName = status?.serverName ?: "SunSet",
                         apiClient = client,
                         onLogin = { u ->
                             user = u

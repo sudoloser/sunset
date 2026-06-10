@@ -7,15 +7,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import dev.sudoloser.sunset.ui.components.*
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.models.*
-import dev.sudoloser.sunset.ui.components.*
-import dev.sudoloser.sunset.ui.theme.NetflixRed
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -44,10 +41,7 @@ fun AdminScreen(
 
     LaunchedEffect(Unit) {
         while (true) {
-            try {
-                uptime = apiClient.getUptime()
-                delay(1000)
-            } catch (_: Exception) { delay(5000) }
+            try { uptime = apiClient.getUptime(); delay(1000) } catch (_: Exception) { delay(5000) }
         }
     }
 
@@ -60,9 +54,7 @@ fun AdminScreen(
     }
 
     val formatUptime: (Long) -> String = { seconds ->
-        val h = seconds / 3600
-        val m = (seconds % 3600) / 60
-        val s = seconds % 60
+        val h = seconds / 3600; val m = (seconds % 3600) / 60; val s = seconds % 60
         "${h}h ${m}m ${s}s"
     }
 
@@ -70,158 +62,158 @@ fun AdminScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SunsetButton(text = "< Back", onClick = onBack, variant = ButtonVariant.Ghost)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack) { Text("< Back") }
+            Spacer(Modifier.width(8.dp))
+            Text("Admin", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        }
 
-        Spacer(Modifier.height(12.dp))
+        Button(onClick = { scope.launch { try { apiClient.triggerScan() } catch (_: Exception) {} } }) {
+            Text("Scan All Libraries")
+        }
 
-        Text("Admin", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Libraries", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
 
-        Spacer(Modifier.height(8.dp))
-
-        SunsetButton(text = "Scan All Libraries", onClick = {
-            scope.launch { try { apiClient.triggerScan() } catch (_: Exception) {} }
-        })
-
-        Spacer(Modifier.height(16.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Libraries", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            libraries.forEach { lib ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(lib.name, fontSize = 14.sp)
-                        Text(lib.path, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    SunsetButton(text = "Remove", onClick = {
-                        scope.launch { try { apiClient.deleteLibrary(lib.id); libraries = libraries - lib } catch (_: Exception) {} }
-                    }, variant = ButtonVariant.Danger)
-                }
-            }
-
-            if (showAdd) {
-                Spacer(Modifier.height(8.dp))
-                SunsetInput(value = newLibName, onValueChange = { newLibName = it }, label = "Name", modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(4.dp))
-                SunsetInput(value = newLibPath, onValueChange = { newLibPath = it }, label = "Path", modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(4.dp))
-                var expanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                    OutlinedTextField(
-                        value = if (newLibType == LibraryType.MOVIES) "Movies" else "Shows",
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
-                    )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        DropdownMenuItem(text = { Text("Movies") }, onClick = { newLibType = LibraryType.MOVIES; expanded = false })
-                        DropdownMenuItem(text = { Text("Shows") }, onClick = { newLibType = LibraryType.SHOWS; expanded = false })
+                libraries.forEach { lib ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(lib.name, fontSize = 14.sp)
+                            Text(lib.path, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        OutlinedButton(onClick = {
+                            scope.launch { try { apiClient.deleteLibrary(lib.id); libraries = libraries - lib } catch (_: Exception) {} }
+                        }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
                     }
                 }
-                Spacer(Modifier.height(4.dp))
-                SunsetButton(text = "Add", onClick = {
-                    scope.launch {
-                        try {
-                            apiClient.addLibrary(LibraryInput(newLibName, newLibPath, newLibType))
-                            libraries = apiClient.getLibraries()
-                            newLibName = ""; newLibPath = ""
-                            showAdd = false
-                        } catch (_: Exception) {}
+
+                if (showAdd) {
+                    OutlinedTextField(value = newLibName, onValueChange = { newLibName = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = newLibPath, onValueChange = { newLibPath = it }, label = { Text("Path") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    var expanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+                        OutlinedTextField(
+                            value = if (newLibType == LibraryType.MOVIES) "Movies" else "Shows",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            DropdownMenuItem(text = { Text("Movies") }, onClick = { newLibType = LibraryType.MOVIES; expanded = false })
+                            DropdownMenuItem(text = { Text("Shows") }, onClick = { newLibType = LibraryType.SHOWS; expanded = false })
+                        }
                     }
-                })
-            } else {
-                SunsetButton(text = "+ Add Library", onClick = { showAdd = true }, variant = ButtonVariant.Secondary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { showAdd = false }) { Text("Cancel") }
+                        Button(onClick = {
+                            scope.launch {
+                                try {
+                                    apiClient.addLibrary(LibraryInput(newLibName, newLibPath, newLibType))
+                                    libraries = apiClient.getLibraries()
+                                    newLibName = ""; newLibPath = ""
+                                    showAdd = false
+                                } catch (_: Exception) {}
+                            }
+                        }) { Text("Add") }
+                    }
+                } else {
+                    OutlinedButton(onClick = { showAdd = true }) { Text("+ Add Library") }
+                }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Server Status", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text("Uptime: ${formatUptime(uptime)}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Server Status", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text("Uptime: ${formatUptime(uptime)}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
-
-        Spacer(Modifier.height(16.dp))
 
         storage?.let { s ->
-            SunsetCard(modifier = Modifier.fillMaxWidth()) {
-                Text("Storage", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Text("Items: ${s.itemCount}", fontSize = 14.sp)
-                Text("Libraries: ${s.libraryCount}", fontSize = 14.sp)
-                Text("Users: ${s.userCount}", fontSize = 14.sp)
-                Text("Total Size: ${formatBytes(s.totalSize)}", fontSize = 14.sp)
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Invite Codes", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            if (inviteCode != null) {
-                Text(inviteCode!!, fontSize = 14.sp, color = NetflixRed)
-                SunsetButton(
-                    text = if (inviteCopied) "Copied!" else "Copy",
-                    onClick = { inviteCopied = true },
-                    variant = ButtonVariant.Secondary
-                )
-            }
-            SunsetButton(text = "Generate Code", onClick = {
-                scope.launch { try { inviteCode = apiClient.createInvite(); inviteCopied = false } catch (_: Exception) {} }
-            })
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Text("Users", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            users.forEach { u ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(u.username, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                    Text(if (u.isAdmin) "Admin" else "User", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Storage", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Items: ${s.itemCount}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Libraries: ${s.libraryCount}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Users: ${s.userCount}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Total Size: ${formatBytes(s.totalSize)}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
 
-            if (showNewUser) {
-                Spacer(Modifier.height(8.dp))
-                SunsetInput(value = newUserName, onValueChange = { newUserName = it }, label = "Username", modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(4.dp))
-                SunsetInput(value = newUserPass, onValueChange = { newUserPass = it }, label = "Password", password = true, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = newUserAdmin, onCheckedChange = { newUserAdmin = it })
-                    Text("Admin", fontSize = 14.sp)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Invite Codes", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                if (inviteCode != null) {
+                    Text(inviteCode!!, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
                 }
-                SunsetButton(text = "Create User", onClick = {
-                    scope.launch {
-                        try {
-                            apiClient.createUser(CreateUserRequest(newUserName, newUserPass, newUserAdmin))
-                            users = apiClient.getUsers()
-                            newUserName = ""; newUserPass = ""; newUserAdmin = false
-                            showNewUser = false
-                        } catch (_: Exception) {}
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        scope.launch { try { inviteCode = apiClient.createInvite(); inviteCopied = false } catch (_: Exception) {} }
+                    }) { Text("Generate Code") }
+                    if (inviteCode != null) {
+                        Button(onClick = { inviteCopied = true }) {
+                            Text(if (inviteCopied) "Copied!" else "Copy")
+                        }
                     }
-                })
-            } else {
-                SunsetButton(text = "+ New User", onClick = { showNewUser = true }, variant = ButtonVariant.Secondary)
+                }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Users", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
 
-        SunsetButton(text = "Invite Code (Redeem)", onClick = {
-            scope.launch { try {
-                apiClient.redeemInvite("")
-            } catch (_: Exception) {} }
-        }, variant = ButtonVariant.Secondary)
+                users.forEach { u ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(u.username, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text(if (u.isAdmin) "Admin" else "User", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                if (showNewUser) {
+                    OutlinedTextField(value = newUserName, onValueChange = { newUserName = it }, label = { Text("Username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = newUserPass, onValueChange = { newUserPass = it }, label = { Text("Password") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = newUserAdmin, onCheckedChange = { newUserAdmin = it })
+                        Text("Admin", fontSize = 14.sp)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { showNewUser = false }) { Text("Cancel") }
+                        Button(onClick = {
+                            scope.launch {
+                                try {
+                                    apiClient.createUser(CreateUserRequest(newUserName, newUserPass, newUserAdmin))
+                                    users = apiClient.getUsers()
+                                    newUserName = ""; newUserPass = ""; newUserAdmin = false
+                                    showNewUser = false
+                                } catch (_: Exception) {}
+                            }
+                        }) { Text("Create User") }
+                    }
+                } else {
+                    OutlinedButton(onClick = { showNewUser = true }) { Text("+ New User") }
+                }
+            }
+        }
+
+        OutlinedButton(onClick = {
+            scope.launch { try { apiClient.redeemInvite("") } catch (_: Exception) {} }
+        }) { Text("Invite Code (Redeem)") }
     }
 }
 

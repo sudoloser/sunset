@@ -20,3 +20,6 @@ Build commands:
 NEVER try building Android locally.
 ---
 When changing the frontend, you are REQUIRED to also port that change to the Android front end.
+---
+### Commit & CI
+After each task, ALWAYS ask the user if you should commit, push, and run the GitHub workflow to build the changed codebase (android/server).

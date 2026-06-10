@@ -122,11 +122,14 @@ fun LibrariesScreen(
 
         if (libraries.isEmpty()) {
             if (isAdmin) {
-                SunsetCard(modifier = Modifier.padding(16.dp)) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("No libraries yet. Add some in Settings!")
+                Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No libraries yet. Add some in Settings!", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(12.dp))
-                        SunsetButton(text = "Go to Settings", onClick = onGoToSettings)
+                        OutlinedButton(onClick = onGoToSettings) { Text("Go to Settings") }
                     }
                 }
             } else {
@@ -138,16 +141,16 @@ fun LibrariesScreen(
             }
         } else {
             libraries.forEach { lib ->
-                SunsetCard(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     onClick = { selectedLibrary = lib }
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(lib.name, style = MaterialTheme.typography.titleMedium)
                             Text(
                                 lib.path,
@@ -155,6 +158,7 @@ fun LibrariesScreen(
                                 fontSize = 13.sp
                             )
                         }
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             if (lib.libType == LibraryType.MOVIES) "Movies" else "Shows",
                             color = MaterialTheme.colorScheme.primary,
@@ -162,7 +166,6 @@ fun LibrariesScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(4.dp))
             }
         }
 

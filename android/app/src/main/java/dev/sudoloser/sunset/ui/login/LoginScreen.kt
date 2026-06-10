@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    serverName: String,
     apiClient: ApiClient,
     onLogin: (User) -> Unit
 ) {
@@ -40,14 +39,6 @@ fun LoginScreen(
             style = MaterialTheme.typography.displayLarge,
             color = NetflixRed,
             fontWeight = FontWeight.Bold
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            text = serverName,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(Modifier.height(48.dp))

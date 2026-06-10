@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.models.Library
@@ -62,6 +64,19 @@ fun DashboardScreen(
     if (loading) {
         Box(Modifier.fillMaxSize()) {
             CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+        }
+        return
+    }
+
+    if (recentlyAdded.isEmpty() && libraries.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                "No content yet.\nAdd libraries in Settings > Admin and run a scan.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(32.dp)
+            )
         }
         return
     }
