@@ -27,6 +27,7 @@ import dev.sudoloser.sunset.ui.theme.NetflixRed
 import kotlinx.coroutines.launch
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun MediaDetailsScreen(
     item: MediaItem,
     baseUrl: String,

@@ -30,13 +30,17 @@ class ApiClient(private val baseUrl: String) {
     }
 
     private inline fun <reified T> post(endpoint: String, body: Any?): T {
-        val requestBody = json.encodeToString(body).toRequestBody(mediaType)
+        val requestBody = if (body == null || body == Unit) {
+            "{}".toRequestBody(mediaType)
+        } else {
+            json.encodeToString(body).toRequestBody(mediaType)
+        }
         val request = Request.Builder()
             .url("$baseUrl/api$endpoint")
             .post(requestBody)
             .build()
         val response = client.newCall(request).execute()
-        val responseBody = response.body?.string() ?: throw Exception("Empty response")
+        val responseBody = response.body?.string() ?: return json.decodeFromString<T>("null")
         return json.decodeFromString<T>(responseBody)
     }
 
