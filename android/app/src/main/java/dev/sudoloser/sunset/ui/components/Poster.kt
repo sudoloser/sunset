@@ -49,7 +49,7 @@ fun Poster(
                 model = imageUrl,
                 contentDescription = item.title,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Cover
+                contentScale = ContentScale.Crop
             )
 
             if (showBadge && item.collectionName != null) {
