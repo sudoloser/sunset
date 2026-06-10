@@ -49,7 +49,7 @@ fun LibrariesScreen(
                     try {
                         val state = apiClient.getPlayback(item.id)
                         if (state.duration != null && state.duration > 0) {
-                            progress[item.id] = (state.timestamp.toFloat() / state.duration).coerceIn(0f, 1f)
+                            progress[item.id] = (state.timestamp.toFloat() / state.duration.toFloat()).coerceIn(0f, 1f)
                         }
                     } catch (_: Exception) {}
                 }
