@@ -6,6 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -16,7 +18,11 @@ import androidx.media3.exoplayer.source.SingleSampleMediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import dev.sudoloser.sunset.R
+import dev.sudoloser.sunset.data.PrefKeys
+import dev.sudoloser.sunset.data.dataStore
+import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -69,6 +75,24 @@ class PlayerActivity : ComponentActivity() {
         player = ExoPlayer.Builder(this).setTrackSelector(trackSelector).build().also { exoPlayer ->
             playerView.player = exoPlayer
 
+            exoPlayer.addListener(object : Player.Listener {
+                override fun onTracksChanged(tracks: Tracks) {
+                    val subtitleTracks = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+                    val selectedSub = subtitleTracks.find { it.isSelected }
+                    if (selectedSub != null) {
+                        val format = selectedSub.getTrackFormat(0)
+                        val label = format.label ?: "Default"
+                        scope.launch {
+                            dataStore.edit { it[PrefKeys.SUBTITLE_PREF] = label }
+                        }
+                    } else {
+                        scope.launch {
+                            dataStore.edit { it[PrefKeys.SUBTITLE_PREF] = "off" }
+                        }
+                    }
+                }
+            })
+
             val dataSourceFactory = DefaultHttpDataSource.Factory()
 
             val mainMediaItem = MediaItem.Builder().setUri(url).build()
@@ -84,18 +108,48 @@ class PlayerActivity : ComponentActivity() {
                         subtitleNames.forEach { name ->
                             val subUrl = "$baseUrl/api/media/$id/subtitle/${java.net.URLEncoder.encode(name, "UTF-8")}"
                             val mimeType = if (name.endsWith(".vtt")) "text/vtt" else "application/x-subrip"
+                            
+                            // Try to extract language/label from filename
+                            val label = name.substringBeforeLast(".")
+                                .replace(id, "")
+                                .trim('-', '_', '.')
+                                .ifBlank { "Default" }
+                                .split(".").last() // Handle cases like title.en.srt
+                                .replaceFirstChar { it.uppercase() }
+
                             val subConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUrl))
                                 .setMimeType(mimeType)
+                                .setLabel(label)
                                 .build()
                             val subSource = SingleSampleMediaSource.Factory(dataSourceFactory)
                                 .createMediaSource(subConfig, 0L)
                             sources.add(subSource)
                         }
                     } catch (_: Exception) {}
+                    
                     withContext(Dispatchers.Main) {
                         val mergedSource = MergingMediaSource(*sources.toTypedArray())
                         exoPlayer.setMediaSource(mergedSource)
                         exoPlayer.prepare()
+                        
+                        // Load saved preference
+                        try {
+                            val savedSub = dataStore.data.first()[PrefKeys.SUBTITLE_PREF]
+                            if (savedSub != null && savedSub != "off") {
+                                // We rely on selection flags and preferred role flags, 
+                                // but setting the selection parameters is more robust.
+                                val parameters = exoPlayer.trackSelectionParameters.buildUpon()
+                                    .setPreferredTextLanguage(null) // Reset to allow label matching if needed
+                                    .build()
+                                exoPlayer.trackSelectionParameters = parameters
+                            } else if (savedSub == "off") {
+                                val parameters = exoPlayer.trackSelectionParameters.buildUpon()
+                                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                                    .build()
+                                exoPlayer.trackSelectionParameters = parameters
+                            }
+                        } catch (_: Exception) {}
+
                         exoPlayer.playWhenReady = true
                     }
                 }

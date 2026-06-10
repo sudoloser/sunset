@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sudoloser.sunset.api.ApiClient
@@ -21,8 +22,7 @@ fun DashboardScreen(
     baseUrl: String,
     onPlayItem: (MediaItem) -> Unit,
     onSearch: () -> Unit,
-    onSelectItem: ((MediaItem) -> Unit)? = null,
-    onShowClicked: ((String, List<MediaItem>) -> Unit)? = null
+    onSelectItem: ((MediaItem) -> Unit)? = null
 ) {
     var recentlyAdded by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var libraries by remember { mutableStateOf<List<Library>>(emptyList()) }
@@ -36,58 +36,73 @@ fun DashboardScreen(
 
     LaunchedEffect(Unit) {
         try {
-            val recent = apiClient.getRecentlyAdded()
+            val recentData = apiClient.getRecentlyAdded()
             val libs = apiClient.getLibraries()
+            
+            // Deduplicate by show_title for episodes
+            val seen = mutableSetOf<String>()
+            val dedupedRecent = recentData.filter { item ->
+                if (item.mediaType.name == "EPISODE" && item.showTitle != null) {
+                    if (seen.contains(item.showTitle)) return@filter false
+                    seen.add(item.showTitle)
+                    true
+                } else true
+            }
+
             val itemsMap = mutableMapOf<String, List<MediaItem>>()
             libs.forEach { lib ->
-                try { itemsMap[lib.id] = apiClient.getLibraryItems(lib.id) } catch (_: Exception) {}
+                try { 
+                    val items = apiClient.getLibraryItems(lib.id)
+                    if (lib.libType == LibraryType.SHOWS) {
+                        val libSeen = mutableSetOf<String>()
+                        itemsMap[lib.id] = items.filter { item ->
+                            val title = item.showTitle ?: item.title
+                            if (libSeen.contains(title)) return@filter false
+                            libSeen.add(title)
+                            true
+                        }.take(15)
+                    } else {
+                        itemsMap[lib.id] = items.take(15)
+                    }
+                } catch (_: Exception) {}
             }
+
             val gens = apiClient.getGenres()
             val genreMap = mutableMapOf<String, List<MediaItem>>()
             gens.take(5).forEach { g ->
-                try { genreMap[g] = apiClient.getGenreItems(g) } catch (_: Exception) {}
+                try { 
+                    val items = apiClient.getGenreItems(g)
+                    val gSeen = mutableSetOf<String>()
+                    genreMap[g] = items.filter { item ->
+                        val title = item.showTitle ?: item.title
+                        if (gSeen.contains(title)) return@filter false
+                        gSeen.add(title)
+                        true
+                    }.take(15)
+                } catch (_: Exception) {}
             }
-            val cols = recent.filter { it.collectionName != null }
-                .groupBy { it.collectionName }
-                .values
-                .filter { it.size >= 2 }
-                .flatten()
 
-            recentlyAdded = recent
+            recentlyAdded = dedupedRecent
             libraries = libs
             libraryItems = itemsMap
             genres = gens.take(5)
             genreItems = genreMap
-            collections = cols
-            featured = recent.firstOrNull()
+            featured = dedupedRecent.firstOrNull()
         } catch (_: Exception) {}
         loading = false
     }
 
     if (loading) {
-        Box(Modifier.fillMaxSize()) {
-            CircularProgressIndicator(modifier = Modifier.padding(16.dp))
-        }
-        return
-    }
-
-    if (recentlyAdded.isEmpty() && libraries.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                "No content yet.\nAdd libraries in Settings > Admin and run a scan.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(32.dp)
-            )
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
         return
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        if (featured != null) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
             item {
                 Hero(
                     item = featured,
@@ -95,66 +110,37 @@ fun DashboardScreen(
                     onPlay = { featured?.let { onPlayItem(it) } }
                 )
             }
-        }
 
-        if (collections.isNotEmpty()) {
-            val collectionItems = recentlyAdded.filter { it.collectionName != null }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             item {
                 MediaRow(
-                    title = "Collections",
-                    items = collectionItems,
+                    title = "Recently Added",
+                    items = recentlyAdded,
                     baseUrl = baseUrl,
                     onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
                 )
             }
-        }
 
-        item {
-            MediaRow(
-                title = "Recently Added",
-                items = recentlyAdded,
-                baseUrl = baseUrl,
-                onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
-            )
-        }
-
-        genres.forEach { genre ->
-            val items = genreItems[genre].orEmpty()
-            if (items.isNotEmpty()) {
-                item {
-                    MediaRow(
-                        title = genre,
-                        items = items,
-                        baseUrl = baseUrl,
-                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
-                    )
-                }
-            }
-        }
-
-        libraries.forEach { lib ->
-            val allItems = libraryItems[lib.id].orEmpty()
-            if (allItems.isNotEmpty()) {
-                if (lib.libType == LibraryType.SHOWS) {
-                    val grouped = allItems.groupBy { it.showTitle ?: it.title }
-                    val showCards = grouped.map { (_, eps) -> eps.first() }
+            genres.forEach { genre ->
+                val items = genreItems[genre].orEmpty()
+                if (items.isNotEmpty()) {
                     item {
                         MediaRow(
-                            title = lib.name,
-                            items = showCards,
+                            title = genre,
+                            items = items,
                             baseUrl = baseUrl,
-                            onClick = { clicked ->
-                                val showTitle = clicked.showTitle
-                                if (showTitle != null && onShowClicked != null) {
-                                    onShowClicked(showTitle, grouped[showTitle] ?: emptyList())
-                                } else {
-                                    onSelectItem?.invoke(clicked) ?: onPlayItem(clicked)
-                                }
-                            },
-                            getSubtitle = { item -> "${grouped[item.showTitle ?: item.title]?.size ?: 0} episodes" }
+                            onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
                         )
                     }
-                } else {
+                }
+            }
+
+            libraries.forEach { lib ->
+                val allItems = libraryItems[lib.id].orEmpty()
+                if (allItems.isNotEmpty()) {
                     item {
                         MediaRow(
                             title = lib.name,
@@ -165,8 +151,25 @@ fun DashboardScreen(
                     }
                 }
             }
+
+            item { Spacer(Modifier.height(100.dp)) }
         }
 
-        item { Spacer(Modifier.height(80.dp)) }
+        // Overlapping Search Button
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 370.dp, end = 32.dp)
+                .zIndex(20f)
+        ) {
+            SunsetButton(
+                text = "Search",
+                onClick = onSearch,
+                variant = ButtonVariant.Secondary,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(28.dp))
+                    .height(44.dp)
+            )
+        }
     }
 }

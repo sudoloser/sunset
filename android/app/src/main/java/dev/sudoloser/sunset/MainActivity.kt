@@ -40,18 +40,11 @@ import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import android.content.Context
 
-val Context.dataStore by preferencesDataStore(name = "settings")
-
-private val SERVER_URL_KEY = stringPreferencesKey("server_url")
-private val USER_ID_KEY = stringPreferencesKey("user_id")
-private val USERNAME_KEY = stringPreferencesKey("username")
-private val IS_ADMIN_KEY = stringPreferencesKey("is_admin")
-private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
+import androidx.activity.compose.BackHandler
+import dev.sudoloser.sunset.data.PrefKeys
+import dev.sudoloser.sunset.data.dataStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,18 +65,27 @@ fun AppContent(activity: ComponentActivity) {
     var user by remember { mutableStateOf<User?>(null) }
     var status by remember { mutableStateOf<SetupStatus?>(null) }
     var selectedItem by remember { mutableStateOf<MediaItem?>(null) }
-    var showEpisodesTitle by remember { mutableStateOf<String?>(null) }
-    var showEpisodesItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var showSearch by remember { mutableStateOf(false) }
     var showAdmin by remember { mutableStateOf(false) }
     var activeTab by remember { mutableStateOf("home") }
     var darkTheme by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
+    // Back button handling
+    BackHandler(enabled = step == "main") {
+        when {
+            showSearch -> showSearch = false
+            selectedItem != null -> selectedItem = null
+            showAdmin -> showAdmin = false
+            activeTab != "home" -> activeTab = "home"
+            else -> activity.finish()
+        }
+    }
+
     // Load saved state
     LaunchedEffect(Unit) {
-        darkTheme = activity.dataStore.data.first()[DARK_MODE_KEY] ?: true
-        val url = activity.dataStore.data.first()[SERVER_URL_KEY]
+        darkTheme = activity.dataStore.data.first()[PrefKeys.DARK_MODE] ?: true
+        val url = activity.dataStore.data.first()[PrefKeys.SERVER_URL]
         if (url != null) {
             serverUrl = url
             apiClient = ApiClient(url)
@@ -91,7 +93,7 @@ fun AppContent(activity: ComponentActivity) {
                 val s = apiClient!!.getStatus()
                 status = s
                 if (s.setupComplete) {
-                    val uid = activity.dataStore.data.first()[USER_ID_KEY]
+                    val uid = activity.dataStore.data.first()[PrefKeys.USER_ID]
                     if (uid != null) {
                         try {
                             val u = apiClient!!.getUserProfile(uid)
@@ -138,7 +140,7 @@ fun AppContent(activity: ComponentActivity) {
                             apiClient = ApiClient(url)
                             try {
                                 val s = apiClient!!.getStatus()
-                                activity.dataStore.edit { it[SERVER_URL_KEY] = url }
+                                activity.dataStore.edit { it[PrefKeys.SERVER_URL] = url }
                                 serverUrl = url
                                 status = s
                                 step = if (s.setupComplete) "login" else "onboarding"
@@ -170,9 +172,9 @@ fun AppContent(activity: ComponentActivity) {
                             user = u
                             scope.launch {
                                 activity.dataStore.edit {
-                                    it[USER_ID_KEY] = u.userId
-                                    it[USERNAME_KEY] = u.username
-                                    it[IS_ADMIN_KEY] = u.isAdmin.toString()
+                                    it[PrefKeys.USER_ID] = u.userId
+                                    it[PrefKeys.USERNAME] = u.username
+                                    it[PrefKeys.IS_ADMIN] = u.isAdmin.toString()
                                 }
                             }
                             step = "main"
@@ -191,9 +193,9 @@ fun AppContent(activity: ComponentActivity) {
                             user = u
                             scope.launch {
                                 activity.dataStore.edit {
-                                    it[USER_ID_KEY] = u.userId
-                                    it[USERNAME_KEY] = u.username
-                                    it[IS_ADMIN_KEY] = u.isAdmin.toString()
+                                    it[PrefKeys.USER_ID] = u.userId
+                                    it[PrefKeys.USERNAME] = u.username
+                                    it[PrefKeys.IS_ADMIN] = u.isAdmin.toString()
                                 }
                             }
                             step = "main"
@@ -218,20 +220,6 @@ fun AppContent(activity: ComponentActivity) {
                                 showSearch = false
                             },
                             onClose = { showSearch = false }
-                        )
-                    }
-                    return
-                }
-
-                if (showEpisodesTitle != null) {
-                    SunsetTheme(darkTheme = darkTheme) {
-                        ShowEpisodesView(
-                            showTitle = showEpisodesTitle!!,
-                            episodes = showEpisodesItems,
-                            onPlayItem = { item ->
-                                startPlayer(activity, client, item.id, item.title, baseUrl, userId)
-                            },
-                            onBack = { showEpisodesTitle = null; showEpisodesItems = emptyList() }
                         )
                     }
                     return
@@ -285,11 +273,7 @@ fun AppContent(activity: ComponentActivity) {
                                     startPlayer(activity, client, item.id, item.title, baseUrl, userId)
                                     },
                                     onSearch = { showSearch = true },
-                                    onSelectItem = { item -> selectedItem = item },
-                                    onShowClicked = { title, episodes ->
-                                        showEpisodesTitle = title
-                                        showEpisodesItems = episodes
-                                    }
+                                    onSelectItem = { item -> selectedItem = item }
                                 )
                                 "library" -> LibrariesScreen(
                                     apiClient = client,
@@ -312,15 +296,15 @@ fun AppContent(activity: ComponentActivity) {
                                     onDarkThemeChange = { newVal ->
                                         darkTheme = newVal
                                         scope.launch {
-                                            activity.dataStore.edit { it[DARK_MODE_KEY] = newVal }
+                                            activity.dataStore.edit { it[PrefKeys.DARK_MODE] = newVal }
                                         }
                                     },
                                     onLogout = {
                                         scope.launch {
                                             activity.dataStore.edit {
-                                                it.remove(USER_ID_KEY)
-                                                it.remove(USERNAME_KEY)
-                                                it.remove(IS_ADMIN_KEY)
+                                                it.remove(PrefKeys.USER_ID)
+                                                it.remove(PrefKeys.USERNAME)
+                                                it.remove(PrefKeys.IS_ADMIN)
                                             }
                                             user = null
                                             step = "login"

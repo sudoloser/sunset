@@ -32,7 +32,10 @@ fun Hero(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(320.dp)
+            .padding(16.dp)
+            .height(420.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         AsyncImage(
             model = backdropUrl,
@@ -48,11 +51,11 @@ fun Hero(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.7f),
-                            Color.Black
+                            Color.Black.copy(alpha = 0.4f),
+                            Color.Black.copy(alpha = 0.9f)
                         ),
                         startY = 0f,
-                        endY = 1200f
+                        endY = 1400f
                     )
                 )
         )
@@ -60,7 +63,7 @@ fun Hero(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(24.dp),
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.Start
         ) {
@@ -68,24 +71,40 @@ fun Hero(
                 model = logoUrl,
                 contentDescription = item.title,
                 modifier = Modifier
-                    .width(200.dp)
-                    .padding(bottom = 12.dp)
+                    .width(240.dp)
+                    .padding(bottom = 16.dp)
             )
 
-            if (item.year != null) {
+            if (item.genres != null) {
+                Text(
+                    text = item.genres.split(",").take(3).joinToString(" • "),
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
+            } else if (item.year != null) {
                 Text(
                     text = item.year.toString(),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 20.dp)
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                SunsetButton(
+                    text = "Play Now",
                     onClick = onPlay,
-                    shape = RoundedCornerShape(4.dp)
-                ) { Text("Play", fontWeight = FontWeight.Medium) }
+                    variant = ButtonVariant.Primary,
+                    modifier = Modifier.weight(1f)
+                )
+                SunsetIconButton(
+                    icon = SunsetIcons.Plus,
+                    onClick = { /* TODO */ },
+                    backgroundColor = Color.White.copy(alpha = 0.2f),
+                    tint = Color.White
+                )
             }
         }
     }

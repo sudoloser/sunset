@@ -34,8 +34,6 @@ fun LibraryViewScreen(
 ) {
     var items by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
-    var selectedShow by remember { mutableStateOf<String?>(null) }
-    var showEpisodes by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
 
     LaunchedEffect(library.id) {
         try {
@@ -51,31 +49,20 @@ fun LibraryViewScreen(
         return
     }
 
-    if (selectedShow != null) {
-        LaunchedEffect(selectedShow) {
-            try {
-                showEpisodes = apiClient.getShowEpisodes(selectedShow!!)
-            } catch (_: Exception) {}
-        }
-        ShowEpisodesView(
-            showTitle = selectedShow!!,
-            episodes = showEpisodes,
-            onPlayItem = onPlayItem,
-            onBack = { selectedShow = null; showEpisodes = emptyList() }
-        )
-        return
-    }
-
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TextButton(onClick = onBack) { Text("< Back") }
-            Spacer(Modifier.width(8.dp))
+            SunsetIconButton(
+                icon = SunsetIcons.Back,
+                onClick = onBack,
+                backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            )
             Text(
                 text = library.name,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -85,8 +72,9 @@ fun LibraryViewScreen(
             LazyVerticalGrid(
                 columns = columnCount,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                contentPadding = PaddingValues(bottom = 100.dp)
             ) {
                 items(items) { item ->
                     Poster(item = item, baseUrl = baseUrl, onClick = { onSelectItem?.invoke(item) ?: onPlayItem(item) })
@@ -97,15 +85,16 @@ fun LibraryViewScreen(
             LazyVerticalGrid(
                 columns = columnCount,
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                contentPadding = PaddingValues(bottom = 100.dp)
             ) {
                 grouped.forEach { (showTitle, eps) ->
                     item {
                         Poster(
                             item = eps.first(),
                             baseUrl = baseUrl,
-                            onClick = { selectedShow = showTitle },
+                            onClick = { onSelectItem?.invoke(eps.first()) ?: onPlayItem(eps.first()) },
                             subtitle = "${eps.size} episodes"
                         )
                     }
@@ -123,86 +112,5 @@ private fun adaptiveGridColumns(): GridCells {
         width > 700.dp -> GridCells.Fixed(5)
         width > 500.dp -> GridCells.Fixed(4)
         else -> GridCells.Fixed(3)
-    }
-}
-
-@Composable
-fun ShowEpisodesView(
-    showTitle: String,
-    episodes: List<MediaItem>,
-    onPlayItem: (MediaItem) -> Unit,
-    onBack: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(onClick = onBack) { Text("< Back to Shows") }
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = showTitle,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        val seasons = episodes.groupBy { it.season ?: 1 }
-        seasons.toSortedMap().forEach { (season, eps) ->
-            Text(
-                "Season $season",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                eps.sortedBy { it.episode }.forEach { ep ->
-                    ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        onClick = { onPlayItem(ep) }
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "${ep.episode}. ${ep.title}",
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                if (!ep.description.isNullOrBlank()) {
-                                    Text(
-                                        ep.description,
-                                        fontSize = 12.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            IconButton(onClick = { onPlayItem(ep) }) {
-                                Icon(
-                                    Icons.Filled.PlayArrow,
-                                    contentDescription = "Play ${ep.title}",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(32.dp))
     }
 }

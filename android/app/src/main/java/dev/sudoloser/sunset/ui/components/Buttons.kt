@@ -32,28 +32,32 @@ fun SunsetButton(
 ) {
     val (bg, fg) = when (variant) {
         ButtonVariant.Primary -> NetflixRed to Color.White
-        ButtonVariant.Secondary -> Color(0xFF333333) to Color.White
-        ButtonVariant.Outline -> Color.Transparent to Color.White
+        ButtonVariant.Secondary -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurface
+        ButtonVariant.Outline -> Color.Transparent to MaterialTheme.colorScheme.onSurface
         ButtonVariant.Danger -> Color(0xFFC62828) to Color.White
-        ButtonVariant.Ghost -> Color.Transparent to Color.White
+        ButtonVariant.Ghost -> Color.Transparent to MaterialTheme.colorScheme.onSurface
     }
     val border = when (variant) {
-        ButtonVariant.Outline -> BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
+        ButtonVariant.Outline -> BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
         else -> null
     }
     val widthModifier = if (fullWidth) Modifier.fillMaxWidth() else Modifier
+    val shape = if (variant == ButtonVariant.Primary) RoundedCornerShape(8.dp) else RoundedCornerShape(12.dp)
 
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.then(widthModifier),
+        modifier = modifier.then(widthModifier).height(48.dp),
         colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = fg),
         border = border,
-        shape = RoundedCornerShape(4.dp)
+        shape = shape,
+        contentPadding = PaddingValues(horizontal = 24.dp)
     ) {
         Text(
             text = text,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 15.sp,
+            letterSpacing = 0.sp
         )
     }
 }

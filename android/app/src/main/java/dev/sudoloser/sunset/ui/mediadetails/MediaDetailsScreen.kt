@@ -44,9 +44,13 @@ fun MediaDetailsScreen(
 
     LaunchedEffect(item.id) {
         try {
-            if (item.mediaType.name == "EPISODE") {
-                val showTitle = item.showTitle ?: item.title
-                episodes = apiClient.getShowEpisodes(showTitle)
+            val isShow = item.mediaType.name == "EPISODE" || item.showTitle != null
+            if (isShow) {
+                val title = item.showTitle ?: item.title
+                episodes = apiClient.getShowEpisodes(title)
+                if (episodes.isNotEmpty()) {
+                    selectedSeason = episodes.first().season ?: 1
+                }
             }
             if (userId != null) {
                 val userItems = apiClient.getUserItems(userId)
@@ -59,17 +63,27 @@ fun MediaDetailsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(Color.Black)
     ) {
+        // Background Image (Blurred)
+        AsyncImage(
+            model = "$baseUrl/api/media/${item.id}/asset/backdrop.jpg",
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            alpha = 0.3f
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
+            // Hero Area
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(400.dp)
             ) {
                 AsyncImage(
                     model = "$baseUrl/api/media/${item.id}/asset/backdrop.jpg",
@@ -83,8 +97,8 @@ fun MediaDetailsScreen(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
-                                startY = 200f
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
+                                startY = 300f
                             )
                         )
                 )
@@ -92,151 +106,191 @@ fun MediaDetailsScreen(
                 SunsetIconButton(
                     icon = SunsetIcons.Back,
                     onClick = onClose,
-                    modifier = Modifier.padding(8.dp),
-                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    modifier = Modifier.padding(16.dp),
+                    backgroundColor = Color.Black.copy(alpha = 0.5f)
                 )
+
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(24.dp)
+                ) {
+                    AsyncImage(
+                        model = "$baseUrl/api/media/${item.id}/asset/logo.png",
+                        contentDescription = item.title,
+                        modifier = Modifier
+                            .width(260.dp)
+                            .padding(bottom = 24.dp),
+                        onError = { /* Fallback handled below */ }
+                    )
+                    
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SunsetButton(
+                            text = "Play",
+                            onClick = onPlay,
+                            variant = ButtonVariant.Primary,
+                            modifier = Modifier.width(140.dp)
+                        )
+
+                        SunsetButton(
+                            text = if (inMyList) "✓ My List" else "+ My List",
+                            onClick = {
+                                scope.launch {
+                                    try {
+                                        if (userId != null) {
+                                            if (inMyList) apiClient.removeUserItem(userId, item.id)
+                                            else apiClient.addUserItem(userId, item.id)
+                                            inMyList = !inMyList
+                                        }
+                                    } catch (_: Exception) {}
+                                }
+                            },
+                            variant = ButtonVariant.Secondary,
+                            modifier = Modifier.width(140.dp)
+                        )
+                    }
+                }
             }
 
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = onPlay) { Text("Play") }
-
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                try {
-                                    if (userId != null) {
-                                        if (inMyList) {
-                                            apiClient.removeUserItem(userId, item.id)
-                                        } else {
-                                            apiClient.addUserItem(userId, item.id)
-                                        }
-                                        inMyList = !inMyList
-                                    }
-                                } catch (_: Exception) {}
-                            }
+            // Content Area
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item.year?.let {
+                        Text(it.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                    }
+                    if (episodes.isNotEmpty()) {
+                        val seasonCount = episodes.map { it.season ?: 1 }.distinct().size
+                        Text("$seasonCount Seasons", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                    }
+                    item.rating?.let {
+                        Text("TMDB ${"%.1f".format(it)}/10", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                    }
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        (1..5).forEach { star ->
+                            Text(
+                                text = if (star <= userRating) "★" else "☆",
+                                fontSize = 18.sp,
+                                color = if (star <= userRating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.clickable { userRating = star }
+                            )
                         }
-                    ) { Text(if (inMyList) "In My List" else "My List") }
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (item.year != null) {
-                        Text(item.year.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                    }
-                    if (item.rating != null) {
-                        Text("TMDB: ${item.rating}/10", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Your rating: ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                    (1..5).forEach { star ->
-                        Text(
-                            text = if (star <= userRating) "★" else "☆",
-                            fontSize = 20.sp,
-                            color = if (star <= userRating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.clickable { userRating = star }
-                        )
-                    }
-                }
-
-                if (item.description != null) {
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = item.description,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 14.sp,
-                        maxLines = 5,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                val castList = item.cast?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
-                if (castList.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
-                    Text("Cast", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        castList.take(5).forEach { actor ->
-                            val initials = actor.split(" ").take(2)
-                                .mapNotNull { it.firstOrNull()?.uppercase() }
-                                .joinToString("")
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(initials, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
+                Text(
+                    text = item.description ?: "No description available for this title.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    lineHeight = 24.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                )
 
                 if (episodes.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
-
-                    val seasons = episodes.map { it.season ?: 1 }.distinct().sorted()
-                    var seasonExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(expanded = seasonExpanded, onExpandedChange = { seasonExpanded = it }) {
-                        OutlinedTextField(
-                            value = "Season $selectedSeason",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = seasonExpanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
-                        )
-                        ExposedDropdownMenu(expanded = seasonExpanded, onDismissRequest = { seasonExpanded = false }) {
-                            seasons.forEach { s ->
-                                DropdownMenuItem(
-                                    text = { Text("Season $s") },
-                                    onClick = { selectedSeason = s; seasonExpanded = false }
-                                )
+                    Spacer(Modifier.height(40.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Episodes", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        
+                        val seasons = episodes.map { it.season ?: 1 }.distinct().sorted()
+                        var seasonExpanded by remember { mutableStateOf(false) }
+                        
+                        Box {
+                            TextButton(
+                                onClick = { seasonExpanded = true },
+                                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                            ) {
+                                Text("Season $selectedSeason ▾", fontWeight = FontWeight.Bold)
+                            }
+                            DropdownMenu(
+                                expanded = seasonExpanded,
+                                onDismissRequest = { seasonExpanded = false },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                seasons.forEach { s ->
+                                    DropdownMenuItem(
+                                        text = { Text("Season $s") },
+                                        onClick = { selectedSeason = s; seasonExpanded = false }
+                                    )
+                                }
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(16.dp))
 
                     val seasonEps = episodes.filter { (it.season ?: 1) == selectedSeason }
                         .sortedBy { it.episode }
-                    seasonEps.forEach { ep ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onPlay() }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                    
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        seasonEps.forEach { ep ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { onPlay() }
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 Text(
-                                    "${ep.episode}. ${ep.title}",
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 14.sp
+                                    text = ep.episode.toString(),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.width(24.dp)
                                 )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        ep.title,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Icon(SunsetIcons.Play, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text("▶", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
+
+                // Cast Section
+                val castList = item.cast?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+                if (castList.isNotEmpty()) {
+                    Spacer(Modifier.height(40.dp))
+                    Text("Cast", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        castList.take(5).forEach { actor ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                val initials = actor.split(" ").take(2)
+                                    .mapNotNull { it.firstOrNull()?.uppercase() }
+                                    .joinToString("")
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(initials, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Text(actor, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(Modifier.height(100.dp))
             }
         }
     }

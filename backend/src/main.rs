@@ -458,11 +458,26 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
     
     loop {
         info!("Connecting to Discord Gateway...");
-        let (ws_stream, _) = match connect_async(url).await {
-            Ok(v) => v,
-            Err(e) => {
-                error!("Failed to connect to Discord Gateway: {}", e);
-                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        let ws_stream = tokio::select! {
+            res = connect_async(url) => {
+                match res {
+                    Ok((v, _)) => v,
+                    Err(e) => {
+                        error!("Failed to connect to Discord Gateway: {}", e);
+                        tokio::select! {
+                            _ = tokio::time::sleep(std::time::Duration::from_secs(5)) => {
+                                continue;
+                            }
+                            _ = rx.recv() => {
+                                if rx.is_closed() { return; }
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            _ = rx.recv() => {
+                if rx.is_closed() { return; }
                 continue;
             }
         };
@@ -472,16 +487,24 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
         let mut sequence: Option<u64> = None;
 
         // Discord HELLO
-        if let Some(Ok(Message::Text(msg))) = read.next().await {
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&msg) {
-                heartbeat_interval = val["d"]["heartbeat_interval"].as_u64().unwrap_or(41250);
-                info!("Discord Gateway HELLO received, heartbeat interval: {}ms", heartbeat_interval);
-            } else {
-                warn!("Discord Gateway: failed to parse HELLO: {}", msg);
+        tokio::select! {
+            msg = read.next() => {
+                if let Some(Ok(Message::Text(msg))) = msg {
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&msg) {
+                        heartbeat_interval = val["d"]["heartbeat_interval"].as_u64().unwrap_or(41250);
+                        info!("Discord Gateway HELLO received, heartbeat interval: {}ms", heartbeat_interval);
+                    } else {
+                        warn!("Discord Gateway: failed to parse HELLO: {}", msg);
+                    }
+                } else {
+                    warn!("Discord Gateway: no HELLO received");
+                    continue;
+                }
             }
-        } else {
-            warn!("Discord Gateway: no HELLO received");
-            continue;
+            _ = rx.recv() => {
+                if rx.is_closed() { return; }
+                continue;
+            }
         }
 
         // Identify
@@ -523,9 +546,6 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                 recv = rx.recv() => {
                     match recv {
                         Some(presence) => {
-                            let status = &presence.status;
-                            let detail = presence.activities.first().map(|a| a.details.as_deref().unwrap_or("")).unwrap_or("");
-                            debug!("Sending Discord presence: status={}, details={}", status, detail);
                             let update = serde_json::json!({
                                 "op": 3,
                                 "d": presence
@@ -552,8 +572,6 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                                         let t = val["t"].as_str().unwrap_or("");
                                         if t == "READY" {
                                             info!("Discord RPC connected successfully (READY received)");
-                                        } else {
-                                            debug!("Discord dispatch: {}", t);
                                         }
                                     }
                                     7 => {
@@ -561,19 +579,12 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                                         break;
                                     }
                                     9 => {
-                                        let d = &val["d"];
-                                        warn!("Discord Invalid Session (op 9) — token likely invalid or rate limited: {:?}", d);
+                                        warn!("Discord Invalid Session (op 9)");
                                         break;
                                     }
-                                    _ => debug!("Discord opcode {} received", op),
+                                    _ => {}
                                 }
                             }
-                        }
-                        Some(Ok(Message::Ping(_))) => {
-                            // handled automatically by tungstenite
-                        }
-                        Some(Ok(_)) => {
-                            // other message types (Pong, Close, Frame) — handled internally by tungstenite
                         }
                         Some(Err(e)) => {
                             warn!("Discord websocket error: {}", e);
@@ -583,12 +594,19 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                             debug!("Discord websocket closed");
                             break;
                         }
+                        _ => {}
                     }
                 }
             }
         }
+        
         info!("Discord RPC session ended, reconnecting in 5s...");
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        tokio::select! {
+            _ = tokio::time::sleep(std::time::Duration::from_secs(5)) => {}
+            _ = rx.recv() => {
+                if rx.is_closed() { return; }
+            }
+        }
     }
 }
 

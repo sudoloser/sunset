@@ -28,30 +28,33 @@ fun SunsetInput(
     password: Boolean = false,
     enabled: Boolean = true
 ) {
-    val shape = RoundedCornerShape(4.dp)
+    val shape = RoundedCornerShape(12.dp)
 
     Column(modifier = modifier) {
         if (label != null) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 6.dp)
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
             )
         }
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = placeholder?.let { { Text(it, color = Color.Gray, fontSize = 14.sp) } },
-            modifier = Modifier.fillMaxWidth(),
+            placeholder = placeholder?.let { { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), fontSize = 15.sp) } },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             shape = shape,
             enabled = enabled,
             singleLine = true,
             visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
-            textStyle = TextStyle(fontSize = 14.sp),
+            textStyle = TextStyle(fontSize = 15.sp),
             colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = DarkBorder.copy(alpha = 0.3f),
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                 cursorColor = MaterialTheme.colorScheme.primary
             )
         )
@@ -59,8 +62,8 @@ fun SunsetInput(
             Text(
                 text = error,
                 color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 4.dp)
+                fontSize = 13.sp,
+                modifier = Modifier.padding(top = 6.dp, start = 4.dp)
             )
         }
     }

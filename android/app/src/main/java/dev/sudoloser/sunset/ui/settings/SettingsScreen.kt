@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,6 +25,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
+import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -49,42 +48,58 @@ fun SettingsScreen(
         if (isAdmin) add("admin")
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         Text(
             text = "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
-            color = MaterialTheme.colorScheme.onBackground
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp),
+            color = Color.White
         )
 
         ScrollableTabRow(
             selectedTabIndex = tabs.indexOf(tab),
-            divider = {}
+            containerColor = Color.Transparent,
+            contentColor = Color.White,
+            divider = {},
+            indicator = { tabPositions ->
+                Box(
+                    Modifier
+                        .tabIndicatorOffset(tabPositions[tabs.indexOf(tab)])
+                        .height(3.dp)
+                        .padding(horizontal = 16.dp)
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                )
+            },
+            edgePadding = 24.dp
         ) {
             tabs.forEach { t ->
+                val selected = tab == t
                 Tab(
-                    selected = tab == t,
+                    selected = selected,
                     onClick = { tab = t },
                     text = {
                         Text(
                             t.replaceFirstChar { it.uppercase() },
-                            fontWeight = if (tab == t) FontWeight.SemiBold else FontWeight.Normal
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 15.sp,
+                            color = if (selected) Color.White else Color.Gray
                         )
-                    },
-                    selectedContentColor = MaterialTheme.colorScheme.onSurface,
-                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
             }
         }
 
-        HorizontalDivider()
+        Spacer(Modifier.height(16.dp))
 
-        when (tab) {
-            "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
-            "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange)
-            "subtitles" -> SubtitleSettings()
-            "discord" -> DiscordSettings(apiClient, userId)
-            "admin" -> onGoToAdmin()
+        Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            when (tab) {
+                "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
+                "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange)
+                "subtitles" -> SubtitleSettings()
+                "discord" -> DiscordSettings(apiClient, userId)
+                "admin" -> onGoToAdmin()
+            }
         }
     }
 }
@@ -126,58 +141,64 @@ fun AccountSettings(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (userId != null) {
                     AsyncImage(
                         model = apiClient.getProfilePictureUrl(userId),
                         contentDescription = null,
-                        modifier = Modifier.size(80.dp).clip(CircleShape),
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Box(
-                        modifier = Modifier.size(80.dp).clip(CircleShape)
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             (currentUsername?.take(2)?.uppercase() ?: "U"),
-                            fontSize = 28.sp,
+                            fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                FilledTonalButton(onClick = { photoPicker.launch("image/*") }) {
-                    Text("Upload Photo")
-                }
+                Spacer(Modifier.height(20.dp))
+                SunsetButton(
+                    text = "Change Photo",
+                    onClick = { photoPicker.launch("image/*") },
+                    variant = ButtonVariant.Secondary
+                )
                 if (photoMsg != null) {
-                    Text(photoMsg!!, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(photoMsg!!, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                SunsetInput(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Username") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    label = "Username"
                 )
                 if (usernameMsg != null) {
-                    Text(usernameMsg!!, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    Text(usernameMsg!!, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
                 }
-                Button(
+                SunsetButton(
+                    text = "Save Username",
                     onClick = {
                         scope.launch {
                             try {
@@ -185,40 +206,33 @@ fun AccountSettings(
                                     apiClient.changeUsername(userId, username)
                                     usernameMsg = "Username updated!"
                                 }
-                            } catch (e: Exception) {
-                                usernameMsg = e.message
-                            }
+                            } catch (e: Exception) { usernameMsg = e.message }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Save")
-                }
+                    fullWidth = true
+                )
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                SunsetInput(
                     value = currentPassword,
                     onValueChange = { currentPassword = it },
-                    label = { Text("Current Password") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
+                    label = "Current Password",
+                    password = true
                 )
-                OutlinedTextField(
+                SunsetInput(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = { Text("New Password") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
+                    label = "New Password",
+                    password = true
                 )
                 if (passwordMsg != null) {
-                    Text(passwordMsg!!, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    Text(passwordMsg!!, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
                 }
-                Button(
+                SunsetButton(
+                    text = "Update Password",
                     onClick = {
                         scope.launch {
                             try {
@@ -227,25 +241,22 @@ fun AccountSettings(
                                     passwordMsg = "Password updated!"
                                     currentPassword = ""; newPassword = ""
                                 }
-                            } catch (e: Exception) {
-                                passwordMsg = e.message
-                            }
+                            } catch (e: Exception) { passwordMsg = e.message }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Change Password")
-                }
+                    fullWidth = true
+                )
             }
         }
 
-        OutlinedButton(
+        SunsetButton(
+            text = "Log Out",
             onClick = onLogout,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-        ) {
-            Text("Log Out")
-        }
+            variant = ButtonVariant.Danger,
+            fullWidth = true
+        )
+        
+        Spacer(Modifier.height(80.dp))
     }
 }
 
@@ -257,24 +268,28 @@ fun AppearanceSettings(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Dark Mode", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Dark Mode", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
                     Text(
-                        "Use dark color theme",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        "Use the cinematic dark theme",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
                     )
                 }
-                Switch(checked = darkTheme, onCheckedChange = onDarkThemeChange)
+                Switch(
+                    checked = darkTheme, 
+                    onCheckedChange = onDarkThemeChange,
+                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
+                )
             }
         }
     }
@@ -300,24 +315,24 @@ fun SubtitleSettings() {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Color", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Text Color", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     colors.forEach { (hex, _) ->
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(36.dp)
                                 .clip(CircleShape)
+                                .background(Color(android.graphics.Color.parseColor(hex)))
                                 .border(
-                                    width = if (color == hex) 2.dp else 0.dp,
-                                    color = if (color == hex) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                    width = if (color == hex) 3.dp else 1.dp,
+                                    color = if (color == hex) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.5f),
                                     shape = CircleShape
                                 )
-                                .background(Color(android.graphics.Color.parseColor(hex)))
                                 .clickable { color = hex }
                         )
                     }
@@ -325,92 +340,65 @@ fun SubtitleSettings() {
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Background", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = bgOpacity == 0,
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Background Opacity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SunsetButton(
+                        text = "None",
                         onClick = { bgOpacity = 0 },
-                        label = { Text("None") }
+                        variant = if (bgOpacity == 0) ButtonVariant.Primary else ButtonVariant.Secondary,
+                        modifier = Modifier.weight(1f)
                     )
-                    FilterChip(
-                        selected = bgOpacity == 85,
-                        onClick = { bgOpacity = 85 },
-                        label = { Text("Black") }
+                    SunsetButton(
+                        text = "Translucent",
+                        onClick = { bgOpacity = 50 },
+                        variant = if (bgOpacity == 50) ButtonVariant.Primary else ButtonVariant.Secondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    SunsetButton(
+                        text = "Black",
+                        onClick = { bgOpacity = 100 },
+                        variant = if (bgOpacity == 100) ButtonVariant.Primary else ButtonVariant.Secondary,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Size: $size%", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Scale: $size%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Slider(
                     value = size.toFloat(),
                     onValueChange = { size = it.toInt() },
                     valueRange = 50f..200f,
-                    steps = 29
+                    steps = 29,
+                    colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary)
                 )
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Font", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                var expanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                    OutlinedTextField(
-                        value = font,
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
-                    )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        fonts.forEach { f ->
-                            DropdownMenuItem(
-                                text = { Text(f) },
-                                onClick = { font = f; expanded = false }
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        SunsetCard(modifier = Modifier.fillMaxWidth().height(160.dp), glass = true) {
+            val previewSize = (16 + (size - 50) * 0.15f).coerceIn(10f, 48f)
+            val previewColor = try { Color(android.graphics.Color.parseColor(color)) } catch (_: Exception) { Color.White }
+            val previewBg = Color.Black.copy(alpha = bgOpacity / 100f)
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = bold, onCheckedChange = { bold = it })
-            Text("Bold", color = MaterialTheme.colorScheme.onSurface)
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        val previewSize = (14 + (size - 50) * 0.12f).coerceIn(10f, 40f)
-        val previewColor = try { Color(android.graphics.Color.parseColor(color)) } catch (_: Exception) { Color.White }
-        val previewBg = if (bgOpacity > 0) Color.Black.copy(alpha = bgOpacity / 100f) else Color.Transparent
-
-        Card(
-            modifier = Modifier.fillMaxWidth().height(120.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "Preview subtitle text",
+                    text = "Subtitles Preview",
                     color = previewColor,
                     fontSize = previewSize.sp,
-                    fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Default,
+                    fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
-                        .background(previewBg, RoundedCornerShape(2.dp))
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .background(previewBg, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
         }
+        
+        Spacer(Modifier.height(80.dp))
     }
 }
 
@@ -440,104 +428,76 @@ fun DiscordSettings(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Rich Presence", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Discord Rich Presence", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
-                    "Sync your \"Watching SunSet\" status to Discord. You'll need your Discord User Token (not a bot token). Keep this token private!",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 13.sp
+                    "Show what you're watching on your Discord profile. This requires your User Token.",
+                    color = Color.Gray,
+                    fontSize = 14.sp
                 )
 
-                Spacer(Modifier.height(8.dp))
-
-                OutlinedTextField(
+                SunsetInput(
                     value = token,
                     onValueChange = { token = it },
-                    label = { Text("Discord User Token") },
-                    placeholder = { Text("PASTE_TOKEN_HERE") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
+                    label = "User Token",
+                    placeholder = "Paste your token here",
+                    password = true
                 )
 
-                Text("Presence Status", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                var expanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                    OutlinedTextField(
-                        value = status.replaceFirstChar { it.uppercase() },
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
-                    )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        listOf("online", "dnd", "idle", "invisible").forEach { s ->
-                            DropdownMenuItem(
-                                text = { Text(s.replaceFirstChar { it.uppercase() }) },
-                                onClick = { status = s; expanded = false }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(
-                        onClick = {
-                            if (userId == null) return@Button
-                            loading = true; saveStatus = null
-                            scope.launch {
-                                try {
-                                    apiClient.updateDiscordConfig(userId, token, status)
-                                    saveStatus = "success"
-                                    delay(3000); saveStatus = null
-                                } catch (_: Exception) { saveStatus = "error" }
-                                loading = false
-                            }
-                        },
-                        enabled = token.isNotBlank() && !loading
-                    ) {
-                        Text(
-                            when {
-                                loading -> "Saving..."
-                                saveStatus == "success" -> "✓ Saved"
-                                else -> "Save Config"
-                            }
+                Text("Status", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("online", "idle", "dnd").forEach { s ->
+                        val selected = status == s
+                        SunsetButton(
+                            text = s.uppercase(),
+                            onClick = { status = s },
+                            variant = if (selected) ButtonVariant.Primary else ButtonVariant.Secondary,
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                    if (saveStatus == "error") {
-                        Text("Failed to save config", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-                    }
+                }
+
+                SunsetButton(
+                    text = if (loading) "Saving..." else if (saveStatus == "success") "✓ Saved" else "Sync Discord",
+                    onClick = {
+                        if (userId == null) return@SunsetButton
+                        loading = true; saveStatus = null
+                        scope.launch {
+                            try {
+                                apiClient.updateDiscordConfig(userId, token, status)
+                                saveStatus = "success"
+                                delay(3000); saveStatus = null
+                            } catch (_: Exception) { saveStatus = "error" }
+                            loading = false
+                        }
+                    },
+                    enabled = token.isNotBlank() && !loading,
+                    fullWidth = true
+                )
+                
+                if (saveStatus == "error") {
+                    Text("Connection failed. Check your token.", color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("How to find your token?", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                val steps = listOf(
-                    "Open Discord in your browser and log in.",
-                    "Press Ctrl+Shift+I to open Developer Tools.",
-                    "Go to the Network tab and type /api in the filter.",
-                    "Refresh the page or click a channel.",
-                    "Click on an entry like science or messages.",
-                    "Find the authorization header in the request headers — that's your token."
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("How to find your token?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "1. Open Discord in browser\n2. Ctrl+Shift+I > Network tab\n3. Filter by '/api' and refresh\n4. Look for 'authorization' header in any request",
+                    color = Color.Gray,
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp
                 )
-                steps.forEachIndexed { i, step ->
-                    Text(
-                        "${i + 1}. $step",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
-                    )
-                }
             }
         }
+        
+        Spacer(Modifier.height(80.dp))
     }
 }

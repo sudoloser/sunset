@@ -31,7 +31,10 @@ fun NavigationSuite(
 
     if (useRail) {
         Row(modifier = Modifier.fillMaxSize()) {
-            NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
+            NavigationRail(
+                containerColor = Color(0xFF121212),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
                 Spacer(Modifier.height(48.dp))
                 tabs.forEach { (label, icon) ->
                     NavigationRailItem(
@@ -40,30 +43,52 @@ fun NavigationSuite(
                         icon = { icon() },
                         label = {
                             if (screenClass == ScreenWidthClass.Expanded) {
-                                Text(label, style = MaterialTheme.typography.labelSmall)
+                                Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
-                        }
+                        },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            selectedTextColor = Color.White,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
                     )
                 }
             }
-            Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Black
+            ) { padding ->
                 content(padding)
             }
         }
     } else {
         Scaffold(
             bottomBar = {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Color(0xFF121212),
+                    tonalElevation = 0.dp,
+                    modifier = Modifier.border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                ) {
                     tabs.forEach { (label, icon) ->
+                        val isSelected = activeTab == label
                         NavigationBarItem(
-                            selected = activeTab == label,
+                            selected = isSelected,
                             onClick = { onTabSelected(label) },
                             icon = { icon() },
-                            label = { Text(label) }
+                            label = { Text(label, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, fontSize = 10.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color.White,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                selectedTextColor = Color.White,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = Color.Transparent
+                            )
                         )
                     }
                 }
-            }
+            },
+            containerColor = Color.Black
         ) { padding ->
             content(padding)
         }

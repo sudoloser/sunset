@@ -19,17 +19,17 @@ fun SunsetCard(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(16.dp)
     val backgroundColor = if (glass) {
         MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     }
 
     val mod = modifier
         .clip(shape)
         .background(backgroundColor)
-        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), shape)
+        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), shape)
         .padding(16.dp)
 
     if (onClick != null) {
