@@ -26,7 +26,9 @@ fun SunsetButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    variant: ButtonVariant = ButtonVariant.Primary
+    variant: ButtonVariant = ButtonVariant.Primary,
+    enabled: Boolean = true,
+    fullWidth: Boolean = false
 ) {
     val (bg, fg) = when (variant) {
         ButtonVariant.Primary -> NetflixRed to Color.White
@@ -39,10 +41,12 @@ fun SunsetButton(
         ButtonVariant.Outline -> BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
         else -> null
     }
+    val widthModifier = if (fullWidth) Modifier.fillMaxWidth() else Modifier
 
     Button(
         onClick = onClick,
-        modifier = modifier,
+        enabled = enabled,
+        modifier = modifier.then(widthModifier),
         colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = fg),
         border = border,
         shape = RoundedCornerShape(4.dp)
