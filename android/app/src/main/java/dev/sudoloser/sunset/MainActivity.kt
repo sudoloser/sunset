@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import dev.sudoloser.sunset.api.ApiClient
@@ -116,20 +117,31 @@ fun AppContent(activity: ComponentActivity) {
         }
 
         "server_selection" -> {
-            ServerSelectionScreen { url ->
-                scope.launch {
-                    activity.dataStore.edit { it[SERVER_URL_KEY] = url }
-                    serverUrl = url
-                    apiClient = ApiClient(url)
-                    try {
-                        val s = apiClient!!.getStatus()
-                        status = s
-                        step = if (s.setupComplete) "login" else "onboarding"
-                    } catch (_: Exception) {
-                        step = "server_selection"
+            var errorMessage by remember { mutableStateOf<String?>(null) }
+            var connecting by remember { mutableStateOf(false) }
+
+            ServerSelectionScreen(
+                errorMessage = errorMessage,
+                loading = connecting,
+                onServerSelected = { url ->
+                    scope.launch {
+                        connecting = true
+                        errorMessage = null
+                        apiClient = ApiClient(url)
+                        try {
+                            val s = apiClient!!.getStatus()
+                            activity.dataStore.edit { it[SERVER_URL_KEY] = url }
+                            serverUrl = url
+                            status = s
+                            step = if (s.setupComplete) "login" else "onboarding"
+                        } catch (e: Exception) {
+                            errorMessage = "Could not reach server. Check the URL and try again."
+                        } finally {
+                            connecting = false
+                        }
                     }
                 }
-            }
+            )
         }
 
         "onboarding" -> {
@@ -301,7 +313,11 @@ fun AppContent(activity: ComponentActivity) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ServerSelectionScreen(onServerSelected: (String) -> Unit) {
+fun ServerSelectionScreen(
+    errorMessage: String? = null,
+    loading: Boolean = false,
+    onServerSelected: (String) -> Unit
+) {
     var input by remember { mutableStateOf("") }
 
     Column(
@@ -316,14 +332,33 @@ fun ServerSelectionScreen(onServerSelected: (String) -> Unit) {
             onValueChange = { input = it },
             label = { Text("Server URL") },
             placeholder = { Text("http://your-server:7867") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !loading
         )
+        if (errorMessage != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = errorMessage,
+                color = NetflixRed,
+                fontSize = 14.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = { if (input.isNotBlank()) onServerSelected(input) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = input.isNotBlank() && !loading
         ) {
-            Text("Connect")
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = NetflixRed,
+                    strokeWidth = 2.dp
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(if (loading) "Connecting..." else "Connect")
         }
     }
 }
