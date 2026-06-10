@@ -28,7 +28,6 @@ import dev.sudoloser.sunset.player.PlayerActivity
 import dev.sudoloser.sunset.ui.admin.AdminScreen
 import dev.sudoloser.sunset.ui.dashboard.DashboardScreen
 import dev.sudoloser.sunset.ui.library.LibrariesScreen
-import dev.sudoloser.sunset.ui.library.ShowEpisodesView
 import dev.sudoloser.sunset.ui.login.LoginScreen
 import dev.sudoloser.sunset.ui.mediadetails.MediaDetailsScreen
 import dev.sudoloser.sunset.ui.onboarding.OnboardingScreen
