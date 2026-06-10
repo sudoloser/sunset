@@ -355,14 +355,13 @@ fun ServerSelectionScreen(
             )
         }
         Spacer(Modifier.height(16.dp))
-            Button(
+        Button(
             onClick = { if (input.isNotBlank()) onServerSelected(input.trimEnd('/')) },
             modifier = Modifier.fillMaxWidth(),
             enabled = input.isNotBlank() && !loading
-        )
-                Spacer(Modifier.width(8.dp))
-            }
+        ) {
             Text(if (loading) "Connecting..." else "Connect")
         }
     }
+}
 }
