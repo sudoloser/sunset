@@ -124,7 +124,7 @@ private fun adaptiveGridColumns(): GridCells {
 }
 
 @Composable
-private fun ShowEpisodesView(
+fun ShowEpisodesView(
     showTitle: String,
     episodes: List<MediaItem>,
     onPlayItem: (MediaItem) -> Unit,

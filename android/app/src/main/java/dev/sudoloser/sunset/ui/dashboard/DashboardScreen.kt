@@ -20,7 +20,8 @@ fun DashboardScreen(
     apiClient: ApiClient,
     baseUrl: String,
     onPlayItem: (MediaItem) -> Unit,
-    onSearch: () -> Unit
+    onSearch: () -> Unit,
+    onShowClicked: ((String, List<MediaItem>) -> Unit)? = null
 ) {
     var recentlyAdded by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var libraries by remember { mutableStateOf<List<Library>>(emptyList()) }
@@ -141,7 +142,14 @@ fun DashboardScreen(
                             title = lib.name,
                             items = showCards,
                             baseUrl = baseUrl,
-                            onPlay = { clicked -> onPlayItem(clicked) },
+                            onPlay = { clicked ->
+                                val showTitle = clicked.showTitle
+                                if (showTitle != null && onShowClicked != null) {
+                                    onShowClicked(showTitle, grouped[showTitle] ?: emptyList())
+                                } else {
+                                    onPlayItem(clicked)
+                                }
+                            },
                             getSubtitle = { item -> "${grouped[item.showTitle ?: item.title]?.size ?: 0} episodes" }
                         )
                     }

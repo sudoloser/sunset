@@ -28,6 +28,7 @@ import dev.sudoloser.sunset.player.PlayerActivity
 import dev.sudoloser.sunset.ui.admin.AdminScreen
 import dev.sudoloser.sunset.ui.dashboard.DashboardScreen
 import dev.sudoloser.sunset.ui.library.LibrariesScreen
+import dev.sudoloser.sunset.ui.library.ShowEpisodesView
 import dev.sudoloser.sunset.ui.login.LoginScreen
 import dev.sudoloser.sunset.ui.mediadetails.MediaDetailsScreen
 import dev.sudoloser.sunset.ui.onboarding.OnboardingScreen
@@ -71,6 +72,8 @@ fun AppContent(activity: ComponentActivity) {
     var user by remember { mutableStateOf<User?>(null) }
     var status by remember { mutableStateOf<SetupStatus?>(null) }
     var selectedItem by remember { mutableStateOf<MediaItem?>(null) }
+    var showEpisodesTitle by remember { mutableStateOf<String?>(null) }
+    var showEpisodesItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var showSearch by remember { mutableStateOf(false) }
     var showAdmin by remember { mutableStateOf(false) }
     var activeTab by remember { mutableStateOf("home") }
@@ -220,6 +223,20 @@ fun AppContent(activity: ComponentActivity) {
                     return
                 }
 
+                if (showEpisodesTitle != null) {
+                    SunsetTheme(darkTheme = darkTheme) {
+                        ShowEpisodesView(
+                            showTitle = showEpisodesTitle!!,
+                            episodes = showEpisodesItems,
+                            onPlayItem = { item ->
+                                startPlayer(activity, client, item.id, item.title, baseUrl, userId)
+                            },
+                            onBack = { showEpisodesTitle = null; showEpisodesItems = emptyList() }
+                        )
+                    }
+                    return
+                }
+
                 if (selectedItem != null) {
                     SunsetTheme(darkTheme = darkTheme) {
                         MediaDetailsScreen(
@@ -278,7 +295,11 @@ fun AppContent(activity: ComponentActivity) {
                                 onPlayItem = { item ->
                                 startPlayer(activity, client, item.id, item.title, baseUrl, userId)
                                 },
-                                onSearch = { showSearch = true }
+                                onSearch = { showSearch = true },
+                                onShowClicked = { title, episodes ->
+                                    showEpisodesTitle = title
+                                    showEpisodesItems = episodes
+                                }
                             )
                             "library" -> LibrariesScreen(
                                 apiClient = client,
