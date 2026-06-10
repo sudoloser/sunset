@@ -9,7 +9,7 @@ interface AccountSettingsProps {
   isAdmin: boolean;
 }
 
-export const AccountSettings: React.FC<AccountSettingsProps> = ({ userId, currentUsername, isAdmin }) => {
+export const AccountSettings: React.FC<AccountSettingsProps> = ({ userId, currentUsername }) => {
   const [username, setUsername] = useState(currentUsername);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

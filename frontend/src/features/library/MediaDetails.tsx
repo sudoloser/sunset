@@ -300,7 +300,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h2 style={{ margin: 0 }}>Episodes</h2>
                   <select 
-                    value={selectedSeason} 
+                    value={selectedSeason ?? undefined} 
                     onChange={e => setSelectedSeason(parseInt(e.target.value))}
                     style={{ 
                       background: 'var(--surface-variant)', color: 'white', border: '1px solid var(--border-color)', 
