@@ -31,6 +31,9 @@ jobs:
         with:
           gradle-version: 8.5
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Build Release APK
         run: |
           cd android
