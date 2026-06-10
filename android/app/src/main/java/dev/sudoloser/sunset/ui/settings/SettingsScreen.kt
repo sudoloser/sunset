@@ -20,7 +20,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.ui.components.*
+import dev.sudoloser.sunset.ui.theme.DarkBorder
 import dev.sudoloser.sunset.ui.theme.NetflixRed
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -38,6 +40,7 @@ fun SettingsScreen(
         add("account")
         add("appearance")
         add("subtitles")
+        add("discord")
         if (isAdmin) add("admin")
     }
 
@@ -63,6 +66,7 @@ fun SettingsScreen(
             "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, isAdmin, onLogout)
             "appearance" -> AppearanceSettings()
             "subtitles" -> SubtitleSettings()
+            "discord" -> DiscordSettings(apiClient, userId)
             "admin" -> onGoToAdmin()
         }
     }
@@ -356,6 +360,159 @@ fun SubtitleSettings() {
                 color = Color.White,
                 fontSize = 16.sp
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DiscordSettings(
+    apiClient: ApiClient,
+    userId: String?
+) {
+    var token by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf("online") }
+    var loading by remember { mutableStateOf(false) }
+    var saveStatus by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(userId) {
+        if (userId != null) {
+            try {
+                val profile = apiClient.getUserProfile(userId)
+                if (profile?.discordToken != null) token = profile.discordToken
+                if (profile?.discordStatus != null) status = profile.discordStatus
+            } catch (_: Exception) {}
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Discord RPC",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                "Rich Presence",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Sync your \"Watching SunSet\" status to Discord. You'll need your Discord User Token (not a bot token). Keep this token private!",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp
+            )
+            Spacer(Modifier.height(20.dp))
+
+            SunsetInput(
+                value = token,
+                onValueChange = { token = it },
+                label = "Discord User Token",
+                password = true,
+                placeholder = "PASTE_TOKEN_HERE",
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                "Presence Status",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+
+            var expanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+                OutlinedTextField(
+                    value = status.replaceFirstChar { it.uppercase() },
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                )
+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    listOf("online", "dnd", "idle", "invisible").forEach { s ->
+                        DropdownMenuItem(
+                            text = { Text(s.replaceFirstChar { it.uppercase() }) },
+                            onClick = { status = s; expanded = false }
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                SunsetButton(
+                    text = when {
+                        loading -> "Saving..."
+                        saveStatus == "success" -> "✓ Saved"
+                        else -> "Save Config"
+                    },
+                    onClick = {
+                        if (userId == null) return@SunsetButton
+                        loading = true
+                        saveStatus = null
+                        scope.launch {
+                            try {
+                                apiClient.updateDiscordConfig(userId, token, status)
+                                saveStatus = "success"
+                                delay(3000)
+                                saveStatus = null
+                            } catch (_: Exception) {
+                                saveStatus = "error"
+                            }
+                            loading = false
+                        }
+                    },
+                    enabled = token.isNotBlank() && !loading
+                )
+                if (saveStatus == "error") {
+                    Text("Failed to save config", color = NetflixRed, fontSize = 12.sp)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        SunsetCard(
+            modifier = Modifier.fillMaxWidth(),
+            glass = true
+        ) {
+            Text(
+                "How to find your token?",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(12.dp))
+            val steps = listOf(
+                "Open Discord in your browser and log in.",
+                "Press Ctrl+Shift+I to open Developer Tools.",
+                "Go to the Network tab and type /api in the filter.",
+                "Refresh the page or click a channel.",
+                "Click on an entry like science or messages.",
+                "Find the authorization header in the request headers — that's your token."
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                steps.forEachIndexed { i, step ->
+                    Text(
+                        "${i + 1}. $step",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp
+                    )
+                }
+            }
         }
     }
 }
