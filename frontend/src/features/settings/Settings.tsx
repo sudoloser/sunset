@@ -27,7 +27,7 @@ export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - var(--header-height) - var(--bottom-nav-height) - 2rem)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: 'calc(100vh - var(--header-height) - var(--safe-area-top) - var(--bottom-nav-height) - var(--safe-area-bottom) - 2rem)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', overflowX: 'auto', flexShrink: 0 }}>
         {tabs.map(t => (
           <button

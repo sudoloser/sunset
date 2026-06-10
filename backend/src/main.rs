@@ -611,6 +611,10 @@ struct Args {
     /// Print version information
     #[arg(short, long)]
     version: bool,
+
+    /// Skip update check on startup
+    #[arg(long)]
+    no_update_check: bool,
 }
 
 #[tokio::main]
@@ -646,7 +650,9 @@ async fn main() {
     println!("\x1b[1;32mStarting server . . .\x1b[0m");
 
     // Check for updates (blocking, before server starts)
-    check_and_update();
+    if !args.no_update_check {
+        check_and_update();
+    }
 
     info!("Initializing storage and database...");
     let home_dir = dirs::home_dir().expect("Could not find home directory");

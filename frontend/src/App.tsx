@@ -92,8 +92,8 @@ function App() {
       
       <main style={{ 
         flex: 1, 
-        paddingTop: step === 'dashboard' ? 0 : 'var(--header-height)',
-        paddingBottom: 'var(--bottom-nav-height)',
+        paddingTop: step === 'dashboard' ? 'var(--safe-area-top)' : 'calc(var(--header-height) + var(--safe-area-top))',
+        paddingBottom: 'calc(var(--bottom-nav-height) + var(--safe-area-bottom))',
         maxWidth: '100vw',
         overflowX: 'hidden'
       }}>

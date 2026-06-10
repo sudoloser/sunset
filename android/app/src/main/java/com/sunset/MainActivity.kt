@@ -2,13 +2,16 @@ package com.sunset
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,6 +35,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        enableEdgeToEdge()
         
         setContent {
             var serverUrl by remember { mutableStateOf<String?>(null) }
@@ -91,6 +96,21 @@ class MainActivity : ComponentActivity() {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.mediaPlaybackRequiresUserGesture = false
+                
+                setOnApplyWindowInsetsListener { view, insets ->
+                    val left = insets.systemWindowInsetLeft
+                    val top = insets.systemWindowInsetTop
+                    val right = insets.systemWindowInsetRight
+                    val bottom = insets.systemWindowInsetBottom
+                    evaluateJavascript(
+                        "document.documentElement.style.setProperty('--safe-area-top', '${top}px');" +
+                        "document.documentElement.style.setProperty('--safe-area-bottom', '${bottom}px');" +
+                        "document.documentElement.style.setProperty('--safe-area-left', '${left}px');" +
+                        "document.documentElement.style.setProperty('--safe-area-right', '${right}px');",
+                        null
+                    )
+                    view.onApplyWindowInsets(insets)
+                }
                 
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {

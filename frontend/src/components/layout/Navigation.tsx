@@ -40,12 +40,14 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
           left: 0,
           right: 0,
           height: 'var(--header-height)',
+          paddingTop: 'var(--safe-area-top)',
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           backdropFilter: 'blur(20px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 var(--spacing-xl)',
+          paddingTop: 'var(--safe-area-top)',
           zIndex: 1000,
           transition: 'var(--transition-standard)'
         }}
@@ -156,13 +158,13 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
           left: 0,
           right: 0,
           height: 'var(--bottom-nav-height)',
+          paddingBottom: 'var(--safe-area-bottom)',
           backgroundColor: '#121212',
           borderTop: '1px solid var(--border-color)',
           display: 'none',
           alignItems: 'center',
           justifyContent: 'space-around',
-          zIndex: 1000,
-          paddingBottom: 'env(safe-area-inset-bottom)'
+          zIndex: 1000
         }}
         className="mobile-nav"
       >

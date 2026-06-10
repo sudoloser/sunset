@@ -98,7 +98,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
   return (
     <div
       ref={containerRef}
-      style={{ paddingBottom: 'var(--spacing-xxl)', marginTop: 'calc(-1 * var(--header-height))' }}
+      style={{ paddingBottom: 'var(--spacing-xxl)', marginTop: 'calc(-1 * var(--header-height) - var(--safe-area-top))' }}
       onTouchStart={(e) => { pullStartY.current = e.touches[0].clientY; }}
       onTouchMove={(e) => {
         if (containerRef.current && containerRef.current.scrollTop <= 0) {
