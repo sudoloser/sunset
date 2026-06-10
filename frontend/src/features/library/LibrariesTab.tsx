@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { MediaRow } from '../../components/common/MediaRow';
-import { MovieIcon, TVIcon } from '../../components/common/Icons';
 import { LibraryView } from './LibraryView';
 import { api } from '../../api/client';
 import type { Library, MediaItem } from '../../types';
