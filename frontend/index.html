@@ -9,6 +9,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>SunSet</title>
+    <script>
+      try {
+        var top = SafeArea.getTop();
+        var bottom = SafeArea.getBottom();
+        document.documentElement.style.setProperty('--safe-area-top', top + 'px');
+        document.documentElement.style.setProperty('--safe-area-bottom', bottom + 'px');
+      } catch(e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

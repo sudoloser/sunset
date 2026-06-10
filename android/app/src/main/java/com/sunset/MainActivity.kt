@@ -2,7 +2,6 @@ package com.sunset
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.webkit.JavascriptInterface
@@ -27,6 +26,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import android.content.Context
+import android.content.res.Resources
 
 val Context.dataStore by preferencesDataStore(name = "settings")
 
@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         enableEdgeToEdge()
-        
+
         setContent {
             var serverUrl by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
@@ -59,6 +59,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun getResourceDimension(name: String): Int {
+        val id = resources.getIdentifier(name, "dimen", "android")
+        return if (id > 0) resources.getDimensionPixelSize(id) else 0
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun ServerSelectionScreen(onServerSelected: (String) -> Unit) {
@@ -67,7 +72,7 @@ class MainActivity : ComponentActivity() {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalOrientation = Arrangement.Center
         ) {
             Text("SunSet", style = MaterialTheme.typography.headlineLarge)
             Spacer(Modifier.height(32.dp))
@@ -91,37 +96,54 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     @Composable
     fun SunSetWebView(url: String) {
+        var safeAreaTop by remember { mutableIntStateOf(getResourceDimension("status_bar_height")) }
+        var safeAreaBottom by remember { mutableIntStateOf(getResourceDimension("navigation_bar_height")) }
+
         AndroidView(factory = { context ->
             WebView(context).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.mediaPlaybackRequiresUserGesture = false
-                
+
                 setOnApplyWindowInsetsListener { view, insets ->
-                    val left = insets.systemWindowInsetLeft
-                    val top = insets.systemWindowInsetTop
-                    val right = insets.systemWindowInsetRight
-                    val bottom = insets.systemWindowInsetBottom
-                    evaluateJavascript(
-                        "document.documentElement.style.setProperty('--safe-area-top', '${top}px');" +
-                        "document.documentElement.style.setProperty('--safe-area-bottom', '${bottom}px');" +
-                        "document.documentElement.style.setProperty('--safe-area-left', '${left}px');" +
-                        "document.documentElement.style.setProperty('--safe-area-right', '${right}px');",
-                        null
+                    safeAreaTop = insets.systemWindowInsetTop
+                    safeAreaBottom = insets.systemWindowInsetBottom
+                    val js = (
+                        "document.documentElement.style.setProperty('--safe-area-top', '${safeAreaTop}px');" +
+                        "document.documentElement.style.setProperty('--safe-area-bottom', '${safeAreaBottom}px');"
                     )
+                    evaluateJavascript(js, null)
                     view.onApplyWindowInsets(insets)
                 }
-                
+
                 webViewClient = object : WebViewClient() {
+                    override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                        super.onPageStarted(view, url, favicon)
+                        val js = (
+                            "document.documentElement.style.setProperty('--safe-area-top', '${safeAreaTop}px');" +
+                            "document.documentElement.style.setProperty('--safe-area-bottom', '${safeAreaBottom}px');"
+                        )
+                        view?.evaluateJavascript(js, null)
+                    }
+
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                         return false
                     }
                 }
                 
+                addJavascriptInterface(SafeAreaBridge(), "SafeArea")
                 addJavascriptInterface(SunSetBridge(context), "SunSetAndroid")
                 loadUrl(url)
             }
         }, modifier = Modifier.fillMaxSize())
+    }
+
+    inner class SafeAreaBridge {
+        @JavascriptInterface
+        fun getTop(): Int = getResourceDimension("status_bar_height")
+
+        @JavascriptInterface
+        fun getBottom(): Int = getResourceDimension("navigation_bar_height")
     }
 
     inner class SunSetBridge(private val context: Context) {

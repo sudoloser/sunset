@@ -5,13 +5,65 @@ import { api } from '../../api/client';
 import { PlayIcon } from '../../components/common/Icons';
 import type { MediaItem } from '../../types';
 
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
+const DownloadProgressBar: React.FC<{
+  loaded: number;
+  total: number;
+  filename: string;
+  onCancel: () => void;
+}> = ({ loaded, total, filename, onCancel }) => {
+  const percent = total > 0 ? Math.round((loaded / total) * 100) : 0;
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 3000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)',
+    }} onClick={onCancel}>
+      <div style={{
+        background: 'var(--surface-color)', borderRadius: 'var(--radius-lg)',
+        padding: '2rem', minWidth: '320px',
+        border: '1px solid var(--border-color)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem' }}>
+          Downloading {filename}
+        </h3>
+        <div style={{
+          height: '8px', background: 'var(--surface-variant)',
+          borderRadius: '4px', overflow: 'hidden', margin: '1rem 0',
+        }}>
+          <div style={{
+            height: '100%', width: `${percent}%`,
+            background: 'var(--primary-color)', borderRadius: '4px',
+            transition: 'width 0.3s ease',
+          }} />
+        </div>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between',
+          fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem',
+        }}>
+          <span>{formatBytes(loaded)} / {formatBytes(total)}</span>
+          <span>{percent}%</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ContextMenu: React.FC<{ 
   item: MediaItem; 
   onClose: () => void; 
   zip?: boolean;
   top: number;
   left: number;
-}> = ({ item, onClose, zip = false, top, left }) => {
+  onDownload?: (item: MediaItem, zip: boolean) => void;
+}> = ({ item, onClose, zip = false, top, left, onDownload }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,6 +75,11 @@ const ContextMenu: React.FC<{
   }, [onClose]);
 
   const handleAction = async (action: 'stream' | 'download') => {
+    if (action === 'download' && onDownload) {
+      onDownload(item, zip || false);
+      onClose();
+      return;
+    }
     try {
       const token = await api.generateMediaToken(item.id);
       let base = '';
@@ -132,6 +189,49 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
   const heroTriggerRef = useRef<HTMLDivElement>(null);
   const episodeTriggerRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [downloadProgress, setDownloadProgress] = useState<{
+    loaded: number;
+    total: number;
+    filename: string;
+  } | null>(null);
+
+  const handleDownload = async (dlItem: MediaItem, zip: boolean) => {
+    try {
+      const token = await api.generateMediaToken(dlItem.id);
+      const url = zip
+        ? `/api/media/${dlItem.id}/download-zip?token=${encodeURIComponent(token)}`
+        : `/api/media/${dlItem.id}/download?token=${encodeURIComponent(token)}`;
+      const response = await fetch(url);
+      if (!response.ok || !response.body) return;
+      const contentLength = response.headers.get('Content-Length');
+      const total = contentLength ? parseInt(contentLength) : 0;
+      const filename = zip ? `${dlItem.title}.zip` : `${dlItem.title}.mp4`;
+      setDownloadProgress({ loaded: 0, total, filename });
+      const reader = response.body.getReader();
+      const chunks: BlobPart[] = [];
+      let loaded = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        setDownloadProgress(prev => prev ? { ...prev, loaded } : null);
+      }
+      const blob = new Blob(chunks);
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error('Download failed', e);
+    } finally {
+      setDownloadProgress(null);
+    }
+  };
 
   const updatePosition = (ref: React.RefObject<HTMLDivElement>, align: 'left' | 'right') => {
     if (ref.current) {
@@ -307,6 +407,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                     zip={isShow}
                     top={position.top}
                     left={position.left}
+                    onDownload={handleDownload}
                   />
                 )}
               </div>
@@ -398,6 +499,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                             zip={false} 
                             top={position.top}
                             left={position.left}
+                            onDownload={handleDownload}
                           />
                         )}
                       </div>
@@ -430,6 +532,14 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
           </div>
         </div>
       </Card>
+      {downloadProgress && (
+        <DownloadProgressBar
+          loaded={downloadProgress.loaded}
+          total={downloadProgress.total}
+          filename={downloadProgress.filename}
+          onCancel={() => setDownloadProgress(null)}
+        />
+      )}
     </div>
   );
 };

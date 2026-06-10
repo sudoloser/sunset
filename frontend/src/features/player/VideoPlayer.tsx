@@ -407,7 +407,7 @@ const handleActivity = () => {
           opacity: showControls ? 1 : 0,
           transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           pointerEvents: showControls ? 'all' : 'none',
-          padding: 'var(--spacing-xl)'
+          padding: 'calc(var(--spacing-xl) + var(--safe-area-top)) var(--spacing-xl) calc(var(--spacing-xl) + var(--safe-area-bottom))'
         }}
       >
           {/* Top Header */}
@@ -446,7 +446,7 @@ const handleActivity = () => {
         {showSpeedPicker && (
           <div 
             style={{
-              position: 'absolute', top: '80px', right: 'var(--spacing-xl)',
+              position: 'absolute', top: 'calc(80px + var(--safe-area-top))', right: 'var(--spacing-xl)',
               background: 'rgba(20,20,20,0.95)', borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-color)', padding: '0.5rem',
               minWidth: '100px', zIndex: 10, backdropFilter: 'blur(10px)'
@@ -553,7 +553,7 @@ const handleActivity = () => {
       {showSubtitlePicker && subtitleFiles.length > 0 && (
         <div 
           style={{
-            position: 'absolute', top: '80px', right: 'var(--spacing-xl)',
+            position: 'absolute', top: 'calc(80px + var(--safe-area-top))', right: 'var(--spacing-xl)',
             background: 'rgba(20,20,20,0.95)', borderRadius: 'var(--radius-lg)',
             border: '1px solid var(--border-color)', padding: '0.5rem', minWidth: '180px', zIndex: 10,
             backdropFilter: 'blur(10px)'
@@ -594,7 +594,7 @@ const handleActivity = () => {
       {showEpisodes && episodes.length > 0 && (
         <div 
           style={{
-            position: 'absolute', top: '80px', right: 'var(--spacing-xl)',
+            position: 'absolute', top: 'calc(80px + var(--safe-area-top))', right: 'var(--spacing-xl)',
             background: 'rgba(20,20,20,0.95)', borderRadius: 'var(--radius-lg)',
             border: '1px solid var(--border-color)', padding: '0.5rem',
             minWidth: '280px', maxHeight: '60vh', overflowY: 'auto', zIndex: 10,
