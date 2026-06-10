@@ -1,11 +1,9 @@
 package dev.sudoloser.sunset.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.data.models.MediaItem
-import dev.sudoloser.sunset.ui.theme.NetflixRed
 
 @Composable
 fun Hero(
@@ -85,11 +82,10 @@ fun Hero(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SunsetButton(
-                    text = "Play",
+                Button(
                     onClick = onPlay,
-                    variant = ButtonVariant.Primary
-                )
+                    shape = RoundedCornerShape(4.dp)
+                ) { Text("Play", fontWeight = FontWeight.Medium) }
             }
         }
     }

@@ -23,7 +23,6 @@ import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.ui.components.*
-import dev.sudoloser.sunset.ui.theme.NetflixRed
 import kotlinx.coroutines.launch
 
 @Composable
@@ -60,7 +59,7 @@ fun MediaDetailsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.8f))
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -84,7 +83,7 @@ fun MediaDetailsScreen(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
+                                colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
                                 startY = 200f
                             )
                         )
@@ -94,7 +93,7 @@ fun MediaDetailsScreen(
                     icon = SunsetIcons.Back,
                     onClick = onClose,
                     modifier = Modifier.padding(8.dp),
-                    backgroundColor = Color(0x66000000)
+                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                 )
             }
 
@@ -105,21 +104,16 @@ fun MediaDetailsScreen(
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f),
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
                 Spacer(Modifier.height(12.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SunsetButton(
-                        text = "Play",
-                        onClick = onPlay,
-                        variant = ButtonVariant.Primary
-                    )
+                    Button(onClick = onPlay) { Text("Play") }
 
-                    SunsetButton(
-                        text = if (inMyList) "In My List" else "My List",
+                    OutlinedButton(
                         onClick = {
                             scope.launch {
                                 try {
@@ -133,31 +127,30 @@ fun MediaDetailsScreen(
                                     }
                                 } catch (_: Exception) {}
                             }
-                        },
-                        variant = ButtonVariant.Secondary
-                    )
+                        }
+                    ) { Text(if (inMyList) "In My List" else "My List") }
                 }
 
                 Spacer(Modifier.height(16.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (item.year != null) {
-                        Text(item.year.toString(), color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                        Text(item.year.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                     if (item.rating != null) {
-                        Text("TMDB: ${item.rating}/10", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                        Text("TMDB: ${item.rating}/10", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
 
                 Spacer(Modifier.height(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Your rating: ", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                    Text("Your rating: ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     (1..5).forEach { star ->
                         Text(
                             text = if (star <= userRating) "★" else "☆",
                             fontSize = 20.sp,
-                            color = if (star <= userRating) NetflixRed else Color.Gray,
+                            color = if (star <= userRating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.clickable { userRating = star }
                         )
                     }
@@ -167,7 +160,7 @@ fun MediaDetailsScreen(
                     Spacer(Modifier.height(12.dp))
                     Text(
                         text = item.description,
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp,
                         maxLines = 5,
                         overflow = TextOverflow.Ellipsis
@@ -177,7 +170,7 @@ fun MediaDetailsScreen(
                 val castList = item.cast?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
                 if (castList.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
-                    Text("Cast", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    Text("Cast", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         castList.take(5).forEach { actor ->
@@ -188,10 +181,10 @@ fun MediaDetailsScreen(
                                 modifier = Modifier
                                     .size(44.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF333333)),
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(initials, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(initials, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -235,13 +228,13 @@ fun MediaDetailsScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     "${ep.episode}. ${ep.title}",
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 14.sp
                                 )
                             }
-                            Text("▶", color = NetflixRed, fontSize = 14.sp)
+                            Text("▶", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
                         }
-                        HorizontalDivider(color = Color(0xFF333333))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
             }

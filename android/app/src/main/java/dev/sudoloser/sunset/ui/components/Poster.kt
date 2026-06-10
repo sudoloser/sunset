@@ -65,7 +65,7 @@ fun Poster(
                         modifier = Modifier
                             .fillMaxWidth(progress.coerceIn(0f, 1f))
                             .fillMaxHeight()
-                            .background(dev.sudoloser.sunset.ui.theme.NetflixRed)
+                            .background(MaterialTheme.colorScheme.primary)
                     )
                 }
             }

@@ -227,14 +227,7 @@ fun AppContent(activity: ComponentActivity) {
                             baseUrl = baseUrl,
                             apiClient = client,
                             userId = userId,
-                            onPlay = {
-                                val intent = Intent(activity, PlayerActivity::class.java).apply {
-                                    putExtra("video_url", client.getStreamUrl(selectedItem!!.id))
-                                    putExtra("video_title", selectedItem!!.title)
-                                    putExtra("item_id", selectedItem!!.id)
-                                }
-                                activity.startActivity(intent)
-                            },
+                            onPlay = { startPlayer(activity, client, selectedItem!!.id, selectedItem!!.title, baseUrl, userId) },
                             onClose = { selectedItem = null }
                         )
                     }
@@ -283,12 +276,7 @@ fun AppContent(activity: ComponentActivity) {
                                 apiClient = client,
                                 baseUrl = baseUrl,
                                 onPlayItem = { item ->
-                                    val intent = Intent(activity, PlayerActivity::class.java).apply {
-                                        putExtra("video_url", client.getStreamUrl(item.id))
-                                        putExtra("video_title", item.title)
-                                        putExtra("item_id", item.id)
-                                    }
-                                    activity.startActivity(intent)
+                                startPlayer(activity, client, item.id, item.title, baseUrl, userId)
                                 },
                                 onSearch = { showSearch = true }
                             )
@@ -298,12 +286,7 @@ fun AppContent(activity: ComponentActivity) {
                                 userId = userId,
                                 isAdmin = user?.isAdmin == true,
                                 onPlayItem = { item ->
-                                    val intent = Intent(activity, PlayerActivity::class.java).apply {
-                                        putExtra("video_url", client.getStreamUrl(item.id))
-                                        putExtra("video_title", item.title)
-                                        putExtra("item_id", item.id)
-                                    }
-                                    activity.startActivity(intent)
+                                startPlayer(activity, client, item.id, item.title, baseUrl, userId)
                                 },
                                 onSelectItem = { selectedItem = it },
                                 onGoToSettings = { activeTab = "settings" }
@@ -341,6 +324,17 @@ fun AppContent(activity: ComponentActivity) {
         }
     }
 }
+}
+
+private fun startPlayer(activity: ComponentActivity, client: ApiClient, itemId: String, title: String, baseUrl: String, userId: String?) {
+    val intent = Intent(activity, PlayerActivity::class.java).apply {
+        putExtra("video_url", client.getStreamUrl(itemId))
+        putExtra("video_title", title)
+        putExtra("item_id", itemId)
+        putExtra("base_url", baseUrl)
+        putExtra("user_id", userId)
+    }
+    activity.startActivity(intent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

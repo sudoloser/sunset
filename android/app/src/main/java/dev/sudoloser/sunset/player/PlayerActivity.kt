@@ -1,19 +1,28 @@
 package dev.sudoloser.sunset.player
 
-import android.app.PictureInPictureParams
 import android.content.pm.ActivityInfo
-import android.content.res.Configuration
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.util.Rational
 import androidx.activity.ComponentActivity
-import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.source.SingleSampleMediaSource
 import androidx.media3.ui.PlayerView
 import dev.sudoloser.sunset.R
+import kotlinx.coroutines.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
 
 @OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
@@ -22,6 +31,15 @@ class PlayerActivity : ComponentActivity() {
     private var videoUrl: String? = null
     private var videoTitle: String? = null
     private var itemId: String? = null
+    private var baseUrl: String? = null
+    private var userId: String? = null
+    private var saveJob: Job? = null
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .build()
+    private val json = Json { ignoreUnknownKeys = true }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,8 +48,9 @@ class PlayerActivity : ComponentActivity() {
         videoUrl = intent.getStringExtra("video_url")
         videoTitle = intent.getStringExtra("video_title")
         itemId = intent.getStringExtra("item_id")
+        baseUrl = intent.getStringExtra("base_url")
+        userId = intent.getStringExtra("user_id")
 
-        // Force Landscape for video
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
         playerView = findViewById(R.id.player_view)
@@ -39,50 +58,106 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun initializePlayer() {
+        val url = videoUrl ?: return
+        val id = itemId ?: return
+
         player = ExoPlayer.Builder(this).build().also { exoPlayer ->
             playerView.player = exoPlayer
-            val mediaItem = MediaItem.fromUri(Uri.parse(videoUrl))
-            exoPlayer.setMediaItem(mediaItem)
-            exoPlayer.prepare()
-            exoPlayer.playWhenReady = true
+
+            val dataSourceFactory = DefaultHttpDataSource.Factory()
+
+            val mainMediaItem = MediaItem.Builder().setUri(url).build()
+            val mainSource = ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mainMediaItem)
+
+            val sources = mutableListOf(mainSource)
+
+            // Fetch and add subtitles
+            if (baseUrl != null) {
+                scope.launch {
+                    try {
+                        val subtitleNames = fetchSubtitles(id)
+                        subtitleNames.forEach { name ->
+                            val subUrl = "$baseUrl/api/media/$id/subtitle/${java.net.URLEncoder.encode(name, "UTF-8")}"
+                            val subSource = SingleSampleMediaSource.Factory(dataSourceFactory)
+                                .createMediaSource(Uri.parse(subUrl), C.TEXT_EXOPLAYER_CUES, 0L)
+                            sources.add(subSource)
+                        }
+                    } catch (_: Exception) {}
+                    withContext(Dispatchers.Main) {
+                        val mergedSource = MergingMediaSource(*sources.toTypedArray())
+                        exoPlayer.setMediaSource(mergedSource)
+                        exoPlayer.prepare()
+                        exoPlayer.playWhenReady = true
+                    }
+                }
+            } else {
+                exoPlayer.setMediaSource(mainSource)
+                exoPlayer.prepare()
+                exoPlayer.playWhenReady = true
+            }
+
+            // Start periodic save
+            startSaveJob(exoPlayer, id)
         }
     }
 
-    override fun onUserLeaveHint() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val aspectRatio = Rational(16, 9)
-            val params = PictureInPictureParams.Builder()
-                .setAspectRatio(aspectRatio)
+    private suspend fun fetchSubtitles(id: String): List<String> {
+        val request = Request.Builder().url("$baseUrl/api/media/$id/subtitles").get().build()
+        val response = httpClient.newCall(request).execute()
+        val body = response.body?.string() ?: return emptyList()
+        val arr = json.decodeFromString<JsonArray>(body)
+        return arr.map { it.jsonPrimitive.content }
+    }
+
+    private fun startSaveJob(exoPlayer: ExoPlayer, id: String) {
+        saveJob?.cancel()
+        saveJob = scope.launch {
+            while (isActive) {
+                delay(15000)
+                if (exoPlayer.isPlaying) {
+                    savePlayback(id, exoPlayer.currentPosition.toDouble(), exoPlayer.duration.toDouble(), isPlaying = true)
+                }
+            }
+        }
+    }
+
+    private fun savePlayback(itemId: String, timestamp: Double, duration: Double, isPlaying: Boolean) {
+        if (baseUrl == null) return
+        try {
+            val payload = buildString {
+                append("{\"item_id\":\"$itemId\",\"timestamp\":$timestamp,\"duration\":$duration")
+                if (userId != null) append(",\"user_id\":\"$userId\"")
+                append(",\"is_playing\":$isPlaying}")
+            }
+            val request = Request.Builder()
+                .url("$baseUrl/api/playback")
+                .post(payload.toRequestBody("application/json".toMediaTypeOrNull()))
                 .build()
-            enterPictureInPictureMode(params)
-        }
-    }
-
-    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-        if (isInPictureInPictureMode) {
-            playerView.useController = false
-        } else {
-            playerView.useController = true
-        }
+            httpClient.newCall(request).execute()
+        } catch (_: Exception) {}
     }
 
     override fun onStop() {
         super.onStop()
-        releasePlayer()
-    }
-
-    private fun releasePlayer() {
-        player?.let { exoPlayer ->
-            // In a real app, we would report progress here
-            exoPlayer.release()
+        saveJob?.cancel()
+        player?.let { p ->
+            if (itemId != null) {
+                savePlayback(itemId!!, p.currentPosition.toDouble(), p.duration.toDouble(), isPlaying = false)
+            }
+            p.stop()
         }
-        player = null
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Return to normal orientation
+        scope.cancel()
+        player?.let {
+            if (itemId != null) {
+                savePlayback(itemId!!, it.currentPosition.toDouble(), it.duration.toDouble(), isPlaying = false)
+            }
+            it.release()
+        }
+        player = null
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 }

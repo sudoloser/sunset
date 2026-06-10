@@ -22,9 +22,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
-
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -100,7 +102,25 @@ fun AccountSettings(
     var newPassword by remember { mutableStateOf("") }
     var passwordMsg by remember { mutableStateOf<String?>(null) }
     var usernameMsg by remember { mutableStateOf<String?>(null) }
+    var photoMsg by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null && userId != null) {
+            scope.launch {
+                try {
+                    val bytes = ctx.contentResolver.openInputStream(uri)?.readBytes()
+                    if (bytes != null) {
+                        val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                        apiClient.uploadProfilePicture(userId, b64)
+                        photoMsg = "Photo updated!"
+                    }
+                } catch (e: Exception) {
+                    photoMsg = "Failed: ${e.message}"
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -136,12 +156,11 @@ fun AccountSettings(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                FilledTonalButton(onClick = {
-                    scope.launch {
-                        try { if (userId != null) apiClient.uploadProfilePicture(userId, "") } catch (_: Exception) {}
-                    }
-                }) {
+                FilledTonalButton(onClick = { photoPicker.launch("image/*") }) {
                     Text("Upload Photo")
+                }
+                if (photoMsg != null) {
+                    Text(photoMsg!!, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -373,7 +392,7 @@ fun SubtitleSettings() {
 
         Card(
             modifier = Modifier.fillMaxWidth().height(120.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF111111))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
