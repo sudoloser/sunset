@@ -31,8 +31,8 @@ class ApiClient(private val baseUrl: String) {
         json.decodeFromString<T>(body)
     }
 
-    private suspend inline fun <reified T> post(endpoint: String, body: Any?): T = withContext(Dispatchers.IO) {
-        val requestBody = if (body == null || body == Unit) {
+    private suspend inline fun <reified T, reified B> post(endpoint: String, body: B?): T = withContext(Dispatchers.IO) {
+        val requestBody = if (body == null || body is Unit) {
             "{}".toRequestBody(mediaType)
         } else {
             json.encodeToString(body).toRequestBody(mediaType)
