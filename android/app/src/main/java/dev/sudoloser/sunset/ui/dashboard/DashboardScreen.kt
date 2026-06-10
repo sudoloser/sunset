@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -157,20 +158,18 @@ fun DashboardScreen(
             item { Spacer(Modifier.height(100.dp)) }
         }
 
-        // Overlapping Search Button
+        // Top Search Icon
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 370.dp, end = 32.dp)
+                .padding(16.dp)
                 .zIndex(20f)
         ) {
-            SunsetButton(
-                text = "Search",
+            SunsetIconButton(
+                icon = SunsetIcons.Search,
                 onClick = onSearch,
-                variant = ButtonVariant.Secondary,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(28.dp))
-                    .height(44.dp)
+                backgroundColor = Color.Black.copy(alpha = 0.4f),
+                size = 28.dp
             )
         }
     }

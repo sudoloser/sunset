@@ -117,7 +117,7 @@ fun AppContent(activity: ComponentActivity) {
 
         when (step) {
         "loading" -> {
-            SunsetTheme(darkTheme = darkTheme) {
+            SunsetTheme {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = NetflixRed)
                 }
@@ -128,7 +128,7 @@ fun AppContent(activity: ComponentActivity) {
             var errorMessage by remember { mutableStateOf<String?>(null) }
             var connecting by remember { mutableStateOf(false) }
 
-            SunsetTheme(darkTheme = darkTheme) {
+            SunsetTheme {
                 ServerSelectionScreen(
                     errorMessage = errorMessage,
                     loading = connecting,
@@ -164,7 +164,7 @@ fun AppContent(activity: ComponentActivity) {
 
         "onboarding" -> {
             apiClient?.let { client ->
-                SunsetTheme(darkTheme = darkTheme) {
+                SunsetTheme {
                     OnboardingScreen(
                         apiClient = client,
                         onComplete = { u ->
@@ -185,7 +185,7 @@ fun AppContent(activity: ComponentActivity) {
 
         "login" -> {
             apiClient?.let { client ->
-                SunsetTheme(darkTheme = darkTheme) {
+                SunsetTheme {
                     LoginScreen(
                         apiClient = client,
                         onLogin = { u ->
@@ -210,7 +210,7 @@ fun AppContent(activity: ComponentActivity) {
                 val userId = user?.userId
 
                 if (showSearch) {
-                    SunsetTheme(darkTheme = darkTheme) {
+                    SunsetTheme {
                         SearchScreen(
                             apiClient = client,
                             baseUrl = baseUrl,
@@ -225,7 +225,7 @@ fun AppContent(activity: ComponentActivity) {
                 }
 
                 if (selectedItem != null) {
-                    SunsetTheme(darkTheme = darkTheme) {
+                    SunsetTheme {
                         MediaDetailsScreen(
                             item = selectedItem!!,
                             baseUrl = baseUrl,
@@ -239,7 +239,7 @@ fun AppContent(activity: ComponentActivity) {
                 }
 
                 if (showAdmin) {
-                    SunsetTheme(darkTheme = darkTheme) {
+                    SunsetTheme {
                         AdminScreen(
                             apiClient = client,
                             baseUrl = baseUrl,
@@ -249,7 +249,7 @@ fun AppContent(activity: ComponentActivity) {
                     return
                 }
 
-                SunsetTheme(darkTheme = darkTheme) {
+                SunsetTheme {
                     val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }
                     val iconLibrary: @Composable () -> Unit = { Icon(SunsetIcons.Library, contentDescription = "Library") }
                     val iconSettings: @Composable () -> Unit = { Icon(SunsetIcons.Settings, contentDescription = "Settings") }

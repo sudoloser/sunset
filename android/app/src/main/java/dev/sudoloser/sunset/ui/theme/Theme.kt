@@ -42,13 +42,10 @@ object SunsetTheme {
 
 @Composable
 fun SunsetTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = DarkColorScheme,
         typography = SunsetTypography,
         content = content
     )
