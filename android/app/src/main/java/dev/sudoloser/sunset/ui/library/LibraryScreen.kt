@@ -98,7 +98,7 @@ fun LibrariesScreen(
                 items = continueWatching,
                 baseUrl = baseUrl,
                 onPlay = onPlayItem,
-                getProgress = { playbackProgress[it.id] }
+                getProgress = { playbackProgress[it.id] ?: 0f }
             )
         }
 

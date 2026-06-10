@@ -342,6 +342,7 @@ fun AppContent(activity: ComponentActivity) {
         }
     }
 }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
