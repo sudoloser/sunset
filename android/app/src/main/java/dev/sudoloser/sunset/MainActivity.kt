@@ -39,6 +39,7 @@ import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import android.content.Context
@@ -110,11 +111,12 @@ fun AppContent(activity: ComponentActivity) {
         }
     }
 
-    SunsetTheme(darkTheme = darkTheme) {
         when (step) {
         "loading" -> {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = NetflixRed)
+            SunsetTheme(darkTheme = darkTheme) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = NetflixRed)
+                }
             }
         }
 
@@ -122,74 +124,80 @@ fun AppContent(activity: ComponentActivity) {
             var errorMessage by remember { mutableStateOf<String?>(null) }
             var connecting by remember { mutableStateOf(false) }
 
-            ServerSelectionScreen(
-                errorMessage = errorMessage,
-                loading = connecting,
-                onServerSelected = { url ->
-                    scope.launch {
-                        connecting = true
-                        errorMessage = null
-                        apiClient = ApiClient(url)
-                        try {
-                            val s = apiClient!!.getStatus()
-                            activity.dataStore.edit { it[SERVER_URL_KEY] = url }
-                            serverUrl = url
-                            status = s
-                            step = if (s.setupComplete) "login" else "onboarding"
-                        } catch (e: Exception) {
-                            val type = e::class.simpleName ?: "Exception"
-                            val detail = when {
-                                e.message?.contains("timeout", ignoreCase = true) == true -> "Connection timed out"
-                                e.message?.contains("refused", ignoreCase = true) == true -> "Connection refused (server not running on this port)"
-                                e.message?.contains("resolve", ignoreCase = true) == true -> "Could not resolve hostname"
-                                e.message?.contains("not permitted", ignoreCase = true) == true -> "Cleartext HTTP blocked by system"
-                                else -> "${e.message?.take(80) ?: "no message"} ($type)"
-                            }
-                            errorMessage = "Can't connect: $detail"
-                        } finally {
-                            connecting = false
-                        }
-                    }
-                }
-            )
-        }
-
-        "onboarding" -> {
-            apiClient?.let { client ->
-                OnboardingScreen(
-                    apiClient = client,
-                    onComplete = { u ->
-                        user = u
+            SunsetTheme(darkTheme = darkTheme) {
+                ServerSelectionScreen(
+                    errorMessage = errorMessage,
+                    loading = connecting,
+                    onServerSelected = { url ->
                         scope.launch {
-                            activity.dataStore.edit {
-                                it[USER_ID_KEY] = u.userId
-                                it[USERNAME_KEY] = u.username
-                                it[IS_ADMIN_KEY] = u.isAdmin.toString()
+                            connecting = true
+                            errorMessage = null
+                            apiClient = ApiClient(url)
+                            try {
+                                val s = apiClient!!.getStatus()
+                                activity.dataStore.edit { it[SERVER_URL_KEY] = url }
+                                serverUrl = url
+                                status = s
+                                step = if (s.setupComplete) "login" else "onboarding"
+                            } catch (e: Exception) {
+                                val type = e::class.simpleName ?: "Exception"
+                                val detail = when {
+                                    e.message?.contains("timeout", ignoreCase = true) == true -> "Connection timed out"
+                                    e.message?.contains("refused", ignoreCase = true) == true -> "Connection refused (server not running on this port)"
+                                    e.message?.contains("resolve", ignoreCase = true) == true -> "Could not resolve hostname"
+                                    e.message?.contains("not permitted", ignoreCase = true) == true -> "Cleartext HTTP blocked by system"
+                                    else -> "${e.message?.take(80) ?: "no message"} ($type)"
+                                }
+                                errorMessage = "Can't connect: $detail"
+                            } finally {
+                                connecting = false
                             }
                         }
-                        step = "main"
                     }
                 )
             }
         }
 
+        "onboarding" -> {
+            apiClient?.let { client ->
+                SunsetTheme(darkTheme = darkTheme) {
+                    OnboardingScreen(
+                        apiClient = client,
+                        onComplete = { u ->
+                            user = u
+                            scope.launch {
+                                activity.dataStore.edit {
+                                    it[USER_ID_KEY] = u.userId
+                                    it[USERNAME_KEY] = u.username
+                                    it[IS_ADMIN_KEY] = u.isAdmin.toString()
+                                }
+                            }
+                            step = "main"
+                        }
+                    )
+                }
+            }
+        }
+
         "login" -> {
             apiClient?.let { client ->
-                LoginScreen(
-                    serverName = status?.serverName ?: "SunSet",
-                    apiClient = client,
-                    onLogin = { u ->
-                        user = u
-                        scope.launch {
-                            activity.dataStore.edit {
-                                it[USER_ID_KEY] = u.userId
-                                it[USERNAME_KEY] = u.username
-                                it[IS_ADMIN_KEY] = u.isAdmin.toString()
+                SunsetTheme(darkTheme = darkTheme) {
+                    LoginScreen(
+                        serverName = status?.serverName ?: "SunSet",
+                        apiClient = client,
+                        onLogin = { u ->
+                            user = u
+                            scope.launch {
+                                activity.dataStore.edit {
+                                    it[USER_ID_KEY] = u.userId
+                                    it[USERNAME_KEY] = u.username
+                                    it[IS_ADMIN_KEY] = u.isAdmin.toString()
+                                }
                             }
+                            step = "main"
                         }
-                        step = "main"
-                    }
-                )
+                    )
+                }
             }
         }
 
@@ -199,47 +207,54 @@ fun AppContent(activity: ComponentActivity) {
                 val userId = user?.userId
 
                 if (showSearch) {
-                    SearchScreen(
-                        apiClient = client,
-                        baseUrl = baseUrl,
-                        onSelect = { item ->
-                            selectedItem = item
-                            showSearch = false
-                        },
-                        onClose = { showSearch = false }
-                    )
+                    SunsetTheme(darkTheme = darkTheme) {
+                        SearchScreen(
+                            apiClient = client,
+                            baseUrl = baseUrl,
+                            onSelect = { item ->
+                                selectedItem = item
+                                showSearch = false
+                            },
+                            onClose = { showSearch = false }
+                        )
+                    }
                     return
                 }
 
                 if (selectedItem != null) {
-                    MediaDetailsScreen(
-                        item = selectedItem!!,
-                        baseUrl = baseUrl,
-                        apiClient = client,
-                        userId = userId,
-                        onPlay = {
-                            val intent = Intent(activity, PlayerActivity::class.java).apply {
-                                putExtra("video_url", client.getStreamUrl(selectedItem!!.id))
-                                putExtra("video_title", selectedItem!!.title)
-                                putExtra("item_id", selectedItem!!.id)
-                            }
-                            activity.startActivity(intent)
-                        },
-                        onClose = { selectedItem = null }
-                    )
+                    SunsetTheme(darkTheme = darkTheme) {
+                        MediaDetailsScreen(
+                            item = selectedItem!!,
+                            baseUrl = baseUrl,
+                            apiClient = client,
+                            userId = userId,
+                            onPlay = {
+                                val intent = Intent(activity, PlayerActivity::class.java).apply {
+                                    putExtra("video_url", client.getStreamUrl(selectedItem!!.id))
+                                    putExtra("video_title", selectedItem!!.title)
+                                    putExtra("item_id", selectedItem!!.id)
+                                }
+                                activity.startActivity(intent)
+                            },
+                            onClose = { selectedItem = null }
+                        )
+                    }
                     return
                 }
 
                 if (showAdmin) {
-                    AdminScreen(
-                        apiClient = client,
-                        baseUrl = baseUrl,
-                        onBack = { showAdmin = false }
-                    )
+                    SunsetTheme(darkTheme = darkTheme) {
+                        AdminScreen(
+                            apiClient = client,
+                            baseUrl = baseUrl,
+                            onBack = { showAdmin = false }
+                        )
+                    }
                     return
                 }
 
-                Scaffold(
+                SunsetTheme(darkTheme = darkTheme) {
+                    Scaffold(
                     bottomBar = {
                         NavigationBar {
                             NavigationBarItem(

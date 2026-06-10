@@ -18,6 +18,7 @@ import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.models.Library
 import dev.sudoloser.sunset.data.models.LibraryType
 import dev.sudoloser.sunset.data.models.MediaItem
+import dev.sudoloser.sunset.data.models.PlaybackState
 import dev.sudoloser.sunset.ui.components.*
 
 @Composable
@@ -33,6 +34,7 @@ fun LibrariesScreen(
     var libraries by remember { mutableStateOf<List<Library>>(emptyList()) }
     var continueWatching by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var myListItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var playbackProgress by remember { mutableStateOf<Map<String, Float>>(emptyMap()) }
     var selectedLibrary by remember { mutableStateOf<Library?>(null) }
     var loading by remember { mutableStateOf(true) }
 
@@ -42,6 +44,16 @@ fun LibrariesScreen(
             if (userId != null) {
                 continueWatching = apiClient.getContinueWatching(userId)
                 myListItems = apiClient.getUserItems(userId)
+                val progress = mutableMapOf<String, Float>()
+                for (item in continueWatching) {
+                    try {
+                        val state = apiClient.getPlayback(item.id)
+                        if (state.duration != null && state.duration > 0) {
+                            progress[item.id] = (state.timestamp.toFloat() / state.duration).coerceIn(0f, 1f)
+                        }
+                    } catch (_: Exception) {}
+                }
+                playbackProgress = progress
             }
         } catch (_: Exception) {}
         loading = false
@@ -85,7 +97,8 @@ fun LibrariesScreen(
                 title = "Continue Watching",
                 items = continueWatching,
                 baseUrl = baseUrl,
-                onPlay = onPlayItem
+                onPlay = onPlayItem,
+                getProgress = { playbackProgress[it.id] }
             )
         }
 

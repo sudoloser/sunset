@@ -26,7 +26,8 @@ fun Poster(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    showBadge: Boolean = false
+    showBadge: Boolean = false,
+    progress: Float? = null
 ) {
     val imageUrl = "$baseUrl/api/media/${item.id}/asset/folder.jpg"
     val posterWidth = 140.dp
@@ -51,6 +52,23 @@ fun Poster(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+
+            if (progress != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress.coerceIn(0f, 1f))
+                            .fillMaxHeight()
+                            .background(dev.sudoloser.sunset.ui.theme.NetflixRed)
+                    )
+                }
+            }
 
             if (showBadge && item.collectionName != null) {
                 Box(
