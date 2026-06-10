@@ -263,10 +263,13 @@ fun AppContent(activity: ComponentActivity) {
                 }
 
                 SunsetTheme(darkTheme = darkTheme) {
+                    val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }
+                    val iconLibrary: @Composable () -> Unit = { Icon(SunsetIcons.Library, contentDescription = "Library") }
+                    val iconSettings: @Composable () -> Unit = { Icon(SunsetIcons.Settings, contentDescription = "Settings") }
                     val tabs = listOf(
-                        "home" to { Icon(SunsetIcons.Home, contentDescription = "Home") },
-                        "library" to { Icon(SunsetIcons.Library, contentDescription = "Library") },
-                        "settings" to { Icon(SunsetIcons.Settings, contentDescription = "Settings") }
+                        "home" to iconHome,
+                        "library" to iconLibrary,
+                        "settings" to iconSettings
                     )
                     NavigationSuite(
                         tabs = tabs,
