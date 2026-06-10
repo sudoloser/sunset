@@ -8,8 +8,7 @@ TMP_DIR="$HOME/.sunset/tmp"
 ARCH="$(uname -m)"
 case "$ARCH" in
   x86_64)  ASSET="sunset-server-x86_64-unknown-linux-gnu" ;;
-  aarch64) ASSET="sunset-server-aarch64-unknown-linux-gnu" ;;
-  aarch64-android) ASSET="sunset-server-aarch64-unknown-linux-gnu" ;;
+  aarch64*) ASSET="sunset-server-aarch64-unknown-linux-gnu" ;;
   *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
@@ -27,7 +26,7 @@ JSON=$(curl -sL "https://api.github.com/repos/$REPO/releases/latest")
 TAG=$(echo "$JSON" | grep '"tag_name"' | cut -d'"' -f4)
 echo "  Version: $TAG"
 
-DL_URL=$(echo "$JSON" | grep '"browser_download_url"' | grep "$ASSET" | cut -d'"' -f4 | head -1)
+DL_URL=$(echo "$JSON" | grep '"browser_download_url"' | grep "$ASSET" | cut -d'"' -f4 | head -1 || true)
 if [ -z "$DL_URL" ]; then
   echo "Failed to find download asset for $ASSET"
   exit 1
@@ -54,6 +53,30 @@ fi
 INSTALL_PATH="$INSTALL_DIR/sunset-server"
 cp "$BINARY" "$INSTALL_PATH"
 chmod +x "$INSTALL_PATH"
+
+if [ "$(uname -o)" = "Android" ]; then
+  LIB_DIR="$HOME/.sunset/lib"
+  mkdir -p "$LIB_DIR"
+  BASE_URL="https://sudoloser.github.io/linux/lib"
+  LIBS="libc.so.6 libm.so.6 libpthread.so.0 libdl.so.2 libgcc_s.so.1 ld-linux-aarch64.so.1"
+  MISSING=0
+  for lib in $LIBS; do
+    if [ ! -f "$LIB_DIR/$lib" ]; then
+      curl -sL "$BASE_URL/$lib" -o "$LIB_DIR/$lib" || MISSING=1
+    fi
+  done
+  if [ "$MISSING" = "1" ]; then
+    GLIBC_LIB="${PREFIX:-/data/data/com.termux/files/usr}/glibc/lib"
+    for lib in $LIBS; do
+      cp "$GLIBC_LIB/$lib" "$LIB_DIR/$lib" 2>/dev/null || true
+    done
+  fi
+  chmod +x "$LIB_DIR"/*.so* "$LIB_DIR"/ld-linux-aarch64.so.1 2>/dev/null
+  patchelf --set-interpreter "$LIB_DIR/ld-linux-aarch64.so.1" \
+           --set-rpath "$LIB_DIR" \
+           "$INSTALL_PATH"
+  echo "  Patched binary for Termux"
+fi
 
 echo "[4/4] Adding to PATH..."
 SHELL_RC=""
