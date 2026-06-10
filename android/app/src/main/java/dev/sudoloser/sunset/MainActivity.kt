@@ -135,7 +135,13 @@ fun AppContent(activity: ComponentActivity) {
                             status = s
                             step = if (s.setupComplete) "login" else "onboarding"
                         } catch (e: Exception) {
-                            errorMessage = "Could not reach server. Check the URL and try again."
+                            val detail = when {
+                                e.message?.contains("timeout", ignoreCase = true) == true -> "Connection timed out"
+                                e.message?.contains("refused", ignoreCase = true) == true -> "Connection refused (server not running on this port)"
+                                e.message?.contains("resolve", ignoreCase = true) == true -> "Could not resolve hostname"
+                                else -> e.message?.take(80) ?: "Unknown error"
+                            }
+                            errorMessage = "Can't connect: $detail"
                         } finally {
                             connecting = false
                         }
@@ -329,11 +335,15 @@ fun ServerSelectionScreen(
         Spacer(Modifier.height(32.dp))
         OutlinedTextField(
             value = input,
-            onValueChange = { input = it },
+            onValueChange = { input = it.trim() },
             label = { Text("Server URL") },
-            placeholder = { Text("http://your-server:7867") },
+            placeholder = { Text("http://192.168.1.100:7867") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !loading
+            enabled = !loading,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri
+            )
         )
         if (errorMessage != null) {
             Spacer(Modifier.height(8.dp))
@@ -345,17 +355,11 @@ fun ServerSelectionScreen(
             )
         }
         Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = { if (input.isNotBlank()) onServerSelected(input) },
+            Button(
+            onClick = { if (input.isNotBlank()) onServerSelected(input.trimEnd('/')) },
             modifier = Modifier.fillMaxWidth(),
             enabled = input.isNotBlank() && !loading
-        ) {
-            if (loading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = NetflixRed,
-                    strokeWidth = 2.dp
-                )
+        )
                 Spacer(Modifier.width(8.dp))
             }
             Text(if (loading) "Connecting..." else "Connect")
