@@ -13,11 +13,12 @@ interface VideoPlayerProps {
   item: MediaItem;
   onClose: () => void;
   onSelectItem?: (item: MediaItem) => void;
+  userId?: string;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelectItem }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelectItem, userId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const seekerRef = useRef<HTMLDivElement>(null);
@@ -87,7 +88,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelec
         const dur = videoRef.current.duration;
         const state = { itemId: item.id, timestamp: ts, duration: dur, updatedAt: Date.now() };
         localStorage.setItem(`sunset_playback_${item.id}`, JSON.stringify(state));
-        api.savePlayback({ item_id: item.id, timestamp: ts, duration: dur }).catch(() => {});
+        api.savePlayback({ item_id: item.id, timestamp: ts, duration: dur, user_id: userId }).catch(() => {});
       }
     }, 5000);
     return () => clearInterval(interval);

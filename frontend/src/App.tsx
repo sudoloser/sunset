@@ -36,6 +36,7 @@ function App() {
   const [previousStep, setPreviousStep] = useState<AppStep>('dashboard');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const userId = localStorage.getItem('sunset_user_id') || undefined;
 
   useEffect(() => {
     checkStatus();
@@ -128,6 +129,7 @@ function App() {
             item={playingMedia} 
             onClose={() => setStep(previousStep)} 
             onSelectItem={item => setPlayingMedia(item)}
+            userId={userId}
           />
         )}
 
