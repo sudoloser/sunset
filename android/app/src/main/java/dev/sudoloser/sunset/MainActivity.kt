@@ -364,4 +364,3 @@ fun ServerSelectionScreen(
         }
     }
 }
-}
