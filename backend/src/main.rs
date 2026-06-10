@@ -1344,66 +1344,64 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
     // Trigger Discord RPC update if user has a token
     let user_row = sqlx::query("SELECT discord_token, discord_status FROM users WHERE id = ?").bind(&user_id).fetch_optional(&state.pool).await.unwrap();
     if let Some(row) = user_row {
-        match row.get::<Option<String>, _>("discord_token") {
-            Some(token) if !token.is_empty() => {
-                let status = row.get::<Option<String>, _>("discord_status").unwrap_or_else(|| "online".to_string());
-                let mut manager = state.rpc_manager.lock().await;
-                let session = if let Some(s) = manager.sessions.get(&user_id) {
-                    s
+        if let Some(token) = row.get::<Option<String>, _>("discord_token").filter(|t| !t.is_empty()) {
+            let status = row.get::<Option<String>, _>("discord_status").unwrap_or_else(|| "online".to_string());
+            let mut manager = state.rpc_manager.lock().await;
+            let session = if let Some(s) = manager.sessions.get(&user_id) {
+                s
+            } else {
+                info!("Creating new Discord RPC session for user {}", user_id);
+                let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+                let token_clone = token.clone();
+                tokio::spawn(async move { run_discord_rpc(token_clone, rx).await; });
+                manager.sessions.insert(user_id.clone(), DiscordRpcSession { token, presence_tx: tx });
+                manager.sessions.get(&user_id).unwrap()
+            };
+
+            // Fetch item details for presence
+            if let Ok(item) = sqlx::query("SELECT title, show_title, media_type FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
+                let title: String = item.get("title");
+                let show_title: Option<String> = item.get("show_title");
+                let media_type: String = item.get("media_type");
+
+                let name = if media_type == "episode" {
+                    format!("Watching {}", show_title.unwrap_or(title.clone()))
                 } else {
-                    info!("Creating new Discord RPC session for user {}", user_id);
-                    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-                    let token_clone = token.clone();
-                    tokio::spawn(async move { run_discord_rpc(token_clone, rx).await; });
-                    manager.sessions.insert(user_id.clone(), DiscordRpcSession { token, presence_tx: tx });
-                    manager.sessions.get(&user_id).unwrap()
+                    format!("Watching {}", title)
                 };
 
-                // Fetch item details for presence
-                if let Ok(item) = sqlx::query("SELECT title, show_title, media_type FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
-                    let title: String = item.get("title");
-                    let show_title: Option<String> = item.get("show_title");
-                    let media_type: String = item.get("media_type");
+                let progress = if let Some(dur) = payload.duration {
+                    if dur > 0.0 { (payload.timestamp / dur * 100.0) as i32 } else { 0 }
+                } else { 0 };
 
-                    let name = if media_type == "episode" {
-                        format!("Watching {}", show_title.unwrap_or(title.clone()))
-                    } else {
-                        format!("Watching {}", title)
-                    };
+                debug!("Sending Discord presence: {} ({}%)", name, progress);
 
-                    let progress = if let Some(dur) = payload.duration {
-                        if dur > 0.0 { (payload.timestamp / dur * 100.0) as i32 } else { 0 }
-                    } else { 0 };
-
-                    debug!("Sending Discord presence: {} ({}%)", name, progress);
-
-                    let presence = DiscordPresence {
-                        status: status,
-                        since: None,
-                        activities: vec![DiscordActivity {
-                            name: "SunSet".to_string(),
-                            activity_type: 3, // Watching
-                            details: Some(name),
-                            state: Some(format!("Progress: {}%", progress)),
-                            assets: Some(DiscordAssets {
-                                large_image: Some(format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)),
-                                large_text: Some(title),
-                                small_image: None,
-                                small_text: None,
-                            }),
-                            timestamps: Some(DiscordTimestamps {
-                                start: Some(chrono::Utc::now().timestamp() as u64 - payload.timestamp as u64),
-                                end: None,
-                            }),
-                        }],
-                        afk: false,
-                    };
-                    if session.presence_tx.send(presence).is_err() {
-                        warn!("Failed to send presence to Discord RPC session for user {} (channel closed)", user_id);
-                    }
-                } else {
-                    warn!("Could not fetch media item {} for Discord presence", payload.item_id);
+                let presence = DiscordPresence {
+                    status: status,
+                    since: None,
+                    activities: vec![DiscordActivity {
+                        name: "SunSet".to_string(),
+                        activity_type: 3, // Watching
+                        details: Some(name),
+                        state: Some(format!("Progress: {}%", progress)),
+                        assets: Some(DiscordAssets {
+                            large_image: Some(format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)),
+                            large_text: Some(title),
+                            small_image: None,
+                            small_text: None,
+                        }),
+                        timestamps: Some(DiscordTimestamps {
+                            start: Some(chrono::Utc::now().timestamp() as u64 - payload.timestamp as u64),
+                            end: None,
+                        }),
+                    }],
+                    afk: false,
+                };
+                if session.presence_tx.send(presence).is_err() {
+                    warn!("Failed to send presence to Discord RPC session for user {} (channel closed)", user_id);
                 }
+            } else {
+                warn!("Could not fetch media item {} for Discord presence", payload.item_id);
             }
         } else {
             debug!("User {} has no discord_token set, skipping RPC", user_id);
