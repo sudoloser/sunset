@@ -8,11 +8,10 @@ import type { MediaItem } from '../../types';
 const ContextMenu: React.FC<{ 
   item: MediaItem; 
   onClose: () => void; 
-  align?: 'left' | 'right';
   zip?: boolean;
   top: number;
   left: number;
-}> = ({ item, onClose, align = 'right', zip = false, top, left }) => {
+}> = ({ item, onClose, zip = false, top, left }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,6 +127,17 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const heroTriggerRef = useRef<HTMLDivElement>(null);
   const episodeTriggerRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  const updatePosition = (ref: React.RefObject<HTMLDivElement>, align: 'left' | 'right') => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setPosition({ 
+        top: rect.bottom, 
+        left: align === 'right' ? rect.right - 180 : rect.left 
+      });
+    }
+  };
 
   const toggleMyList = () => {
     try {
@@ -276,7 +286,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
               <div style={{ position: 'relative' }}>
                 <div ref={heroTriggerRef}>
                   <button
-                    onClick={e => { e.stopPropagation(); updatePosition(heroTriggerRef, 'left'); setMenuOpen(menuOpen === item.id ? null : item.id); }}
+                    onClick={e => { e.stopPropagation(); updatePosition(heroTriggerRef as any, 'left'); setMenuOpen(menuOpen === item.id ? null : item.id); }}
                     style={{
                       background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
                       width: '44px', height: '44px', borderRadius: 'var(--radius-md)',
@@ -295,7 +305,6 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                   <ContextMenu 
                     item={item} 
                     onClose={() => setMenuOpen(null)} 
-                    align="left" 
                     zip={isShow}
                     top={position.top}
                     left={position.left}
@@ -369,7 +378,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                         <div ref={episodeTriggerRef}>
                           <button
-                            onClick={e => { e.stopPropagation(); updatePosition(episodeTriggerRef, 'right'); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
+                            onClick={e => { e.stopPropagation(); updatePosition(episodeTriggerRef as any, 'right'); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
                             style={{
                               background: 'transparent', border: 'none', color: 'var(--text-secondary)',
                               cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: 'var(--radius-sm)',
@@ -387,7 +396,6 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                           <ContextMenu 
                             item={ep} 
                             onClose={() => setMenuOpen(null)} 
-                            align="right" 
                             zip={false} 
                             top={position.top}
                             left={position.left}
