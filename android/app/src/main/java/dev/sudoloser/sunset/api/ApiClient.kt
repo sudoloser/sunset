@@ -7,6 +7,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class ApiClient(private val baseUrl: String) {
@@ -19,17 +21,17 @@ class ApiClient(private val baseUrl: String) {
 
     private val mediaType = "application/json".toMediaType()
 
-    private inline fun <reified T> get(endpoint: String): T {
+    private suspend inline fun <reified T> get(endpoint: String): T = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$baseUrl/api$endpoint")
             .get()
             .build()
         val response = client.newCall(request).execute()
         val body = response.body?.string() ?: throw Exception("Empty response")
-        return json.decodeFromString<T>(body)
+        json.decodeFromString<T>(body)
     }
 
-    private inline fun <reified T> post(endpoint: String, body: Any?): T {
+    private suspend inline fun <reified T> post(endpoint: String, body: Any?): T = withContext(Dispatchers.IO) {
         val requestBody = if (body == null || body == Unit) {
             "{}".toRequestBody(mediaType)
         } else {
@@ -40,11 +42,11 @@ class ApiClient(private val baseUrl: String) {
             .post(requestBody)
             .build()
         val response = client.newCall(request).execute()
-        val responseBody = response.body?.string() ?: return json.decodeFromString<T>("null")
-        return json.decodeFromString<T>(responseBody)
+        val responseBody = response.body?.string() ?: return@withContext json.decodeFromString<T>("null")
+        json.decodeFromString<T>(responseBody)
     }
 
-    private inline fun <reified T> put(endpoint: String, body: Any): T {
+    private suspend inline fun <reified T> put(endpoint: String, body: Any): T = withContext(Dispatchers.IO) {
         val requestBody = json.encodeToString(body).toRequestBody(mediaType)
         val request = Request.Builder()
             .url("$baseUrl/api$endpoint")
@@ -52,16 +54,16 @@ class ApiClient(private val baseUrl: String) {
             .build()
         val response = client.newCall(request).execute()
         val responseBody = response.body?.string() ?: throw Exception("Empty response")
-        return json.decodeFromString<T>(responseBody)
+        json.decodeFromString<T>(responseBody)
     }
 
-    private fun delete(endpoint: String): Boolean {
+    private suspend fun delete(endpoint: String): Boolean = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$baseUrl/api$endpoint")
             .delete()
             .build()
         val response = client.newCall(request).execute()
-        return response.isSuccessful
+        response.isSuccessful
     }
 
     suspend fun getStatus(): SetupStatus = get("/status")
