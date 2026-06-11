@@ -1802,6 +1802,7 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
     // More flexible show regex: S01E01, 1x01, S1E1, etc.
     let show_regex = Regex::new(r"(?i)^(.*?)\s*(?:S(\d{1,2})E(\d{1,2})|(\d{1,2})x(\d{1,2}))").unwrap();
     let mut count = 0;
+    let mut found_paths: Vec<String> = Vec::new();
 
     for entry in WalkDir::new(&lib.path).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
@@ -1810,6 +1811,7 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
             if !["mp4", "mkv", "avi", "mov"].contains(&ext.to_lowercase().as_str()) { continue; }
             let file_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
             let file_path = path.to_str().unwrap().to_string();
+            found_paths.push(file_path.clone());
             let folder_path = path.parent().unwrap();
 
             if lib.lib_type == "movies" {
@@ -1854,6 +1856,29 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
             }
         }
     }
+    // Remove entries for files that no longer exist
+    let existing_paths = sqlx::query_scalar::<_, String>("SELECT file_path FROM media_items WHERE library_id = ?")
+        .bind(&lib.id)
+        .fetch_all(&state.pool)
+        .await
+        .unwrap_or_default();
+    let mut removed = 0;
+    for path in &existing_paths {
+        if !found_paths.contains(path) {
+            if sqlx::query("DELETE FROM media_items WHERE file_path = ?")
+                .bind(path)
+                .execute(&state.pool)
+                .await
+                .is_ok()
+            {
+                removed += 1;
+            }
+        }
+    }
+    if removed > 0 {
+        info!("Removed {} missing items from library '{}'.", removed, lib.name);
+    }
+
     info!("Finished scanning '{}'. {} new items indexed.", lib.name, count);
 }
 

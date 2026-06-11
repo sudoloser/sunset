@@ -11,7 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
-class ApiClient(private val baseUrl: String) {
+class ApiClient(baseUrl: String) {
+    private val baseUrl = baseUrl.trimEnd('/')
     private val json = Json { ignoreUnknownKeys = true }
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)

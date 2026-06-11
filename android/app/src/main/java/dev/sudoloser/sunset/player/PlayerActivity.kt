@@ -40,9 +40,13 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
+import androidx.media3.ui.SubtitleView
+import dev.sudoloser.sunset.data.PrefKeys
+import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.components.*
 import dev.sudoloser.sunset.ui.theme.SunsetTheme
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -80,7 +84,7 @@ class PlayerActivity : ComponentActivity() {
         videoUrl = intent.getStringExtra("video_url")
         videoTitle = intent.getStringExtra("video_title")
         itemId = intent.getStringExtra("item_id")
-        baseUrl = intent.getStringExtra("base_url")
+        baseUrl = intent.getStringExtra("base_url")?.trimEnd('/')
         userId = intent.getStringExtra("user_id")
         showTitle = intent.getStringExtra("show_title")
         mediaType = intent.getStringExtra("media_type")
@@ -110,17 +114,31 @@ class PlayerActivity : ComponentActivity() {
         var shouldRestorePosition by remember { mutableStateOf(true) }
         var skipDirection by remember { mutableStateOf<String?>(null) }
 
+        var subtitleColor by remember { mutableStateOf("#ffffff") }
+        var subtitleBgOpacity by remember { mutableFloatStateOf(0f) }
+        var subtitleSize by remember { mutableIntStateOf(100) }
+        var subtitleBold by remember { mutableStateOf(false) }
+
+        LaunchedEffect(Unit) {
+            val prefs = context.dataStore.data.first()
+            subtitleColor = prefs[PrefKeys.SUBTITLE_COLOR] ?: "#ffffff"
+            subtitleBgOpacity = prefs[PrefKeys.SUBTITLE_BACKGROUND_OPACITY] ?: 0f
+            subtitleSize = prefs[PrefKeys.SUBTITLE_SIZE] ?: 100
+            subtitleBold = prefs[PrefKeys.SUBTITLE_BOLD] ?: false
+        }
+
         var episodes by remember { mutableStateOf<List<dev.sudoloser.sunset.data.models.MediaItem>>(emptyList()) }
         var showEpisodePicker by remember { mutableStateOf(false) }
         var currentItemId by remember { mutableStateOf(itemId ?: "") }
         var currentEpisodeTitle by remember { mutableStateOf(videoTitle ?: "") }
-        val showEpisodeButton = showTitle != null
+        val showEpisodeButton = showTitle != null || mediaType == "EPISODE"
+        val episodeShowTitle = showTitle ?: videoTitle
 
         // Fetch episodes
-        LaunchedEffect(showTitle) {
-            if (showTitle != null && baseUrl != null) {
+        LaunchedEffect(episodeShowTitle) {
+            if (episodeShowTitle != null && baseUrl != null) {
                 try {
-                    episodes = withContext(Dispatchers.IO) { fetchEpisodes(showTitle!!) }
+                    episodes = withContext(Dispatchers.IO) { fetchEpisodes(episodeShowTitle!!) }
                 } catch (_: Exception) {}
             }
         }
@@ -180,7 +198,12 @@ class PlayerActivity : ComponentActivity() {
                     }
                 }
                 override fun onPlayerError(error: PlaybackException) {
-                    Toast.makeText(context, "Playback Error: ${error.message}", Toast.LENGTH_LONG).show()
+                    val msg = if (error.message?.contains("404") == true) {
+                        "Video not found (404). It may have been moved or deleted."
+                    } else {
+                        "Playback Error: ${error.message}"
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 }
             })
 
@@ -212,13 +235,19 @@ class PlayerActivity : ComponentActivity() {
             exoPlayer.prepare()
             exoPlayer.playWhenReady = true
             
-            // Progress update loop
+            // Progress update loop - frequent updates for smooth seek bar
+            var lastSave = 0L
             while (true) {
-                delay(2000)
-                exoPlayer.let { 
+                delay(200)
+                exoPlayer.let {
                     currentTime = it.currentPosition
+                    duration = it.duration
                     if (it.isPlaying) {
-                        saveCurrentPlayback(it.currentPosition, it.duration)
+                        val now = System.currentTimeMillis()
+                        if (now - lastSave >= 2000) {
+                            saveCurrentPlayback(it.currentPosition, it.duration)
+                            lastSave = now
+                        }
                     }
                 }
             }
@@ -255,15 +284,29 @@ class PlayerActivity : ComponentActivity() {
                 }
         ) {
             
+            var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
                         useController = false
                         setBackgroundColor(android.graphics.Color.BLACK)
+                        playerViewRef = this
                     }
                 },
                 update = { view ->
                     view.player = player
+                    view.subtitleView.apply {
+                        setForegroundColor(android.graphics.Color.parseColor(subtitleColor))
+                        setBackgroundColor(
+                            if (subtitleBgOpacity > 0) android.graphics.Color.argb((subtitleBgOpacity * 255).toInt(), 0, 0, 0)
+                            else android.graphics.Color.TRANSPARENT
+                        )
+                        setTextSize((14 * subtitleSize / 100).toFloat(), android.util.TypedValue.COMPLEX_UNIT_SP)
+                        setUserDefaultStyle(false)
+                        setApplyEmbeddedStyles(false)
+                        setTypeface(if (subtitleBold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT)
+                    }
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -406,7 +449,7 @@ class PlayerActivity : ComponentActivity() {
                     ) {
                         Column(modifier = Modifier.padding(12.dp).width(300.dp).heightIn(max = 420.dp)) {
                             Text(
-                                text = showTitle ?: "Episodes",
+                                text = episodeShowTitle ?: "Episodes",
                                 color = MaterialTheme.colorScheme.primary,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.ExtraBold,

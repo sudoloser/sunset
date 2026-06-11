@@ -1,5 +1,8 @@
 package dev.sudoloser.sunset.ui.settings
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,9 +24,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.PrefKeys
@@ -32,7 +35,6 @@ import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import androidx.datastore.preferences.core.edit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +51,7 @@ fun SettingsScreen(
 ) {
     var tab by remember { mutableStateOf("account") }
     val tabs = buildList {
-        add("account"); add("discord"); add("downloads")
+        add("account"); add("subtitles"); add("discord"); add("downloads")
         if (isAdmin) add("admin")
     }
 
@@ -100,6 +102,7 @@ fun SettingsScreen(
         Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             when (tab) {
                 "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
+                "subtitles" -> SubtitleSettings()
                 "discord" -> DiscordSettings(apiClient, userId)
                 "downloads" -> DownloadSettings()
                 "admin" -> onGoToAdmin()
@@ -434,6 +437,183 @@ fun DiscordSettings(
             }
         }
         
+        Spacer(Modifier.height(80.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SubtitleSettings() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val FONT_OPTIONS = listOf(
+        "Inter, sans-serif" to "Inter",
+        "\"Google Sans\", sans-serif" to "Google Sans",
+        "Arial, sans-serif" to "Arial",
+        "Helvetica, sans-serif" to "Helvetica",
+        "Verdana, sans-serif" to "Verdana",
+        "\"Times New Roman\", serif" to "Times New Roman",
+        "\"Courier New\", monospace" to "Courier New",
+    )
+
+    val COLORS = listOf(
+        "#ffffff", "#ffff00", "#00ff00", "#00ffff",
+        "#ff9900", "#ff66cc", "#ff0000", "#cccccc"
+    )
+
+    var color by remember { mutableStateOf("#ffffff") }
+    var backgroundOpacity by remember { mutableFloatStateOf(0f) }
+    var size by remember { mutableIntStateOf(100) }
+    var font by remember { mutableStateOf("Inter, sans-serif") }
+    var bold by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val prefs = ctx.dataStore.data.first()
+        color = prefs[PrefKeys.SUBTITLE_COLOR] ?: "#ffffff"
+        backgroundOpacity = prefs[PrefKeys.SUBTITLE_BACKGROUND_OPACITY] ?: 0f
+        size = prefs[PrefKeys.SUBTITLE_SIZE] ?: 100
+        font = prefs[PrefKeys.SUBTITLE_FONT] ?: "Inter, sans-serif"
+        bold = prefs[PrefKeys.SUBTITLE_BOLD] ?: false
+    }
+
+    fun save() {
+        scope.launch {
+            ctx.dataStore.edit {
+                it[PrefKeys.SUBTITLE_COLOR] = color
+                it[PrefKeys.SUBTITLE_BACKGROUND_OPACITY] = backgroundOpacity
+                it[PrefKeys.SUBTITLE_SIZE] = size
+                it[PrefKeys.SUBTITLE_FONT] = font
+                it[PrefKeys.SUBTITLE_BOLD] = bold
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Style", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+
+                Column {
+                    Text("Text Color", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        COLORS.forEach { c ->
+                            val isSelected = color == c
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(android.graphics.Color.parseColor(c)))
+                                    .border(if (isSelected) 3.dp else 1.5.dp, if (isSelected) Color.White else Color.White.copy(alpha = 0.3f), CircleShape)
+                                    .clickable { color = c; save() }
+                            )
+                        }
+                    }
+                }
+
+                Column {
+                    Text("Background", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0f to "None", 0.85f to "Black Rectangle (CC)").forEach { (value, label) ->
+                            val selected = backgroundOpacity == value
+                            SunsetButton(
+                                text = label,
+                                onClick = { backgroundOpacity = value; save() },
+                                variant = if (selected) ButtonVariant.Primary else ButtonVariant.Secondary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                Column {
+                    Text("Size: $size%", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                    Slider(
+                        value = size.toFloat(),
+                        onValueChange = { size = it.toInt(); save() },
+                        valueRange = 50f..200f,
+                        steps = 29,
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Column {
+                    Text("Font", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                    FONT_OPTIONS.forEach { (value, label) ->
+                        val selected = font == value
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+                                .clickable { font = value; save() }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(label, color = if (selected) MaterialTheme.colorScheme.primary else Color.White, fontWeight = FontWeight.SemiBold)
+                            if (selected) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { bold = !bold; save() }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Bold text", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Switch(
+                        checked = bold,
+                        onCheckedChange = { bold = it; save() },
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                    )
+                }
+            }
+        }
+
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Text("Preview", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .background(Color(0xFF111111), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Text(
+                        text = "This is a preview of your subtitle style.",
+                        color = Color(android.graphics.Color.parseColor(color)),
+                        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = (14 * size / 100).sp,
+                        modifier = Modifier
+                            .padding(bottom = 32.dp)
+                            .background(
+                                if (backgroundOpacity > 0) Color.Black.copy(alpha = backgroundOpacity)
+                                else Color.Transparent
+                            )
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(80.dp))
     }
 }
