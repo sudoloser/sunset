@@ -300,14 +300,15 @@ class PlayerActivity : ComponentActivity() {
                     view.subtitleView?.let { sv ->
                         sv.setApplyEmbeddedStyles(false)
                         sv.setStyle(
-                            CaptionStyleCompat.Builder()
-                                .setForegroundColor(android.graphics.Color.parseColor(subtitleColor))
-                                .setBackgroundColor(
-                                    if (subtitleBgOpacity > 0) android.graphics.Color.argb((subtitleBgOpacity * 255).toInt(), 0, 0, 0)
-                                    else android.graphics.Color.TRANSPARENT
-                                )
-                                .setTypeface(if (subtitleBold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT)
-                                .build()
+                            CaptionStyleCompat(
+                                android.graphics.Color.parseColor(subtitleColor),
+                                if (subtitleBgOpacity > 0) android.graphics.Color.argb((subtitleBgOpacity * 255).toInt(), 0, 0, 0)
+                                else android.graphics.Color.TRANSPARENT,
+                                android.graphics.Color.TRANSPARENT, // windowColor
+                                CaptionStyleCompat.EDGE_TYPE_NONE, // edgeType
+                                android.graphics.Color.WHITE, // edgeColor
+                                if (subtitleBold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
+                            )
                         )
                     }
                 },
