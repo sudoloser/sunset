@@ -734,6 +734,7 @@ async fn main() {
         .route("/api/login", post(login))
         .route("/api/users/:id", get(get_user_profile))
         .route("/api/users/:id/discord-config", put(update_discord_config))
+        .route("/api/users/:id/discord-stop", post(stop_discord_rpc))
         .route("/api/recently-added", get(get_recently_added))
         .route("/api/libraries", get(get_libraries).post(add_library))
         .route("/api/libraries/:id", put(update_library).delete(delete_library))
@@ -1433,6 +1434,15 @@ async fn update_discord_config(
         info!("Closed existing Discord RPC session for user {}", id);
     }
     
+    Json(true)
+}
+
+async fn stop_discord_rpc(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<bool> {
+    info!("Stopping Discord RPC for user {}", id);
+    let mut manager = state.rpc_manager.lock().await;
+    if manager.sessions.remove(&id).is_some() {
+        info!("Closed Discord RPC session for user {}", id);
+    }
     Json(true)
 }
 

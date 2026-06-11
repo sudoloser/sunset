@@ -34,6 +34,17 @@ export const DiscordSettings: React.FC = () => {
     }
   };
 
+  const handleStop = async () => {
+    if (!userId) return;
+    try {
+      await api.stopDiscordRpc(userId);
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (e) {
+      setSaveStatus('error');
+    }
+  };
+
   return (
     <div style={{ maxWidth: '600px' }}>
       <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '3rem' }}>Discord RPC</h2>
@@ -82,6 +93,9 @@ export const DiscordSettings: React.FC = () => {
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <Button onClick={handleSave} disabled={!token || loading}>
               {loading ? 'Saving...' : (saveStatus === 'success' ? '✓ Saved' : 'Save Config')}
+            </Button>
+            <Button onClick={handleStop} variant="danger">
+              Stop RPC
             </Button>
             {saveStatus === 'error' && <span style={{ color: '#ef4444', fontSize: '0.8rem' }}>Failed to save config</span>}
           </div>

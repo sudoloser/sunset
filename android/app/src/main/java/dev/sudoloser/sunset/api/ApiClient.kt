@@ -88,6 +88,7 @@ class ApiClient(private val baseUrl: String) {
     }
     suspend fun updateDiscordConfig(userId: String, token: String, status: String): Boolean =
         put("/users/$userId/discord-config", DiscordConfig(token, status))
+    suspend fun stopDiscordRpc(userId: String): Boolean = post("/users/$userId/discord-stop", Unit)
     suspend fun getStorage(): StorageInfo = get("/storage")
     suspend fun refreshMedia(id: String): Boolean = post("/media/$id/refresh", Unit)
     suspend fun getGenres(): List<String> = get("/genres")

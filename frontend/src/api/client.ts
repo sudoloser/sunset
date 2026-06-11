@@ -45,6 +45,7 @@ export const api = {
   savePlayback: (data: any) => request<boolean>('/playback', { method: 'POST', body: JSON.stringify(data) }),
   getPlayback: (itemId: string) => request<PlaybackState>(`/playback/${itemId}`),
   updateDiscordConfig: (id: string, token: string, status: string) => request<boolean>(`/users/${id}/discord-config`, { method: 'PUT', body: JSON.stringify({ token, status }) }),
+  stopDiscordRpc: (id: string) => request<boolean>(`/users/${id}/discord-stop`, { method: 'POST' }),
   getStorage: () => request<StorageInfo>('/storage'),
   updateMedia: (id: string, data: any) => request<boolean>(`/media/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   refreshMedia: (id: string) => request<boolean>(`/media/${id}/refresh`, { method: 'POST' }),

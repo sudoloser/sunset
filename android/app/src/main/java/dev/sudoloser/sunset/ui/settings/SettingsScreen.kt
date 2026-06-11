@@ -26,7 +26,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
-import dev.sudoloser.sunset.data.DataStore
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.components.*
@@ -324,6 +323,8 @@ fun DiscordSettings(
     var status by remember { mutableStateOf("online") }
     var loading by remember { mutableStateOf(false) }
     var saveStatus by remember { mutableStateOf<String?>(null) }
+    var stopLoading by remember { mutableStateOf(false) }
+    var stopStatus by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(userId) {
@@ -394,6 +395,29 @@ fun DiscordSettings(
                 
                 if (saveStatus == "error") {
                     Text("Connection failed. Check your token.", color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                }
+
+                SunsetButton(
+                    text = if (stopLoading) "Stopping..." else if (stopStatus == "success") "✓ Stopped" else "Stop RPC",
+                    onClick = {
+                        if (userId == null) return@SunsetButton
+                        stopLoading = true; stopStatus = null
+                        scope.launch {
+                            try {
+                                apiClient.stopDiscordRpc(userId)
+                                stopStatus = "success"
+                                delay(3000); stopStatus = null
+                            } catch (_: Exception) { stopStatus = "error" }
+                            stopLoading = false
+                        }
+                    },
+                    variant = ButtonVariant.Danger,
+                    enabled = !stopLoading,
+                    fullWidth = true
+                )
+
+                if (stopStatus == "error") {
+                    Text("Failed to stop RPC.", color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
                 }
             }
         }
