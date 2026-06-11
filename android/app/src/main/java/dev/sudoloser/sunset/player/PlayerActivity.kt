@@ -37,10 +37,6 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.MediaSource
-import androidx.media3.exoplayer.source.MergingMediaSource
-import androidx.media3.exoplayer.source.ProgressiveMediaSource
-import androidx.media3.exoplayer.source.SingleSampleMediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import dev.sudoloser.sunset.data.PrefKeys
@@ -59,9 +55,13 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
+import android.widget.Toast
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.MimeTypes
+
 @UnstableApi
 class PlayerActivity : ComponentActivity() {
-    private var player: ExoPlayer? = null
+    private var player by mutableStateOf<ExoPlayer?>(null)
     private var videoUrl: String? = null
     private var videoTitle: String? = null
     private var itemId: String? = null
@@ -110,64 +110,69 @@ class PlayerActivity : ComponentActivity() {
         // Initialize Player
         LaunchedEffect(Unit) {
             val trackSelector = DefaultTrackSelector(context)
-            player = ExoPlayer.Builder(context)
+            val exoPlayer = ExoPlayer.Builder(context)
                 .setTrackSelector(trackSelector)
-                .build().also { exoPlayer ->
+                .build()
+            
+            player = exoPlayer
                     
-                    exoPlayer.addListener(object : Player.Listener {
-                        override fun onIsPlayingChanged(playing: Boolean) {
-                            isPlaying = playing
-                        }
-                        override fun onPlaybackStateChanged(state: Int) {
-                            if (state == Player.STATE_READY) {
-                                duration = exoPlayer.duration
-                            }
-                        }
-                    })
-
-                    val dataSourceFactory = DefaultHttpDataSource.Factory()
-                    val mainMediaItem = MediaItem.Builder().setUri(videoUrl).build()
-                    val mainSource = ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mainMediaItem)
-                    val sources = mutableListOf<MediaSource>(mainSource)
-
-                    // Fetch Subtitles
-                    itemId?.let { id ->
-                        try {
-                            val subs = withContext(Dispatchers.IO) { fetchSubtitleList(id) }
-                            subtitleTracks = subs
-                            subs.forEach { name ->
-                                val subUrl = "$baseUrl/api/media/$id/subtitle/${java.net.URLEncoder.encode(name, "UTF-8")}"
-                                val mimeType = if (name.endsWith(".vtt")) "text/vtt" else "application/x-subrip"
-                                val label = name.substringBeforeLast(".").split(".").last().uppercase()
-                                
-                                val subConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUrl))
-                                    .setMimeType(mimeType)
-                                    .setLabel(label)
-                                    .build()
-                                sources.add(SingleSampleMediaSource.Factory(dataSourceFactory).createMediaSource(subConfig, 0L))
-                            }
-                        } catch (_: Exception) {}
-                    }
-
-                    val mergedSource = MergingMediaSource(*sources.toTypedArray())
-                    exoPlayer.setMediaSource(mergedSource)
-                    exoPlayer.prepare()
-
-                    // Load saved progress
-                    itemId?.let { id ->
-                        try {
-                            val state = withContext(Dispatchers.IO) { fetchPlaybackState(id) }
-                            state?.let { exoPlayer.seekTo((it.timestamp * 1000).toLong()) }
-                        } catch (_: Exception) {}
-                    }
-
-                    exoPlayer.playWhenReady = true
+            exoPlayer.addListener(object : Player.Listener {
+                override fun onIsPlayingChanged(playing: Boolean) {
+                    isPlaying = playing
                 }
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_READY) {
+                        duration = exoPlayer.duration
+                    }
+                }
+                override fun onPlayerError(error: PlaybackException) {
+                    Toast.makeText(context, "Playback Error: ${error.message}", Toast.LENGTH_LONG).show()
+                }
+            })
+
+            // Prepare Media Item
+            val subtitleConfigs = mutableListOf<MediaItem.SubtitleConfiguration>()
+            itemId?.let { id ->
+                try {
+                    val subs = withContext(Dispatchers.IO) { fetchSubtitleList(id) }
+                    subtitleTracks = subs
+                    subs.forEach { name ->
+                        val subUrl = "$baseUrl/api/media/$id/subtitle/${java.net.URLEncoder.encode(name, "UTF-8")}"
+                        val mimeType = if (name.endsWith(".vtt")) MimeTypes.TEXT_VTT else MimeTypes.APPLICATION_SUBRIP
+                        val label = name.substringBeforeLast(".").split(".").last().uppercase()
+                        
+                        val subConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUrl))
+                            .setMimeType(mimeType)
+                            .setLabel(label)
+                            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                            .build()
+                        subtitleConfigs.add(subConfig)
+                    }
+                } catch (_: Exception) {}
+            }
+
+            val mediaItem = MediaItem.Builder()
+                .setUri(videoUrl)
+                .setSubtitleConfigurations(subtitleConfigs)
+                .build()
+
+            exoPlayer.setMediaItem(mediaItem)
+            exoPlayer.prepare()
+
+            // Load saved progress
+            itemId?.let { id ->
+                try {
+                    val state = withContext(Dispatchers.IO) { fetchPlaybackState(id) }
+                    state?.let { exoPlayer.seekTo((it.timestamp * 1000).toLong()) }
+                } catch (_: Exception) {}
+            }
+
+            exoPlayer.playWhenReady = true
             
             // Progress update loop
             while (true) {
                 delay(500)
-                player?.let { 
+                exoPlayer.let { 
                     currentTime = it.currentPosition
                     if (it.isPlaying) {
                         saveCurrentPlayback(it.currentPosition, it.duration)
