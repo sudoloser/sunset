@@ -1,0 +1,95 @@
+name: Android Beta
+
+on:
+  push:
+    branches:
+      - pre
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Build Tools
+        run: sdkmanager "build-tools;29.0.3" "build-tools;34.0.0"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --warning-mode all
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE }}
+          alias: ${{ secrets.KEYSTORE_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEYSTORE_PASSWORD }}
+
+      - name: Rename Signed APK
+        run: |
+          mv ${{ steps.sign_app.outputs.signedReleaseFile }} android/app/build/outputs/apk/sunset-android.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: android/app/build/outputs/apk/sunset-android.apk
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Delete existing Android beta release
+        run: |
+          gh release delete android-beta --yes || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Delete existing Android beta tag
+        run: |
+          git fetch origin refs/tags/android-beta 2>/dev/null && git push origin --delete android-beta || true
+
+      - name: Create Android Beta Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-beta
+          name: Android Beta Build
+          body: |
+            ## Android Beta Build
+
+            Automated beta release from `${{ github.ref_name }}` branch.
+
+            - Commit: ${{ github.sha }}
+
+            **Note:** Beta builds may be unstable. Use at your own risk.
+          prerelease: true
+          files: |
+            artifacts/android-apk/sunset-android.apk
