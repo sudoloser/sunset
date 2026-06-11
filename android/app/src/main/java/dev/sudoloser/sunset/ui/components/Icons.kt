@@ -18,23 +18,23 @@ object SunsetIcons {
 
     val Pause: ImageVector = ImageVector.Builder("Pause", 24.dp, 24.dp, 24f, 24f).apply {
         path(fill = SolidColor(Color.White)) {
-            moveTo(6f, 4f); h(4f); v(16f); h(-4f); close()
-            moveTo(14f, 4f); h(4f); v(16f); h(-4f); close()
+            moveTo(6f, 4f); horizontalLineToRelative(4f); verticalLineToRelative(16f); horizontalLineToRelative(-4f); close()
+            moveTo(14f, 4f); horizontalLineToRelative(4f); verticalLineToRelative(16f); horizontalLineToRelative(-4f); close()
         }
     }.build()
 
     val Home: ImageVector = ImageVector.Builder("Home", 24.dp, 24.dp, 24f, 24f).apply {
         path(fill = SolidColor(Color.White)) {
-            moveTo(10f, 20f); v(-6f); h(4f); v(6f); h(5f); v(-8f); h(3f); lineTo(12f, 3f); lineTo(2f, 12f); h(3f); v(8f); close()
+            moveTo(10f, 20f); verticalLineToRelative(-6f); horizontalLineToRelative(4f); verticalLineToRelative(6f); horizontalLineToRelative(5f); verticalLineToRelative(-8f); horizontalLineToRelative(3f); lineTo(12f, 3f); lineTo(2f, 12f); horizontalLineToRelative(3f); verticalLineToRelative(8f); close()
         }
     }.build()
 
     val Library: ImageVector = ImageVector.Builder("Library", 24.dp, 24.dp, 24f, 24f).apply {
         path(fill = SolidColor(Color.White)) {
-            moveTo(4f, 6f); h(2f); v(14f); h(-2f); close()
-            moveTo(8f, 4f); h(2f); v(16f); h(-2f); close()
-            moveTo(12f, 7f); h(2f); v(13f); h(-2f); close()
-            moveTo(16f, 2f); h(2f); v(18f); h(-2f); close()
+            moveTo(4f, 6f); horizontalLineToRelative(2f); verticalLineToRelative(14f); horizontalLineToRelative(-2f); close()
+            moveTo(8f, 4f); horizontalLineToRelative(2f); verticalLineToRelative(16f); horizontalLineToRelative(-2f); close()
+            moveTo(12f, 7f); horizontalLineToRelative(2f); verticalLineToRelative(13f); horizontalLineToRelative(-2f); close()
+            moveTo(16f, 2f); horizontalLineToRelative(2f); verticalLineToRelative(18f); horizontalLineToRelative(-2f); close()
         }
     }.build()
 
@@ -63,22 +63,22 @@ object SunsetIcons {
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
         ) {
-            moveTo(20f, 4f); h(-16f); arcTo(2f, 2f, 0f, false, false, 2f, 6f); v(12f); arcTo(2f, 2f, 0f, false, false, 4f, 20f); h(16f); arcTo(2f, 2f, 0f, false, false, 22f, 18f); v(-12f); arcTo(2f, 2f, 0f, false, false, 20f, 4f); close()
-            moveTo(7f, 10f); h(4f); moveTo(7f, 14f); h(2f); moveTo(13f, 14f); h(4f); moveTo(17f, 10f); h(-2f)
+            moveTo(20f, 4f); horizontalLineToRelative(-16f); arcTo(2f, 2f, 0f, false, false, 2f, 6f); verticalLineToRelative(12f); arcTo(2f, 2f, 0f, false, false, 4f, 20f); horizontalLineToRelative(16f); arcTo(2f, 2f, 0f, false, false, 22f, 18f); verticalLineToRelative(-12f); arcTo(2f, 2f, 0f, false, false, 20f, 4f); close()
+            moveTo(7f, 10f); horizontalLineToRelative(4f); moveTo(7f, 14f); horizontalLineToRelative(2f); moveTo(13f, 14f); horizontalLineToRelative(4f); moveTo(17f, 10f); horizontalLineToRelative(-2f)
         }
     }.build()
 
     val SkipBack: ImageVector = ImageVector.Builder("SkipBack", 24.dp, 24.dp, 24f, 24f).apply {
         path(fill = SolidColor(Color.White)) {
-            moveTo(11f, 18f); v(-12f); lineTo(2.5f, 12f); close()
-            moveTo(21.5f, 18f); v(-12f); lineTo(13f, 12f); close()
+            moveTo(11f, 18f); verticalLineToRelative(-12f); lineTo(2.5f, 12f); close()
+            moveTo(21.5f, 18f); verticalLineToRelative(-12f); lineTo(13f, 12f); close()
         }
     }.build()
 
     val SkipForward: ImageVector = ImageVector.Builder("SkipForward", 24.dp, 24.dp, 24f, 24f).apply {
         path(fill = SolidColor(Color.White)) {
-            moveTo(2.5f, 18f); v(-12f); lineTo(11f, 12f); close()
-            moveTo(13f, 18f); v(-12f); lineTo(21.5f, 12f); close()
+            moveTo(2.5f, 18f); verticalLineToRelative(-12f); lineTo(11f, 12f); close()
+            moveTo(13f, 18f); verticalLineToRelative(-12f); lineTo(21.5f, 12f); close()
         }
     }.build()
 
@@ -89,7 +89,7 @@ object SunsetIcons {
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
         ) {
-            moveTo(19f, 12f); h(-14f); moveTo(12f, 19f); lineTo(5f, 12f); lineTo(12f, 5f)
+            moveTo(19f, 12f); horizontalLineToRelative(-14f); moveTo(12f, 19f); lineTo(5f, 12f); lineTo(12f, 5f)
         }
     }.build()
 
@@ -99,7 +99,7 @@ object SunsetIcons {
             strokeLineWidth = 2.5f,
             strokeLineCap = StrokeCap.Round
         ) {
-            moveTo(12f, 5f); v(14f); moveTo(5f, 12f); h(14f)
+            moveTo(12f, 5f); verticalLineToRelative(14f); moveTo(5f, 12f); horizontalLineToRelative(14f)
         }
     }.build()
 
@@ -110,7 +110,7 @@ object SunsetIcons {
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
         ) {
-            moveTo(23f, 4f); v(6f); h(-6f); moveTo(1f, 20f); v(-6f); h(6f);
+            moveTo(23f, 4f); verticalLineToRelative(6f); horizontalLineToRelative(-6f); moveTo(1f, 20f); verticalLineToRelative(-6f); horizontalLineToRelative(6f);
             moveTo(3.51f, 9f); arcTo(9f, 9f, 0f, false, true, 21f, 12f); arcTo(9f, 9f, 0f, false, true, 20.49f, 15f);
             moveTo(20.49f, 15f); arcTo(9f, 9f, 0f, false, true, 3f, 12f); arcTo(9f, 9f, 0f, false, true, 3.51f, 9f);
         }
