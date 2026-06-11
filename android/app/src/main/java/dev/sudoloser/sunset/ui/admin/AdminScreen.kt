@@ -1,5 +1,6 @@
 package dev.sudoloser.sunset.ui.admin
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -7,12 +8,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.models.*
+import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -84,7 +87,7 @@ fun AdminScreen(
             fullWidth = true
         )
 
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+        SunsetCard(modifier = Modifier.fillMaxWidth(), content = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Libraries", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
@@ -139,26 +142,26 @@ fun AdminScreen(
                     SunsetButton(text = "+ Add Library", onClick = { showAdd = true }, variant = ButtonVariant.Secondary, fullWidth = true)
                 }
             }
-        }
+        })
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SunsetCard(modifier = Modifier.weight(1f)) {
+            SunsetCard(modifier = Modifier.weight(1f), content = {
                 Column {
                     Text("Uptime", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
                     Text(formatUptime(uptime), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
-            }
+            })
             storage?.let { s ->
-                SunsetCard(modifier = Modifier.weight(1f)) {
+                SunsetCard(modifier = Modifier.weight(1f), content = {
                     Column {
                         Text("Users", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
                         Text(s.userCount.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
-                }
+                })
             }
         }
 
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+        SunsetCard(modifier = Modifier.fillMaxWidth(), content = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Invite Codes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 if (inviteCode != null) {
@@ -173,9 +176,9 @@ fun AdminScreen(
                     }
                 }
             }
-        }
+        })
 
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+        SunsetCard(modifier = Modifier.fillMaxWidth(), content = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Users", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
@@ -186,7 +189,8 @@ fun AdminScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(u.username, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Text(if (u.isAdmin) "ADMIN" else "USER", style = MaterialTheme.typography.labelSmall, color = if (u.isAdmin) NetflixRed else Color.Gray)
+                        val isAdminUser = u.isAdmin
+                        Text(if (isAdminUser) "ADMIN" else "USER", style = MaterialTheme.typography.labelSmall, color = if (isAdminUser) Color(0xFFE50914) else Color.Gray)
                     }
                 }
 
@@ -214,7 +218,7 @@ fun AdminScreen(
                     SunsetButton(text = "+ Create User", onClick = { showNewUser = true }, variant = ButtonVariant.Secondary, fullWidth = true)
                 }
             }
-        }
+        })
         
         Spacer(Modifier.height(100.dp))
     }
