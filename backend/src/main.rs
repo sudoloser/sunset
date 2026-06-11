@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use axum::{
     routing::{get, post, put, delete},
     Json, Router,
@@ -1629,9 +1630,15 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
     Json(true)
 }
 
-async fn get_playback(Path(item_id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Option<PlaybackState>> {
-    let state_row = sqlx::query_as::<_, PlaybackState>("SELECT id, item_id, user_id, timestamp, duration, updated_at FROM playback_state WHERE item_id = ? ORDER BY updated_at DESC LIMIT 1")
-        .bind(item_id).fetch_optional(&state.pool).await.unwrap();
+async fn get_playback(Path(item_id): Path<String>, State(state): State<Arc<AppState>>, Query(params): Query<HashMap<String, String>>) -> Json<Option<PlaybackState>> {
+    let user_id = params.get("user_id").map(|s| s.as_str());
+    let state_row = if let Some(uid) = user_id {
+        sqlx::query_as::<_, PlaybackState>("SELECT id, item_id, user_id, timestamp, duration, updated_at FROM playback_state WHERE item_id = ? AND user_id = ? ORDER BY updated_at DESC LIMIT 1")
+            .bind(&item_id).bind(uid).fetch_optional(&state.pool).await.unwrap()
+    } else {
+        sqlx::query_as::<_, PlaybackState>("SELECT id, item_id, user_id, timestamp, duration, updated_at FROM playback_state WHERE item_id = ? ORDER BY updated_at DESC LIMIT 1")
+            .bind(&item_id).fetch_optional(&state.pool).await.unwrap()
+    };
     Json(state_row)
 }
 

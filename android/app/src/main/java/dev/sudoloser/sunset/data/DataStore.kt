@@ -14,4 +14,5 @@ object PrefKeys {
     val IS_ADMIN = stringPreferencesKey("is_admin")
     val DARK_MODE = booleanPreferencesKey("dark_mode")
     val SUBTITLE_PREF = stringPreferencesKey("subtitle_preference")
+    val DOWNLOAD_PATH = stringPreferencesKey("download_path")
 }

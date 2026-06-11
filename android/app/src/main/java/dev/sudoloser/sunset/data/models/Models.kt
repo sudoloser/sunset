@@ -105,7 +105,7 @@ data class LoginRequest(
 data class CreateUserRequest(
     val username: String,
     @SerialName("password_hash") val passwordHash: String,
-    @SerialName("is_admin") val isAdmin: Boolean = false
+    @SerialName("is_admin") val isAdmin: Boolean
 )
 
 @Serializable

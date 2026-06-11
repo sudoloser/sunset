@@ -127,6 +127,23 @@ fun DashboardScreen(
                 )
             }
 
+            // Collections
+            val collectionGroups = recentlyAdded
+                .filter { it.collectionName != null }
+                .groupBy { it.collectionName!! }
+                .filter { it.value.size > 1 }
+
+            collectionGroups.forEach { (name, items) ->
+                item {
+                    MediaRow(
+                        title = name,
+                        items = items,
+                        baseUrl = baseUrl,
+                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
+                    )
+                }
+            }
+
             genres.forEach { genre ->
                 val items = genreItems[genre].orEmpty()
                 if (items.isNotEmpty()) {

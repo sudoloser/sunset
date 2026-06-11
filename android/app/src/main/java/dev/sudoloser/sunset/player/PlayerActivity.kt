@@ -9,9 +9,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,19 +35,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
-import dev.sudoloser.sunset.data.PrefKeys
-import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.components.*
 import dev.sudoloser.sunset.ui.theme.SunsetTheme
-import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -67,6 +63,8 @@ class PlayerActivity : ComponentActivity() {
     private var itemId: String? = null
     private var baseUrl: String? = null
     private var userId: String? = null
+    private var showTitle: String? = null
+    private var mediaType: String? = null
     
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val httpClient = OkHttpClient.Builder()
@@ -83,6 +81,8 @@ class PlayerActivity : ComponentActivity() {
         itemId = intent.getStringExtra("item_id")
         baseUrl = intent.getStringExtra("base_url")
         userId = intent.getStringExtra("user_id")
+        showTitle = intent.getStringExtra("show_title")
+        mediaType = intent.getStringExtra("media_type")
 
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
@@ -106,9 +106,40 @@ class PlayerActivity : ComponentActivity() {
         
         var showSubtitlePicker by remember { mutableStateOf(false) }
         var showSpeedPicker by remember { mutableStateOf(false) }
+        var shouldRestorePosition by remember { mutableStateOf(true) }
+        var skipDirection by remember { mutableStateOf<String?>(null) }
+
+        var episodes by remember { mutableStateOf<List<dev.sudoloser.sunset.data.models.MediaItem>>(emptyList()) }
+        var showEpisodePicker by remember { mutableStateOf(false) }
+        var currentItemId by remember { mutableStateOf(itemId ?: "") }
+        var currentEpisodeTitle by remember { mutableStateOf(videoTitle ?: "") }
+        val showEpisodeButton = showTitle != null
+
+        // Fetch episodes
+        LaunchedEffect(showTitle) {
+            if (showTitle != null && baseUrl != null) {
+                try {
+                    episodes = withContext(Dispatchers.IO) { fetchEpisodes(showTitle!!) }
+                } catch (_: Exception) {}
+            }
+        }
+
+        fun switchEpisode(ep: dev.sudoloser.sunset.data.models.MediaItem) {
+            val newUrl = "$baseUrl/api/stream/${ep.id}"
+            player?.let { saveCurrentPlayback(it.currentPosition, it.duration) }
+            videoUrl = newUrl
+            videoTitle = ep.title
+            itemId = ep.id
+            currentItemId = ep.id
+            currentEpisodeTitle = ep.title
+            shouldRestorePosition = true
+            showEpisodePicker = false
+        }
 
         // Initialize Player
-        LaunchedEffect(Unit) {
+        LaunchedEffect(currentItemId) {
+            player?.release()
+
             val trackSelector = DefaultTrackSelector(context)
             val exoPlayer = ExoPlayer.Builder(context)
                 .setTrackSelector(trackSelector)
@@ -119,10 +150,32 @@ class PlayerActivity : ComponentActivity() {
             exoPlayer.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
+                    if (!playing) {
+                        exoPlayer.let { saveCurrentPlayback(it.currentPosition, it.duration, false) }
+                    }
                 }
                 override fun onPlaybackStateChanged(state: Int) {
                     if (state == Player.STATE_READY) {
                         duration = exoPlayer.duration
+                        if (shouldRestorePosition) {
+                            shouldRestorePosition = false
+                            scope.launch {
+                                val savedState = withContext(Dispatchers.IO) { itemId?.let { fetchPlaybackState(it) } }
+                                savedState?.let { exoPlayer.seekTo((it.timestamp * 1000).toLong()) }
+                            }
+                        }
+                    } else if (state == Player.STATE_ENDED) {
+                        val currentIdx = episodes.indexOfFirst { it.id == currentItemId }
+                        if (currentIdx >= 0 && currentIdx < episodes.size - 1) {
+                            val nextEp = episodes[currentIdx + 1]
+                            saveCurrentPlayback(exoPlayer.currentPosition, exoPlayer.duration, false)
+                            videoUrl = "$baseUrl/api/stream/${nextEp.id}"
+                            videoTitle = nextEp.title
+                            itemId = nextEp.id
+                            currentItemId = nextEp.id
+                            currentEpisodeTitle = nextEp.title
+                            shouldRestorePosition = false
+                        }
                     }
                 }
                 override fun onPlayerError(error: PlaybackException) {
@@ -132,24 +185,22 @@ class PlayerActivity : ComponentActivity() {
 
             // Prepare Media Item
             val subtitleConfigs = mutableListOf<MediaItem.SubtitleConfiguration>()
-            itemId?.let { id ->
-                try {
-                    val subs = withContext(Dispatchers.IO) { fetchSubtitleList(id) }
-                    subtitleTracks = subs
-                    subs.forEach { name ->
-                        val subUrl = "$baseUrl/api/media/$id/subtitle/${java.net.URLEncoder.encode(name, "UTF-8")}"
-                        val mimeType = if (name.endsWith(".vtt")) MimeTypes.TEXT_VTT else MimeTypes.APPLICATION_SUBRIP
-                        val label = name.substringBeforeLast(".").split(".").last().uppercase()
-                        
-                        val subConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUrl))
-                            .setMimeType(mimeType)
-                            .setLabel(label)
-                            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-                            .build()
-                        subtitleConfigs.add(subConfig)
-                    }
-                } catch (_: Exception) {}
-            }
+            try {
+                val subs = withContext(Dispatchers.IO) { fetchSubtitleList(currentItemId) }
+                subtitleTracks = subs
+                subs.forEach { name ->
+                    val subUrl = "$baseUrl/api/media/$currentItemId/subtitle/${java.net.URLEncoder.encode(name, "UTF-8")}"
+                    val mimeType = if (name.endsWith(".vtt")) MimeTypes.TEXT_VTT else MimeTypes.APPLICATION_SUBRIP
+                    val label = name.substringBeforeLast(".").split(".").last().uppercase()
+                    
+                    val subConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUrl))
+                        .setMimeType(mimeType)
+                        .setLabel(label)
+                        .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                        .build()
+                    subtitleConfigs.add(subConfig)
+                }
+            } catch (_: Exception) {}
 
             val mediaItem = MediaItem.Builder()
                 .setUri(videoUrl)
@@ -158,20 +209,11 @@ class PlayerActivity : ComponentActivity() {
 
             exoPlayer.setMediaItem(mediaItem)
             exoPlayer.prepare()
-
-            // Load saved progress
-            itemId?.let { id ->
-                try {
-                    val state = withContext(Dispatchers.IO) { fetchPlaybackState(id) }
-                    state?.let { exoPlayer.seekTo((it.timestamp * 1000).toLong()) }
-                } catch (_: Exception) {}
-            }
-
             exoPlayer.playWhenReady = true
             
             // Progress update loop
             while (true) {
-                delay(500)
+                delay(2000)
                 exoPlayer.let { 
                     currentTime = it.currentPosition
                     if (it.isPlaying) {
@@ -188,13 +230,29 @@ class PlayerActivity : ComponentActivity() {
                 showControls = false
                 showSubtitlePicker = false
                 showSpeedPicker = false
+                showEpisodePicker = false
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black).clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null
-        ) { showControls = !showControls }) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { showControls = !showControls },
+                        onDoubleTap = { offset ->
+                            if (offset.x < size.width / 2) {
+                                player?.seekTo((player!!.currentPosition - 10000).coerceAtLeast(0))
+                                skipDirection = "-10s"
+                            } else {
+                                player?.seekTo((player!!.currentPosition + 10000).coerceAtMost(player!!.duration))
+                                skipDirection = "+10s"
+                            }
+                        }
+                    )
+                }
+        ) {
             
             AndroidView(
                 factory = { ctx ->
@@ -209,6 +267,27 @@ class PlayerActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxSize()
             )
 
+            // Skip direction indicator
+            if (skipDirection != null) {
+                LaunchedEffect(skipDirection) {
+                    delay(600)
+                    skipDirection = null
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                        .padding(horizontal = 32.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = skipDirection ?: "",
+                        color = Color.White,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
+
             // UI Overlay
             AnimatedVisibility(
                 visible = showControls,
@@ -216,7 +295,7 @@ class PlayerActivity : ComponentActivity() {
                 exit = fadeOut()
             ) {
                 PlayerControls(
-                    title = videoTitle ?: "Video",
+                    title = currentEpisodeTitle,
                     isPlaying = isPlaying,
                     currentTime = currentTime,
                     duration = duration,
@@ -225,9 +304,11 @@ class PlayerActivity : ComponentActivity() {
                     onSkip = { player?.seekTo(player!!.currentPosition + it) },
                     onBack = { finish() },
                     playbackSpeed = playbackSpeed,
-                    onSpeedClick = { showSpeedPicker = !showSpeedPicker; showSubtitlePicker = false },
-                    onSubtitlesClick = { showSubtitlePicker = !showSubtitlePicker; showSpeedPicker = false },
-                    hasSubtitles = subtitleTracks.isNotEmpty()
+                    onSpeedClick = { showSpeedPicker = !showSpeedPicker; showSubtitlePicker = false; showEpisodePicker = false },
+                    onSubtitlesClick = { showSubtitlePicker = !showSubtitlePicker; showSpeedPicker = false; showEpisodePicker = false },
+                    onEpisodesClick = { showEpisodePicker = !showEpisodePicker; showSubtitlePicker = false; showSpeedPicker = false },
+                    hasSubtitles = subtitleTracks.isNotEmpty(),
+                    hasEpisodes = showEpisodeButton && episodes.isNotEmpty()
                 )
             }
 
@@ -313,6 +394,89 @@ class PlayerActivity : ComponentActivity() {
                     }
                 }
             }
+
+            // Episode Picker
+            if (showEpisodePicker) {
+                Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 64.dp)) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.95f),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp).width(300.dp).heightIn(max = 420.dp)) {
+                            Text(
+                                text = showTitle ?: "Episodes",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                            )
+
+                            val grouped = episodes.groupBy { it.season ?: 1 }
+                            val sortedSeasons = grouped.keys.sorted()
+
+                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                sortedSeasons.forEach { season ->
+                                    val seasonEpisodes = grouped[season]!!
+                                    item {
+                                        Text(
+                                            text = "Season $season",
+                                            color = Color.White.copy(alpha = 0.6f),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)
+                                        )
+                                    }
+                                    items(seasonEpisodes, key = { it.id }) { ep ->
+                                        val isCurrent = ep.id == currentItemId
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(
+                                                    if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                                    else Color.Transparent
+                                                )
+                                                .clickable {
+                                                    if (!isCurrent) switchEpisode(ep)
+                                                }
+                                                .padding(horizontal = 8.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "${ep.episode ?: "?"}",
+                                                color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.width(28.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = ep.title,
+                                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Normal,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            if (isCurrent) {
+                                                Icon(
+                                                    SunsetIcons.Play,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -329,7 +493,9 @@ class PlayerActivity : ComponentActivity() {
         playbackSpeed: Float,
         onSpeedClick: () -> Unit,
         onSubtitlesClick: () -> Unit,
-        hasSubtitles: Boolean
+        onEpisodesClick: () -> Unit,
+        hasSubtitles: Boolean,
+        hasEpisodes: Boolean
     ) {
         Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(
             listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent, Color.Black.copy(alpha = 0.7f))
@@ -347,6 +513,12 @@ class PlayerActivity : ComponentActivity() {
                 if (hasSubtitles) {
                     IconButton(onClick = onSubtitlesClick) {
                         Icon(SunsetIcons.Subtitles, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                }
+
+                if (hasEpisodes) {
+                    IconButton(onClick = onEpisodesClick) {
+                        Icon(SunsetIcons.Episodes, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
                     }
                 }
                 
@@ -412,18 +584,26 @@ class PlayerActivity : ComponentActivity() {
         return Json.decodeFromString<JsonArray>(body).map { it.jsonPrimitive.content }
     }
 
+    private suspend fun fetchEpisodes(showTitle: String): List<dev.sudoloser.sunset.data.models.MediaItem> {
+        val request = Request.Builder().url("$baseUrl/api/shows/${java.net.URLEncoder.encode(showTitle, "UTF-8")}/episodes").build()
+        val response = httpClient.newCall(request).execute()
+        val body = response.body?.string() ?: return emptyList()
+        return Json.decodeFromString<List<dev.sudoloser.sunset.data.models.MediaItem>>(body)
+    }
+
     private suspend fun fetchPlaybackState(id: String): dev.sudoloser.sunset.data.models.PlaybackState? {
-        val request = Request.Builder().url("$baseUrl/api/playback/$id").build()
+        val url = if (userId != null) "$baseUrl/api/playback/$id?user_id=$userId" else "$baseUrl/api/playback/$id"
+        val request = Request.Builder().url(url).build()
         val response = httpClient.newCall(request).execute()
         val body = response.body?.string() ?: return null
         return try { Json.decodeFromString<dev.sudoloser.sunset.data.models.PlaybackState>(body) } catch (_: Exception) { null }
     }
 
-    private fun saveCurrentPlayback(pos: Long, dur: Long) {
+    private fun saveCurrentPlayback(pos: Long, dur: Long, playing: Boolean = true) {
         if (baseUrl == null || itemId == null) return
         scope.launch(Dispatchers.IO) {
             try {
-                val payload = """{"item_id":"$itemId","timestamp":${pos / 1000.0},"duration":${dur / 1000.0},"user_id":"$userId","is_playing":true}"""
+                val payload = """{"item_id":"$itemId","timestamp":${pos / 1000.0},"duration":${dur / 1000.0},"user_id":"$userId","is_playing":$playing}"""
                 val request = Request.Builder()
                     .url("$baseUrl/api/playback")
                     .post(payload.toRequestBody("application/json".toMediaTypeOrNull()))
@@ -431,6 +611,11 @@ class PlayerActivity : ComponentActivity() {
                 httpClient.newCall(request).execute()
             } catch (_: Exception) {}
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        player?.let { saveCurrentPlayback(it.currentPosition, it.duration, false) }
     }
 
     override fun onDestroy() {

@@ -17,16 +17,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.app.DownloadManager
+import android.content.Context
+import android.net.Uri
+import android.widget.Toast
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
+import dev.sudoloser.sunset.data.PrefKeys
+import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.ui.components.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +53,43 @@ fun MediaDetailsScreen(
     var inMyList by remember { mutableStateOf(false) }
     var userRating by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
+    var downloadPath by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val ctx = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        downloadPath = ctx.dataStore.data.first()[PrefKeys.DOWNLOAD_PATH] ?: ""
+    }
+
+    fun downloadItem(itemId: String, title: String) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val token = apiClient.generateMediaToken(itemId)
+                val url = apiClient.getDownloadUrl(itemId, token)
+                val downloadManager = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                val request = DownloadManager.Request(Uri.parse(url))
+                    .setTitle(title)
+                    .setDescription("Downloading $title")
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    .setAllowedOverMetered(true)
+                    .setAllowedOverRoaming(true)
+                if (downloadPath.isNotBlank()) {
+                    val dir = java.io.File(downloadPath)
+                    if (dir.exists() || dir.mkdirs()) {
+                        request.setDestinationUri(Uri.fromFile(java.io.File(dir, "$title.mp4")))
+                    }
+                }
+                downloadManager.enqueue(request)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(ctx, "Downloading $title", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(ctx, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(item.id) {
         try {
@@ -152,6 +198,14 @@ fun MediaDetailsScreen(
                             variant = ButtonVariant.Secondary,
                             modifier = Modifier.width(160.dp)
                         )
+
+                        if (item.mediaType.name == "MOVIE") {
+                            SunsetIconButton(
+                                icon = SunsetIcons.Download,
+                                onClick = { downloadItem(item.id, item.title) },
+                                backgroundColor = Color.White.copy(alpha = 0.15f)
+                            )
+                        }
                     }
                 }
             }
@@ -266,6 +320,15 @@ fun MediaDetailsScreen(
                                     )
                                 }
                                 Icon(SunsetIcons.Play, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Icon(
+                                    SunsetIcons.Download,
+                                    contentDescription = "Download",
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clickable { downloadItem(ep.id, ep.title) }
+                                )
                             }
                         }
                     }

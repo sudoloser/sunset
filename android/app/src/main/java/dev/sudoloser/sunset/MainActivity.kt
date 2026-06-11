@@ -231,7 +231,7 @@ fun AppContent(activity: ComponentActivity) {
                             baseUrl = baseUrl,
                             apiClient = client,
                             userId = userId,
-                            onPlay = { startPlayer(activity, client, selectedItem!!.id, selectedItem!!.title, baseUrl, userId) },
+                            onPlay = { startPlayer(activity, client, selectedItem!!, baseUrl, userId) },
                             onClose = { selectedItem = null }
                         )
                     }
@@ -269,7 +269,7 @@ fun AppContent(activity: ComponentActivity) {
                                     apiClient = client,
                                     baseUrl = baseUrl,
                                     onPlayItem = { item ->
-                                    startPlayer(activity, client, item.id, item.title, baseUrl, userId)
+                                    startPlayer(activity, client, item, baseUrl, userId)
                                     },
                                     onSearch = { showSearch = true },
                                     onSelectItem = { item -> selectedItem = item }
@@ -280,7 +280,7 @@ fun AppContent(activity: ComponentActivity) {
                                     userId = userId,
                                     isAdmin = user?.isAdmin == true,
                                     onPlayItem = { item ->
-                                    startPlayer(activity, client, item.id, item.title, baseUrl, userId)
+                                    startPlayer(activity, client, item, baseUrl, userId)
                                     },
                                     onSelectItem = { selectedItem = it },
                                     onGoToSettings = { activeTab = "settings" }
@@ -320,13 +320,15 @@ fun AppContent(activity: ComponentActivity) {
 }
 }
 
-private fun startPlayer(activity: ComponentActivity, client: ApiClient, itemId: String, title: String, baseUrl: String, userId: String?) {
+private fun startPlayer(activity: ComponentActivity, client: ApiClient, item: MediaItem, baseUrl: String, userId: String?) {
     val intent = Intent(activity, PlayerActivity::class.java).apply {
-        putExtra("video_url", client.getStreamUrl(itemId))
-        putExtra("video_title", title)
-        putExtra("item_id", itemId)
+        putExtra("video_url", client.getStreamUrl(item.id))
+        putExtra("video_title", item.title)
+        putExtra("item_id", item.id)
         putExtra("base_url", baseUrl)
         putExtra("user_id", userId)
+        putExtra("show_title", item.showTitle)
+        putExtra("media_type", item.mediaType.name)
     }
     activity.startActivity(intent)
 }

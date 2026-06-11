@@ -115,4 +115,33 @@ object SunsetIcons {
             moveTo(20.49f, 15f); arcTo(9f, 9f, 0f, false, true, 3f, 12f); arcTo(9f, 9f, 0f, false, true, 3.51f, 9f);
         }
     }.build()
+
+    val Episodes: ImageVector = ImageVector.Builder("Episodes", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.White)) {
+            moveTo(4f, 6f); horizontalLineToRelative(6f); verticalLineToRelative(6f); horizontalLineToRelative(-6f); close()
+            moveTo(14f, 6f); horizontalLineToRelative(6f); verticalLineToRelative(6f); horizontalLineToRelative(-6f); close()
+            moveTo(4f, 14f); horizontalLineToRelative(6f); verticalLineToRelative(6f); horizontalLineToRelative(-6f); close()
+            moveTo(14f, 14f); horizontalLineToRelative(6f); verticalLineToRelative(6f); horizontalLineToRelative(-6f); close()
+        }
+    }.build()
+
+    val MoreVertical: ImageVector = ImageVector.Builder("MoreVertical", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.White)) {
+            moveTo(12f, 8f); arcTo(2f, 2f, 0f, true, false, 12f, 4f); arcTo(2f, 2f, 0f, false, false, 12f, 8f); close()
+            moveTo(12f, 14f); arcTo(2f, 2f, 0f, true, false, 12f, 10f); arcTo(2f, 2f, 0f, false, false, 12f, 14f); close()
+            moveTo(12f, 20f); arcTo(2f, 2f, 0f, true, false, 12f, 16f); arcTo(2f, 2f, 0f, false, false, 12f, 20f); close()
+        }
+    }.build()
+
+    val Download: ImageVector = ImageVector.Builder("Download", 24.dp, 24.dp, 24f, 24f).apply {
+        path(
+            stroke = SolidColor(Color.White),
+            strokeLineWidth = 2f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            moveTo(21f, 15f); verticalLineToRelative(4f); arcTo(2f, 2f, 0f, false, true, 19f, 21f); horizontalLineToRelative(-14f); arcTo(2f, 2f, 0f, false, true, 3f, 19f); verticalLineToRelative(-4f);
+            moveTo(7f, 10f); lineTo(12f, 15f); lineTo(17f, 10f); moveTo(12f, 15f); verticalLineToRelative(-12f);
+        }
+    }.build()
 }

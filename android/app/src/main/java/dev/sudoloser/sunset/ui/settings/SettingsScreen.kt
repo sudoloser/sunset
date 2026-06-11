@@ -26,9 +26,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
+import dev.sudoloser.sunset.data.DataStore
+import dev.sudoloser.sunset.data.PrefKeys
+import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.datastore.preferences.core.edit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +50,7 @@ fun SettingsScreen(
 ) {
     var tab by remember { mutableStateOf("account") }
     val tabs = buildList {
-        add("account"); add("appearance"); add("subtitles"); add("discord")
+        add("account"); add("discord"); add("downloads")
         if (isAdmin) add("admin")
     }
 
@@ -96,9 +101,8 @@ fun SettingsScreen(
         Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             when (tab) {
                 "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
-                "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange)
-                "subtitles" -> SubtitleSettings()
                 "discord" -> DiscordSettings(apiClient, userId)
+                "downloads" -> DownloadSettings()
                 "admin" -> onGoToAdmin()
             }
         }
@@ -261,56 +265,17 @@ fun AccountSettings(
     }
 }
 
-@Composable
-fun AppearanceSettings(
-    darkTheme: Boolean,
-    onDarkThemeChange: (Boolean) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("Dark Mode", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
-                    Text(
-                        "Use the cinematic dark theme",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
-                    )
-                }
-                Switch(
-                    checked = darkTheme, 
-                    onCheckedChange = onDarkThemeChange,
-                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
-                )
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SubtitleSettings() {
-    var color by remember { mutableStateOf("#FFFFFF") }
-    var bgOpacity by remember { mutableIntStateOf(0) }
-    var size by remember { mutableIntStateOf(100) }
-    var font by remember { mutableStateOf("Inter") }
-    var bold by remember { mutableStateOf(false) }
+fun DownloadSettings() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var downloadPath by remember { mutableStateOf("") }
+    var saved by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
-    val colors = listOf(
-        "#FFFFFF" to "White", "#FFFF00" to "Yellow", "#00FF00" to "Green",
-        "#00FFFF" to "Cyan", "#FF0000" to "Red", "#FF00FF" to "Magenta",
-        "#0000FF" to "Blue", "#000000" to "Black"
-    )
-    val fonts = listOf("Inter", "Arial", "Helvetica", "Times New Roman", "Courier New", "Georgia", "Verdana")
+    LaunchedEffect(Unit) {
+        downloadPath = ctx.dataStore.data.first()[PrefKeys.DOWNLOAD_PATH] ?: ""
+    }
 
     Column(
         modifier = Modifier
@@ -320,85 +285,31 @@ fun SubtitleSettings() {
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Text Color", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    colors.forEach { (hex, _) ->
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color(android.graphics.Color.parseColor(hex)))
-                                .border(
-                                    width = if (color == hex) 3.dp else 1.dp,
-                                    color = if (color == hex) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.5f),
-                                    shape = CircleShape
-                                )
-                                .clickable { color = hex }
-                        )
-                    }
-                }
-            }
-        }
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Background Opacity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SunsetButton(
-                        text = "None",
-                        onClick = { bgOpacity = 0 },
-                        variant = if (bgOpacity == 0) ButtonVariant.Primary else ButtonVariant.Secondary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    SunsetButton(
-                        text = "Translucent",
-                        onClick = { bgOpacity = 50 },
-                        variant = if (bgOpacity == 50) ButtonVariant.Primary else ButtonVariant.Secondary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    SunsetButton(
-                        text = "Black",
-                        onClick = { bgOpacity = 100 },
-                        variant = if (bgOpacity == 100) ButtonVariant.Primary else ButtonVariant.Secondary,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Scale: $size%", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Slider(
-                    value = size.toFloat(),
-                    onValueChange = { size = it.toInt() },
-                    valueRange = 50f..200f,
-                    steps = 29,
-                    colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary)
-                )
-            }
-        }
-
-        SunsetCard(modifier = Modifier.fillMaxWidth().height(160.dp), glass = true) {
-            val previewSize = (16 + (size - 50) * 0.15f).coerceIn(10f, 48f)
-            val previewColor = try { Color(android.graphics.Color.parseColor(color)) } catch (_: Exception) { Color.White }
-            val previewBg = Color.Black.copy(alpha = bgOpacity / 100f)
-
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Download Location", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
-                    text = "Subtitles Preview",
-                    color = previewColor,
-                    fontSize = previewSize.sp,
-                    fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .background(previewBg, RoundedCornerShape(4.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                    "Files will be saved to this directory on your device.",
+                    color = Color.Gray,
+                    fontSize = 14.sp
+                )
+                SunsetInput(
+                    value = downloadPath,
+                    onValueChange = { downloadPath = it; saved = false },
+                    label = "Download Path",
+                    placeholder = "e.g. /storage/emulated/0/Download/SunSet"
+                )
+                SunsetButton(
+                    text = if (saved) "✓ Saved" else "Save Path",
+                    onClick = {
+                        scope.launch {
+                            ctx.dataStore.edit { it[PrefKeys.DOWNLOAD_PATH] = downloadPath }
+                            saved = true
+                        }
+                    },
+                    fullWidth = true
                 )
             }
         }
-        
         Spacer(Modifier.height(80.dp))
     }
 }

@@ -82,7 +82,10 @@ class ApiClient(private val baseUrl: String) {
     fun getStreamUrl(itemId: String): String = "$baseUrl/api/stream/$itemId"
     suspend fun getSubtitles(itemId: String): List<String> = get("/media/$itemId/subtitles")
     suspend fun savePlayback(data: PlaybackState): Boolean = post("/playback", data)
-    suspend fun getPlayback(itemId: String): PlaybackState = get("/playback/$itemId")
+    suspend fun getPlayback(itemId: String, userId: String? = null): PlaybackState {
+        val suffix = if (userId != null) "/playback/$itemId?user_id=$userId" else "/playback/$itemId"
+        return get(suffix)
+    }
     suspend fun updateDiscordConfig(userId: String, token: String, status: String): Boolean =
         put("/users/$userId/discord-config", DiscordConfig(token, status))
     suspend fun getStorage(): StorageInfo = get("/storage")
