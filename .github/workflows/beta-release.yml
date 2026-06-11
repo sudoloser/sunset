@@ -85,3 +85,45 @@ jobs:
         with:
           name: sunset-server-${{ matrix.target }}
           path: bin/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Delete existing beta release
+        run: |
+          gh release delete beta --yes || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Delete existing beta tag
+        run: |
+          git fetch origin refs/tags/beta 2>/dev/null && git push origin --delete beta || true
+
+      - name: Create Beta Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta
+          name: Beta Build
+          body: |
+            ## Beta Build
+
+            Automated beta release from `${{ github.ref_name }}` branch.
+
+            - Commit: ${{ github.sha }}
+            - Build time: ${{ github.event.head_commit.timestamp || github.event.client_payload.timestamp || 'latest' }}
+
+            **Note:** Beta builds may be unstable. Use at your own risk.
+          prerelease: true
+          files: |
+            artifacts/sunset-server-x86_64-unknown-linux-gnu/sunset-server-linux-x86_64
+            artifacts/sunset-server-aarch64-unknown-linux-gnu/sunset-server-linux-aarch64
+            artifacts/sunset-server-x86_64-pc-windows-msvc/sunset-server-windows-x64.exe
