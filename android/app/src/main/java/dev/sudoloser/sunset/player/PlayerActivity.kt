@@ -299,15 +299,16 @@ class PlayerActivity : ComponentActivity() {
                     view.player = player
                     view.subtitleView?.let { sv ->
                         sv.setApplyEmbeddedStyles(false)
-                        sv.setStyle(CaptionStyleCompat(
-                            android.graphics.Color.parseColor(subtitleColor),
-                            if (subtitleBgOpacity > 0) android.graphics.Color.argb((subtitleBgOpacity * 255).toInt(), 0, 0, 0)
-                            else android.graphics.Color.TRANSPARENT,
-                            if (subtitleBold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT,
-                            0,
-                            subtitleSize / 100f,
-                            CaptionStyleCompat.TEXT_SIZE_TYPE_FRACTIONAL
-                        ))
+                        sv.setStyle(
+                            CaptionStyleCompat.Builder()
+                                .setForegroundColor(android.graphics.Color.parseColor(subtitleColor))
+                                .setBackgroundColor(
+                                    if (subtitleBgOpacity > 0) android.graphics.Color.argb((subtitleBgOpacity * 255).toInt(), 0, 0, 0)
+                                    else android.graphics.Color.TRANSPARENT
+                                )
+                                .setTypeface(if (subtitleBold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT)
+                                .build()
+                        )
                     }
                 },
                 modifier = Modifier.fillMaxSize()
