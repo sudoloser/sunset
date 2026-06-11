@@ -56,3 +56,40 @@ jobs:
         with:
           name: beta-apk
           path: android/app/build/outputs/apk/sunset-android.apk
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Delete existing Android beta release
+        run: |
+          gh release delete android-beta --yes || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Delete existing Android beta tag
+        run: |
+          git fetch origin refs/tags/android-beta 2>/dev/null && git push origin --delete android-beta || true
+
+      - name: Create Android Beta Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-beta
+          name: Android Beta Build
+          body: |
+            ## Android Beta Build
+
+            Automated beta release from `${{ github.ref_name }}` branch.
+
+            - Commit: ${{ github.sha }}
+
+            **Note:** Beta builds may be unstable. Use at your own risk.
+          prerelease: true
+          files: |
+            artifacts/beta-apk/sunset-android.apk
