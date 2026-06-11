@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.media3.common.text.CaptionStyleCompat
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
@@ -296,16 +297,17 @@ class PlayerActivity : ComponentActivity() {
                 },
                 update = { view ->
                     view.player = player
-                    view.subtitleView.apply {
-                        setForegroundColor(android.graphics.Color.parseColor(subtitleColor))
-                        setBackgroundColor(
+                    view.subtitleView?.let { sv ->
+                        sv.setApplyEmbeddedStyles(false)
+                        sv.setStyle(CaptionStyleCompat(
+                            android.graphics.Color.parseColor(subtitleColor),
                             if (subtitleBgOpacity > 0) android.graphics.Color.argb((subtitleBgOpacity * 255).toInt(), 0, 0, 0)
-                            else android.graphics.Color.TRANSPARENT
-                        )
-                        setTextSize((14 * subtitleSize / 100).toFloat(), android.util.TypedValue.COMPLEX_UNIT_SP)
-                        setUserDefaultStyle(false)
-                        setApplyEmbeddedStyles(false)
-                        setTypeface(if (subtitleBold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT)
+                            else android.graphics.Color.TRANSPARENT,
+                            if (subtitleBold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT,
+                            0,
+                            subtitleSize / 100f,
+                            CaptionStyleCompat.TEXT_SIZE_TYPE_FRACTIONAL
+                        ))
                     }
                 },
                 modifier = Modifier.fillMaxSize()
