@@ -1,0 +1,130 @@
+name: Beta Release
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: "-linux-x86_64"
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            suffix: "-linux-aarch64"
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            suffix: "-windows-x64.exe"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          pnpm install
+          pnpm build
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross (for aarch64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: cargo install cross
+
+      - name: Build Backend (Standard)
+        if: matrix.target != 'aarch64-unknown-linux-gnu'
+        run: |
+          cp -r frontend/dist backend/dist
+          cd backend
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Build Backend (Cross)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          cp -r frontend/dist backend/dist
+          cd backend
+          cross build --release --target ${{ matrix.target }}
+
+      - name: Prepare Binary
+        shell: bash
+        run: |
+          mkdir -p bin
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp backend/target/${{ matrix.target }}/release/sunset-backend.exe bin/sunset-server${{ matrix.suffix }}
+          else
+            cp backend/target/${{ matrix.target }}/release/sunset-backend bin/sunset-server${{ matrix.suffix }}
+          fi
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunset-server-${{ matrix.target }}
+          path: bin/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Delete existing beta release
+        run: |
+          gh release delete beta --yes || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Delete existing beta tag
+        run: |
+          git fetch origin refs/tags/beta 2>/dev/null && git push origin --delete beta || true
+
+      - name: Create Beta Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta
+          name: Beta Build
+          body: |
+            ## Beta Build
+
+            This is an automated beta release built from the latest commit on `${{ github.ref_name }}`.
+
+            - Commit: ${{ github.sha }}
+            - Build time: ${{ github.event.head_commit.timestamp || github.event.client_payload.timestamp || 'latest' }}
+
+            **Note:** Beta builds may be unstable. Use at your own risk.
+          prerelease: true
+          files: |
+            artifacts/sunset-server-x86_64-unknown-linux-gnu/sunset-server-linux-x86_64
+            artifacts/sunset-server-aarch64-unknown-linux-gnu/sunset-server-linux-aarch64
+            artifacts/sunset-server-x86_64-pc-windows-msvc/sunset-server-windows-x64.exe
