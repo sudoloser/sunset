@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - pre
+    paths:
+      - '.github/workflows/beta-android.yml'
+      - 'android/**'
   workflow_dispatch:
 
 jobs:

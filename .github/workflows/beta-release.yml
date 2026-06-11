@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - pre
+    paths:
+      - '.github/workflows/beta-release.yml'
+      - 'frontend/**'
+      - 'backend/**'
   workflow_dispatch:
 
 jobs:
