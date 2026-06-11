@@ -1,0 +1,58 @@
+name: Beta Build (Android)
+
+on:
+  push:
+    branches:
+      - pre
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+          
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        
+      - name: Install Build Tools
+        run: sdkmanager "build-tools;29.0.3" "build-tools;34.0.0"
+          
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+        
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --warning-mode all
+        
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE }}
+          alias: ${{ secrets.KEYSTORE_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEYSTORE_PASSWORD }}
+
+      - name: Rename Signed APK
+        run: |
+          mv ${{ steps.sign_app.outputs.signedReleaseFile }} android/app/build/outputs/apk/sunset-android.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-apk
+          path: android/app/build/outputs/apk/sunset-android.apk
