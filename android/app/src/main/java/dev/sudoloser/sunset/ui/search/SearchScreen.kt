@@ -57,10 +57,16 @@ fun SearchScreen(
                         searchJob = scope.launch {
                             delay(300)
                             try {
-                                results = apiClient.search(q)
+                                val resultsData = apiClient.search(q)
+                                val seen = mutableSetOf<String>()
+                                results = resultsData.filter { item ->
+                                    val title = item.showTitle ?: item.title
+                                    if (seen.contains(title)) return@filter false
+                                    seen.add(title)
+                                    true
+                                }
                             } catch (_: Exception) {}
-                        }
-                    } else {
+                        }                    } else {
                         results = emptyList()
                     }
                 },

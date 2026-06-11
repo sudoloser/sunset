@@ -92,18 +92,12 @@ fun Hero(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 SunsetButton(
                     text = "Play Now",
                     onClick = onPlay,
                     variant = ButtonVariant.Primary,
-                    modifier = Modifier.weight(1f)
-                )
-                SunsetIconButton(
-                    icon = SunsetIcons.Plus,
-                    onClick = { /* TODO */ },
-                    backgroundColor = Color.White.copy(alpha = 0.2f),
-                    tint = Color.White
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

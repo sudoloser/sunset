@@ -61,23 +61,32 @@ fun AdminScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("< Back") }
-            Spacer(Modifier.width(8.dp))
-            Text("Admin", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SunsetIconButton(
+                icon = SunsetIcons.Back,
+                onClick = onBack,
+                backgroundColor = Color.White.copy(alpha = 0.1f)
+            )
+            Text("Admin Dashboard", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
         }
 
-        Button(onClick = { scope.launch { try { apiClient.triggerScan() } catch (_: Exception) {} } }) {
-            Text("Scan All Libraries")
-        }
+        SunsetButton(
+            text = "Scan All Libraries",
+            onClick = { scope.launch { try { apiClient.triggerScan() } catch (_: Exception) {} } },
+            fullWidth = true
+        )
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Libraries", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Libraries", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
                 libraries.forEach { lib ->
                     Row(
@@ -86,36 +95,36 @@ fun AdminScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(lib.name, fontSize = 14.sp)
-                            Text(lib.path, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(lib.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(lib.path, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
-                        Spacer(Modifier.width(8.dp))
-                        OutlinedButton(onClick = {
+                        TextButton(onClick = {
                             scope.launch { try { apiClient.deleteLibrary(lib.id); libraries = libraries - lib } catch (_: Exception) {} }
-                        }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
+                        }) { Text("Remove", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
                     }
                 }
 
                 if (showAdd) {
-                    OutlinedTextField(value = newLibName, onValueChange = { newLibName = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = newLibPath, onValueChange = { newLibPath = it }, label = { Text("Path") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    SunsetInput(value = newLibName, onValueChange = { newLibName = it }, label = "Name", placeholder = "Movies")
+                    SunsetInput(value = newLibPath, onValueChange = { newLibPath = it }, label = "Path", placeholder = "/mnt/media/movies")
+                    
                     var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                        OutlinedTextField(
-                            value = if (newLibType == LibraryType.MOVIES) "Movies" else "Shows",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                    Box {
+                        SunsetButton(
+                            text = if (newLibType == LibraryType.MOVIES) "MOVIES" else "SHOWS",
+                            onClick = { expanded = true },
+                            variant = ButtonVariant.Secondary,
+                            fullWidth = true
                         )
-                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             DropdownMenuItem(text = { Text("Movies") }, onClick = { newLibType = LibraryType.MOVIES; expanded = false })
                             DropdownMenuItem(text = { Text("Shows") }, onClick = { newLibType = LibraryType.SHOWS; expanded = false })
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { showAdd = false }) { Text("Cancel") }
-                        Button(onClick = {
+                    
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SunsetButton(text = "Cancel", onClick = { showAdd = false }, variant = ButtonVariant.Ghost, modifier = Modifier.weight(1f))
+                        SunsetButton(text = "Add", onClick = {
                             scope.launch {
                                 try {
                                     apiClient.addLibrary(LibraryInput(newLibName, newLibPath, newLibType))
@@ -124,55 +133,51 @@ fun AdminScreen(
                                     showAdd = false
                                 } catch (_: Exception) {}
                             }
-                        }) { Text("Add") }
+                        }, modifier = Modifier.weight(1f))
                     }
                 } else {
-                    OutlinedButton(onClick = { showAdd = true }) { Text("+ Add Library") }
+                    SunsetButton(text = "+ Add Library", onClick = { showAdd = true }, variant = ButtonVariant.Secondary, fullWidth = true)
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Server Status", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Text("Uptime: ${formatUptime(uptime)}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
-        storage?.let { s ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Storage", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                    Text("Items: ${s.itemCount}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Libraries: ${s.libraryCount}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Users: ${s.userCount}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Total Size: ${formatBytes(s.totalSize)}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            SunsetCard(modifier = Modifier.weight(1f)) {
+                Column {
+                    Text("Uptime", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
+                    Text(formatUptime(uptime), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Invite Codes", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                if (inviteCode != null) {
-                    Text(inviteCode!!, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = {
-                        scope.launch { try { inviteCode = apiClient.createInvite(); inviteCopied = false } catch (_: Exception) {} }
-                    }) { Text("Generate Code") }
-                    if (inviteCode != null) {
-                        Button(onClick = { inviteCopied = true }) {
-                            Text(if (inviteCopied) "Copied!" else "Copy")
-                        }
+            storage?.let { s ->
+                SunsetCard(modifier = Modifier.weight(1f)) {
+                    Column {
+                        Text("Users", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
+                        Text(s.userCount.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Users", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Invite Codes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                if (inviteCode != null) {
+                    Text(inviteCode!!, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SunsetButton(text = "Generate", onClick = {
+                        scope.launch { try { inviteCode = apiClient.createInvite(); inviteCopied = false } catch (_: Exception) {} }
+                    }, modifier = Modifier.weight(1f))
+                    if (inviteCode != null) {
+                        SunsetButton(text = if (inviteCopied) "Copied!" else "Copy", onClick = { inviteCopied = true }, variant = ButtonVariant.Secondary, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Users", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
                 users.forEach { u ->
                     Row(
@@ -180,21 +185,21 @@ fun AdminScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(u.username, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                        Text(if (u.isAdmin) "Admin" else "User", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(u.username, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text(if (u.isAdmin) "ADMIN" else "USER", style = MaterialTheme.typography.labelSmall, color = if (u.isAdmin) NetflixRed else Color.Gray)
                     }
                 }
 
                 if (showNewUser) {
-                    OutlinedTextField(value = newUserName, onValueChange = { newUserName = it }, label = { Text("Username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = newUserPass, onValueChange = { newUserPass = it }, label = { Text("Password") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                    SunsetInput(value = newUserName, onValueChange = { newUserName = it }, label = "Username")
+                    SunsetInput(value = newUserPass, onValueChange = { newUserPass = it }, label = "Password", password = true)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = newUserAdmin, onCheckedChange = { newUserAdmin = it })
-                        Text("Admin", fontSize = 14.sp)
+                        Text("Admin Privileges", color = Color.White)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { showNewUser = false }) { Text("Cancel") }
-                        Button(onClick = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SunsetButton(text = "Cancel", onClick = { showNewUser = false }, variant = ButtonVariant.Ghost, modifier = Modifier.weight(1f))
+                        SunsetButton(text = "Create", onClick = {
                             scope.launch {
                                 try {
                                     apiClient.createUser(CreateUserRequest(newUserName, newUserPass, newUserAdmin))
@@ -203,17 +208,15 @@ fun AdminScreen(
                                     showNewUser = false
                                 } catch (_: Exception) {}
                             }
-                        }) { Text("Create User") }
+                        }, modifier = Modifier.weight(1f))
                     }
                 } else {
-                    OutlinedButton(onClick = { showNewUser = true }) { Text("+ New User") }
+                    SunsetButton(text = "+ Create User", onClick = { showNewUser = true }, variant = ButtonVariant.Secondary, fullWidth = true)
                 }
             }
         }
-
-        OutlinedButton(onClick = {
-            scope.launch { try { apiClient.redeemInvite("") } catch (_: Exception) {} }
-        }) { Text("Invite Code (Redeem)") }
+        
+        Spacer(Modifier.height(100.dp))
     }
 }
 

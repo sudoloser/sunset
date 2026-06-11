@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
@@ -13,10 +12,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,11 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -45,7 +42,6 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.source.SingleSampleMediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
-import dev.sudoloser.sunset.R
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.components.*
@@ -126,9 +122,6 @@ class PlayerActivity : ComponentActivity() {
                                 duration = exoPlayer.duration
                             }
                         }
-                        override fun onTracksChanged(tracks: Tracks) {
-                            // Update active sub state if needed
-                        }
                     })
 
                     val dataSourceFactory = DefaultHttpDataSource.Factory()
@@ -200,10 +193,12 @@ class PlayerActivity : ComponentActivity() {
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
-                        this.player = this@PlayerActivity.player
                         useController = false
                         setBackgroundColor(android.graphics.Color.BLACK)
                     }
+                },
+                update = { view ->
+                    view.player = player
                 },
                 modifier = Modifier.fillMaxSize()
             )
@@ -211,8 +206,8 @@ class PlayerActivity : ComponentActivity() {
             // UI Overlay
             AnimatedVisibility(
                 visible = showControls,
-                enter = fadeIn() + slideInVertically { it / 2 },
-                exit = fadeOut() + slideOutVertically { it / 2 }
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
                 PlayerControls(
                     title = videoTitle ?: "Video",
@@ -269,9 +264,7 @@ class PlayerActivity : ComponentActivity() {
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
                     ) {
                         Column(modifier = Modifier.padding(8.dp).width(200.dp)) {
-                            Text(
-                                "Off",
-                                color = if (activeSubtitle == null) MaterialTheme.colorScheme.primary else Color.White,
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { 
@@ -281,26 +274,34 @@ class PlayerActivity : ComponentActivity() {
                                         showSubtitlePicker = false
                                     }
                                     .padding(12.dp),
-                                fontWeight = FontWeight.Bold
-                            )
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Off", color = if (activeSubtitle == null) MaterialTheme.colorScheme.primary else Color.White, fontWeight = FontWeight.Bold)
+                                if (activeSubtitle == null) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                            }
+                            
                             subtitleTracks.forEach { sub ->
                                 val label = sub.substringBeforeLast(".").split(".").last().uppercase()
-                                Text(
-                                    label,
-                                    color = if (activeSubtitle == sub) MaterialTheme.colorScheme.primary else Color.White,
+                                val isSelected = activeSubtitle == sub
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable { 
                                             activeSubtitle = sub
                                             player?.trackSelectionParameters = player!!.trackSelectionParameters.buildUpon()
                                                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                                                .setPreferredTextLanguage(null)
+                                                .setPreferredTextLanguage(label.lowercase())
                                                 .build()
                                             showSubtitlePicker = false
                                         }
                                         .padding(12.dp),
-                                    fontWeight = FontWeight.Bold
-                                )
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(label, color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White, fontWeight = FontWeight.Bold)
+                                    if (isSelected) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+                                }
                             }
                         }
                     }
@@ -334,9 +335,7 @@ class PlayerActivity : ComponentActivity() {
                     Icon(SunsetIcons.Back, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
                 }
                 Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                }
+                Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.weight(1f))
                 
                 if (hasSubtitles) {
@@ -416,7 +415,7 @@ class PlayerActivity : ComponentActivity() {
 
     private fun saveCurrentPlayback(pos: Long, dur: Long) {
         if (baseUrl == null || itemId == null) return
-        GlobalScope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             try {
                 val payload = """{"item_id":"$itemId","timestamp":${pos / 1000.0},"duration":${dur / 1000.0},"user_id":"$userId","is_playing":true}"""
                 val request = Request.Builder()
