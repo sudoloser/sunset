@@ -1828,8 +1828,8 @@ async fn scan_all_libraries(state: Arc<AppState>) {
 async fn scan_library(state: Arc<AppState>, lib: Library) {
     info!("Scanning library '{}' at {}...", lib.name, lib.path);
     let movie_regex = Regex::new(r"^(.*)\s\((\d{4})\)$").unwrap();
-    // More flexible show regex: S01E01, 1x01, S1E1, etc.
-    let show_regex = Regex::new(r"(?i)^(.*?)\s*(?:S(\d{1,2})E(\d{1,2})|(\d{1,2})x(\d{1,2}))").unwrap();
+    // More flexible show regex: S01E01, 1x01, S1E1, Anime Style ( - 01, 01), etc.
+    let show_regex = Regex::new(r"(?i)^(.*?)\s*(?:S(\d{1,2})E(\d{1,2})|(\d{1,2})x(\d{1,2})|(?:\s-\s|\s)(\d{1,3})$)").unwrap();
     let mut count = 0;
     let mut found_paths: Vec<String> = Vec::new();
 
@@ -1856,10 +1856,13 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 cleaned_file_name = cleaned_file_name.replace("[DUB]", "").replace("[dub]", "")
                     .replace("[SUB]", "").replace("[sub]", "").trim().to_string();
 
-                let (title, year) = match movie_regex.captures(&cleaned_file_name) {
+                let (mut title, year) = match movie_regex.captures(&cleaned_file_name) {
                     Some(caps) => (caps[1].to_string(), Some(caps[2].parse::<i32>().unwrap_or(0))),
                     None => (cleaned_file_name, None),
                 };
+
+                title = title.replace("[DUB]", "").replace("[dub]", "")
+                    .replace("[SUB]", "").replace("[sub]", "").trim().to_string();
 
                 // Fetch metadata and assets
                 let (overview, cast, genres, rating, tmdb_id, collection, poster, backdrop) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
@@ -1881,11 +1884,11 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 cleaned_file_name = cleaned_file_name.replace("[DUB]", "").replace("[dub]", "")
                     .replace("[SUB]", "").replace("[sub]", "").trim().to_string();
 
-                let (show_title, season, episode) = match show_regex.captures(&cleaned_file_name) {
+                let (mut show_title, season, episode) = match show_regex.captures(&cleaned_file_name) {
                     Some(caps) => {
                         let title = caps[1].trim().to_string();
-                        let s = caps.get(2).or(caps.get(4)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(0);
-                        let e = caps.get(3).or(caps.get(5)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(0);
+                        let s = caps.get(2).or(caps.get(4)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(1);
+                        let e = caps.get(3).or(caps.get(5)).or(caps.get(6)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(0);
                         (title, s, e)
                     },
                     None => {
@@ -1899,13 +1902,16 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                     }
                 };
 
+                show_title = show_title.replace("[DUB]", "").replace("[dub]", "")
+                    .replace("[SUB]", "").replace("[sub]", "").trim().to_string();
+
                 // Fetch metadata and assets for the show if not already done
                 let (overview, cast, genres, rating, tmdb_id, _, poster, backdrop) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
                 let display_title = format!("Episode {}", episode);
 
                 if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path, version_tag) VALUES (?, ?, ?, ?, NULL, ?, 'episode', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(display_title).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(display_title).bind(&show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {
                         count += 1;
                     }
             }

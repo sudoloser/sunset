@@ -9,9 +9,10 @@ import { VideoPlayer } from './features/player/VideoPlayer';
 import { LibrariesTab } from './features/library/LibrariesTab';
 import { MediaDetails } from './features/library/MediaDetails';
 import { SearchOverlay } from './features/search/SearchOverlay';
+import { CollectionView } from './features/library/CollectionView';
 import type { SetupStatus, MediaItem } from './types';
 
-type AppStep = 'loading' | 'onboarding' | 'login' | 'dashboard' | 'admin' | 'player' | 'libraries' | 'settings';
+type AppStep = 'loading' | 'onboarding' | 'login' | 'dashboard' | 'admin' | 'player' | 'libraries' | 'settings' | 'collection';
 
 function App() {
   // Apply saved theme on load
@@ -32,6 +33,7 @@ function App() {
   const [status, setStatus] = useState<SetupStatus | null>(null);
   const [activeTab, setActiveTab] = useState('home');
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const [selectedCollection, setSelectedCollection] = useState<{ name: string; items: MediaItem[] } | null>(null);
   const [playingMedia, setPlayingMedia] = useState<MediaItem | null>(null);
   const [previousStep, setPreviousStep] = useState<AppStep>('dashboard');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -100,9 +102,26 @@ function App() {
         <div style={{ padding: step === 'dashboard' ? 0 : 'var(--spacing-xl)' }}>
           {step === 'dashboard' && (
             <Dashboard 
-              onSelectItem={item => setSelectedItem(item)}
+              onSelectItem={item => {
+                if ((item as any).is_collection) {
+                  setSelectedCollection({ name: item.title, items: (item as any).items });
+                  setPreviousStep(step);
+                  setStep('collection');
+                } else {
+                  setSelectedItem(item);
+                }
+              }}
               onPlayItem={item => { setPlayingMedia(item); setPreviousStep(step); setStep('player'); }}
               onSearch={() => setShowSearch(true)}
+            />
+          )}
+
+          {step === 'collection' && selectedCollection && (
+            <CollectionView 
+              name={selectedCollection.name}
+              items={selectedCollection.items}
+              onSelectItem={(item: MediaItem) => setSelectedItem(item)}
+              onBack={() => setStep('dashboard')}
             />
           )}
 

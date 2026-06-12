@@ -132,8 +132,10 @@ class PlayerActivity : ComponentActivity() {
         var showEpisodePicker by remember { mutableStateOf(false) }
         var currentItemId by remember { mutableStateOf(itemId ?: "") }
         var currentEpisodeTitle by remember { mutableStateOf(videoTitle ?: "") }
-        val isSeries = mediaType?.lowercase() == "episode" || !showTitle.isNullOrEmpty()
-        val episodeShowTitle = showTitle ?: if (mediaType?.lowercase() == "episode") videoTitle else null
+        var currentVideoUrl by remember { mutableStateOf(videoUrl ?: "") }
+        
+        val isSeries = mediaType?.uppercase() == "EPISODE" || !showTitle.isNullOrEmpty()
+        val episodeShowTitle = showTitle ?: if (mediaType?.uppercase() == "EPISODE") videoTitle else null
 
         // Fetch episodes
         LaunchedEffect(episodeShowTitle) {
@@ -145,13 +147,10 @@ class PlayerActivity : ComponentActivity() {
         }
 
         fun switchEpisode(ep: dev.sudoloser.sunset.data.models.MediaItem) {
-            val newUrl = "$baseUrl/api/stream/${ep.id}"
             player?.let { saveCurrentPlayback(it.currentPosition, it.duration) }
-            videoUrl = newUrl
-            videoTitle = ep.title
-            itemId = ep.id
-            currentItemId = ep.id
+            currentVideoUrl = "$baseUrl/api/stream/${ep.id}"
             currentEpisodeTitle = ep.title
+            currentItemId = ep.id
             shouldRestorePosition = true
             showEpisodePicker = false
         }
@@ -180,7 +179,7 @@ class PlayerActivity : ComponentActivity() {
                         if (shouldRestorePosition) {
                             shouldRestorePosition = false
                             scope.launch {
-                                val savedState = withContext(Dispatchers.IO) { itemId?.let { fetchPlaybackState(it) } }
+                                val savedState = withContext(Dispatchers.IO) { currentItemId.let { fetchPlaybackState(it) } }
                                 savedState?.let { exoPlayer.seekTo((it.timestamp * 1000).toLong()) }
                             }
                         }
@@ -189,11 +188,9 @@ class PlayerActivity : ComponentActivity() {
                         if (currentIdx >= 0 && currentIdx < episodes.size - 1) {
                             val nextEp = episodes[currentIdx + 1]
                             saveCurrentPlayback(exoPlayer.currentPosition, exoPlayer.duration, false)
-                            videoUrl = "$baseUrl/api/stream/${nextEp.id}"
-                            videoTitle = nextEp.title
-                            itemId = nextEp.id
-                            currentItemId = nextEp.id
+                            currentVideoUrl = "$baseUrl/api/stream/${nextEp.id}"
                             currentEpisodeTitle = nextEp.title
+                            currentItemId = nextEp.id
                             shouldRestorePosition = false
                         }
                     }
@@ -228,7 +225,7 @@ class PlayerActivity : ComponentActivity() {
             } catch (_: Exception) {}
 
             val mediaItem = MediaItem.Builder()
-                .setUri(videoUrl)
+                .setUri(currentVideoUrl)
                 .setSubtitleConfigurations(subtitleConfigs)
                 .build()
 

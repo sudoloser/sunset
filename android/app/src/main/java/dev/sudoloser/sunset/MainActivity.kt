@@ -231,7 +231,7 @@ fun AppContent(activity: ComponentActivity) {
                             baseUrl = baseUrl,
                             apiClient = client,
                             userId = userId,
-                            onPlay = { startPlayer(activity, client, selectedItem!!, baseUrl, userId) },
+                            onPlay = { itemToPlay -> startPlayer(activity, client, itemToPlay, baseUrl, userId) },
                             onClose = { selectedItem = null }
                         )
                     }

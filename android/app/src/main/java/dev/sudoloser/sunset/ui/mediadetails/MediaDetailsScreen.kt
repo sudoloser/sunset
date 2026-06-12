@@ -45,7 +45,7 @@ fun MediaDetailsScreen(
     baseUrl: String,
     apiClient: ApiClient,
     userId: String?,
-    onPlay: () -> Unit,
+    onPlay: (MediaItem) -> Unit,
     onClose: () -> Unit
 ) {
     var episodes by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -139,13 +139,16 @@ fun MediaDetailsScreen(
                 AsyncImage(
                     model = "$baseUrl/api/media/${item.id}/asset/backdrop.jpg",
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)),
                     contentScale = ContentScale.Crop
                 )
 
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.95f)),
@@ -177,7 +180,7 @@ fun MediaDetailsScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         SunsetButton(
                             text = "Play",
-                            onClick = onPlay,
+                            onClick = { onPlay(item) },
                             variant = ButtonVariant.Primary,
                             modifier = Modifier.width(160.dp)
                         )
@@ -212,6 +215,8 @@ fun MediaDetailsScreen(
 
             // Content Area
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                Spacer(Modifier.height(24.dp))
+                
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -309,7 +314,7 @@ fun MediaDetailsScreen(
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(Color.White.copy(alpha = 0.08f))
                                     .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
-                                    .clickable { onPlay() }
+                                    .clickable { onPlay(ep) }
                                     .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(20.dp)
