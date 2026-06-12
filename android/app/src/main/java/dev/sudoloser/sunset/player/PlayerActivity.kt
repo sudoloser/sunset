@@ -152,14 +152,28 @@ class PlayerActivity : ComponentActivity() {
         var currentVideoUrl by remember { mutableStateOf(videoUrl ?: "") }
         
         val isSeries = mediaType?.uppercase() == "EPISODE" || !showTitle.isNullOrEmpty()
-        val episodeShowTitle = showTitle ?: if (mediaType?.uppercase() == "EPISODE") videoTitle else null
+        
+        val episodeShowTitle = remember(showTitle, videoTitle, mediaType) {
+            val rawTitle = showTitle ?: if (mediaType?.uppercase() == "EPISODE") videoTitle else null
+            rawTitle?.replace(Regex("(?i)\\[SUB\\]|\\[DUB\\]|\\(SUB\\)|\\(DUB\\)"), "")?.trim()
+        }
 
         // Fetch episodes
         LaunchedEffect(episodeShowTitle) {
             if (episodeShowTitle != null && baseUrl != null) {
                 try {
-                    episodes = withContext(Dispatchers.IO) { fetchEpisodes(episodeShowTitle!!) }
-                } catch (_: Exception) {}
+                    val list = withContext(Dispatchers.IO) { fetchEpisodes(episodeShowTitle) }
+                    episodes = list
+                    if (list.isEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "No episodes found for: $episodeShowTitle", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Error fetching episodes: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
 
