@@ -31,7 +31,9 @@ data class MediaItem(
     val cast: String? = null,
     val genres: String? = null,
     val rating: Double? = null,
-    @SerialName("tmdb_id") val tmdbId: String? = null
+    @SerialName("tmdb_id") val tmdbId: String? = null,
+    val progress: Double? = null,
+    @SerialName("version_tag") val versionTag: String? = null
 )
 
 @Serializable

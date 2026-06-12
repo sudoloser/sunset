@@ -144,4 +144,39 @@ object SunsetIcons {
             moveTo(7f, 10f); lineTo(12f, 15f); lineTo(17f, 10f); moveTo(12f, 15f); verticalLineToRelative(-12f);
         }
     }.build()
+
+    val Star: ImageVector = ImageVector.Builder("Star", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.White)) {
+            moveTo(12f, 17.27f); lineTo(18.18f, 21f); lineTo(16.54f, 13.97f); lineTo(22f, 9.24f); lineTo(14.81f, 8.63f); lineTo(12f, 2f); lineTo(9.19f, 8.63f); lineTo(2f, 9.24f); lineTo(7.46f, 13.97f); lineTo(5.82f, 21f); close()
+        }
+    }.build()
+
+    val StarOutline: ImageVector = ImageVector.Builder("StarOutline", 24.dp, 24.dp, 24f, 24f).apply {
+        path(
+            stroke = SolidColor(Color.White),
+            strokeLineWidth = 2f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            moveTo(12f, 17.27f); lineTo(18.18f, 21f); lineTo(16.54f, 13.97f); lineTo(22f, 9.24f); lineTo(14.81f, 8.63f); lineTo(12f, 2f); lineTo(9.19f, 8.63f); lineTo(2f, 9.24f); lineTo(7.46f, 13.97f); lineTo(5.82f, 21f); close()
+        }
+    }.build()
+
+    val Check: ImageVector = ImageVector.Builder("Check", 24.dp, 24.dp, 24f, 24f).apply {
+        path(
+            stroke = SolidColor(Color.White),
+            strokeLineWidth = 2.5f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            moveTo(20f, 6f); lineTo(9f, 17f); lineTo(4f, 12f)
+        }
+    }.build()
+
+    val Admin: ImageVector = ImageVector.Builder("Admin", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.White)) {
+            moveTo(12f, 12f); arcTo(4f, 4f, 0f, true, true, 8f, 8f); arcTo(4f, 4f, 0f, false, true, 12f, 12f); close()
+            moveTo(12f, 14f); arcTo(6f, 6f, 0f, false, false, 6f, 20f); verticalLineToRelative(2f); horizontalLineToRelative(12f); verticalLineToRelative(-2f); arcTo(6f, 6f, 0f, false, false, 12f, 14f); close()
+        }
+    }.build()
 }

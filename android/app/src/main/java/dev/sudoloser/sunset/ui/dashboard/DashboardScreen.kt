@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 fun DashboardScreen(
     apiClient: ApiClient,
     baseUrl: String,
+    userId: String? = null,
     onPlayItem: (MediaItem) -> Unit,
     onSearch: () -> Unit,
     onSelectItem: ((MediaItem) -> Unit)? = null
@@ -39,12 +40,16 @@ fun DashboardScreen(
 
     LaunchedEffect(Unit) {
         try {
-            val recentData = apiClient.getRecentlyAdded()
+            val recentData = apiClient.getRecentlyAdded(userId)
             val libs = apiClient.getLibraries()
             
             // Deduplicate by show_title for episodes
             val seen = mutableSetOf<String>()
-            val dedupedRecent = recentData.filter { item ->
+            val dedupedRecent = recentData.map { item ->
+                if (item.mediaType.name == "EPISODE" && item.showTitle != null) {
+                    item.copy(title = item.showTitle)
+                } else item
+            }.filter { item ->
                 if (item.mediaType.name == "EPISODE" && item.showTitle != null) {
                     if (seen.contains(item.showTitle)) return@filter false
                     seen.add(item.showTitle)
@@ -55,10 +60,12 @@ fun DashboardScreen(
             val itemsMap = mutableMapOf<String, List<MediaItem>>()
             libs.forEach { lib ->
                 try { 
-                    val items = apiClient.getLibraryItems(lib.id)
+                    val items = apiClient.getLibraryItems(lib.id, userId)
                     if (lib.libType == LibraryType.SHOWS) {
                         val libSeen = mutableSetOf<String>()
-                        itemsMap[lib.id] = items.filter { item ->
+                        itemsMap[lib.id] = items.map { item ->
+                            if (item.showTitle != null) item.copy(title = item.showTitle) else item
+                        }.filter { item ->
                             val title = item.showTitle ?: item.title
                             if (libSeen.contains(title)) return@filter false
                             libSeen.add(title)
@@ -74,9 +81,11 @@ fun DashboardScreen(
             val genreMap = mutableMapOf<String, List<MediaItem>>()
             gens.take(5).forEach { g ->
                 try { 
-                    val items = apiClient.getGenreItems(g)
+                    val items = apiClient.getGenreItems(g, userId)
                     val gSeen = mutableSetOf<String>()
-                    genreMap[g] = items.filter { item ->
+                    genreMap[g] = items.map { item ->
+                        if (item.showTitle != null) item.copy(title = item.showTitle) else item
+                    }.filter { item ->
                         val title = item.showTitle ?: item.title
                         if (gSeen.contains(title)) return@filter false
                         gSeen.add(title)

@@ -52,6 +52,18 @@ export const Poster: React.FC<PosterProps> = ({ itemId, title, subtitle, item, o
         zIndex: 1
       }} />
 
+      {item?.progress && item.progress > 0 && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          height: '4px', background: 'rgba(255,255,255,0.2)', zIndex: 3
+        }}>
+          <div style={{
+            height: '100%', width: `${Math.min(item.progress * 100, 100)}%`,
+            background: 'var(--primary-color)'
+          }} />
+        </div>
+      )}
+
       {item && (item as any).is_collection && (
         <div style={{
           position: 'absolute', top: '0.5rem', right: '0.5rem',
@@ -61,6 +73,19 @@ export const Poster: React.FC<PosterProps> = ({ itemId, title, subtitle, item, o
           boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
         }}>
           COLLECTION
+        </div>
+      )}
+
+      {item?.version_tag && (
+        <div style={{
+          position: 'absolute', top: '0.5rem', left: '0.5rem',
+          background: 'rgba(0,0,0,0.7)', color: 'white',
+          padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)',
+          fontSize: '0.7rem', fontWeight: 800, zIndex: 2,
+          border: '1px solid rgba(255,255,255,0.2)',
+          backdropFilter: 'blur(4px)'
+        }}>
+          {item.version_tag}
         </div>
       )}
 

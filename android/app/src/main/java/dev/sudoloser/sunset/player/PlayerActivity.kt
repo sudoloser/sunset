@@ -132,8 +132,8 @@ class PlayerActivity : ComponentActivity() {
         var showEpisodePicker by remember { mutableStateOf(false) }
         var currentItemId by remember { mutableStateOf(itemId ?: "") }
         var currentEpisodeTitle by remember { mutableStateOf(videoTitle ?: "") }
-        val showEpisodeButton = showTitle != null || mediaType == "EPISODE"
-        val episodeShowTitle = showTitle ?: videoTitle
+        val isSeries = mediaType?.lowercase() == "episode" || !showTitle.isNullOrEmpty()
+        val episodeShowTitle = showTitle ?: if (mediaType?.lowercase() == "episode") videoTitle else null
 
         // Fetch episodes
         LaunchedEffect(episodeShowTitle) {
@@ -356,7 +356,7 @@ class PlayerActivity : ComponentActivity() {
                     onSubtitlesClick = { showSubtitlePicker = !showSubtitlePicker; showSpeedPicker = false; showEpisodePicker = false },
                     onEpisodesClick = { showEpisodePicker = !showEpisodePicker; showSubtitlePicker = false; showSpeedPicker = false },
                     hasSubtitles = subtitleTracks.isNotEmpty(),
-                    hasEpisodes = showEpisodeButton && episodes.isNotEmpty()
+                    hasEpisodes = isSeries && episodes.isNotEmpty()
                 )
             }
 

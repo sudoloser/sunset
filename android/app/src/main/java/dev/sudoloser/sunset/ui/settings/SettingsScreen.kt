@@ -107,7 +107,7 @@ fun SettingsScreen(
                 "subtitles" -> SubtitleSettings()
                 "discord" -> DiscordSettings(apiClient, userId)
                 "downloads" -> DownloadSettings()
-                "admin" -> onGoToAdmin()
+                "admin" -> AdminScreen(apiClient, baseUrl, onBack = { tab = "account" })
             }
         }
     }

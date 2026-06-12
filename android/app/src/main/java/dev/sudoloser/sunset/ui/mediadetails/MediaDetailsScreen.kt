@@ -96,7 +96,7 @@ fun MediaDetailsScreen(
             val isShow = item.mediaType.name == "EPISODE" || item.showTitle != null
             if (isShow) {
                 val title = item.showTitle ?: item.title
-                episodes = apiClient.getShowEpisodes(title)
+                episodes = apiClient.getShowEpisodes(title, userId)
                 if (episodes.isNotEmpty()) {
                     selectedSeason = episodes.first().season ?: 1
                 }
@@ -226,14 +226,25 @@ fun MediaDetailsScreen(
                     item.rating?.let {
                         Text("TMDB ${"%.1f".format(it)}/10", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     }
+
+                    if (item.versionTag != null) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(item.versionTag, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                     
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         (1..5).forEach { star ->
-                            Text(
-                                text = if (star <= userRating) "★" else "☆",
-                                fontSize = 20.sp,
-                                color = if (star <= userRating) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.3f),
-                                modifier = Modifier.clickable { userRating = star }
+                            Icon(
+                                imageVector = if (star <= userRating) SunsetIcons.Star else SunsetIcons.StarOutline,
+                                contentDescription = null,
+                                tint = if (star <= userRating) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.3f),
+                                modifier = Modifier.size(24.dp).clickable { userRating = star }
                             )
                         }
                     }
@@ -312,12 +323,22 @@ fun MediaDetailsScreen(
                                     textAlign = TextAlign.Center
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        ep.title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color.White
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            ep.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White
+                                        )
+                                        if ((ep.progress ?: 0.0) > 0.7) {
+                                            Icon(
+                                                SunsetIcons.Check,
+                                                contentDescription = "Watched",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
                                 }
                                 Icon(SunsetIcons.Play, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(12.dp))

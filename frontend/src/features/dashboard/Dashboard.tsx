@@ -22,8 +22,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
   const pullStartY = useRef(0);
 
   const loadData = useCallback(async () => {
+    const userId = localStorage.getItem('sunset_user_id') || undefined;
     const [recentData, libsData] = await Promise.all([
-      api.getRecentlyAdded(),
+      api.getRecentlyAdded(userId),
       api.getLibraries()
     ]);
     
@@ -33,6 +34,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       if (r.media_type === 'episode' && r.show_title) {
         if (seen.has(r.show_title)) return false;
         seen.add(r.show_title);
+        r.title = r.show_title;
         return true;
       }
       return true;
@@ -44,7 +46,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
     // Handle Collections
     const allItems: MediaItem[] = [];
     for (const lib of libsData) {
-      const items = await api.getLibraryItems(lib.id);
+      const items = await api.getLibraryItems(lib.id, userId);
       allItems.push(...items);
     }
 
@@ -75,12 +77,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       const itemsMap: Record<string, MediaItem[]> = {};
       await Promise.all(genreList.slice(0, 5).map(async (g) => {
         try {
-          const genreData = await api.getGenreItems(g);
+          const genreData = await api.getGenreItems(g, userId);
           const gSeen = new Set();
           itemsMap[g] = genreData.filter((r: MediaItem) => {
             if (r.media_type === 'episode' && r.show_title) {
               if (gSeen.has(r.show_title)) return false;
               gSeen.add(r.show_title);
+              r.title = r.show_title;
               return true;
             }
             return true;
@@ -160,7 +163,8 @@ const LibraryRow: React.FC<{ lib: Library, onPlay: (item: MediaItem) => void }> 
   const [items, setItems] = useState<MediaItem[]>([]);
 
   useEffect(() => {
-    api.getLibraryItems(lib.id).then(data => {
+    const userId = localStorage.getItem('sunset_user_id') || undefined;
+    api.getLibraryItems(lib.id, userId).then(data => {
       if (lib.lib_type === 'shows') {
         const seen = new Set<string>();
         const grouped = data.filter(item => {

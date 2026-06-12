@@ -72,13 +72,17 @@ class ApiClient(baseUrl: String) {
     suspend fun onboard(data: OnboardRequest): Boolean = post("/onboard", data)
     suspend fun login(data: LoginRequest): User? = post("/login", data)
     suspend fun getUserProfile(id: String): User? = get("/users/$id")
-    suspend fun getRecentlyAdded(): List<MediaItem> = get("/recently-added")
+    suspend fun getRecentlyAdded(userId: String? = null): List<MediaItem> = 
+        get("/recently-added" + (if (userId != null) "?user_id=$userId" else ""))
     suspend fun getLibraries(): List<Library> = get("/libraries")
     suspend fun addLibrary(data: LibraryInput): Boolean = post("/libraries", data)
     suspend fun deleteLibrary(id: String): Boolean = delete("/libraries/$id")
-    suspend fun getLibraryItems(id: String): List<MediaItem> = get("/libraries/$id/items")
-    suspend fun getShowEpisodes(showTitle: String): List<MediaItem> = get("/shows/$showTitle/episodes")
-    suspend fun search(query: String): List<MediaItem> = get("/search?q=$query")
+    suspend fun getLibraryItems(id: String, userId: String? = null): List<MediaItem> = 
+        get("/libraries/$id/items" + (if (userId != null) "?user_id=$userId" else ""))
+    suspend fun getShowEpisodes(showTitle: String, userId: String? = null): List<MediaItem> = 
+        get("/shows/$showTitle/episodes" + (if (userId != null) "?user_id=$userId" else ""))
+    suspend fun search(query: String, userId: String? = null): List<MediaItem> = 
+        get("/search?q=$query" + (if (userId != null) "&user_id=$userId" else ""))
     suspend fun triggerScan(): Boolean = post("/scan", Unit)
     fun getStreamUrl(itemId: String): String = "$baseUrl/api/stream/$itemId"
     suspend fun getSubtitles(itemId: String): List<String> = get("/media/$itemId/subtitles")
@@ -93,12 +97,14 @@ class ApiClient(baseUrl: String) {
     suspend fun getStorage(): StorageInfo = get("/storage")
     suspend fun refreshMedia(id: String): Boolean = post("/media/$id/refresh", Unit)
     suspend fun getGenres(): List<String> = get("/genres")
-    suspend fun getGenreItems(genre: String): List<MediaItem> = get("/genre/$genre")
+    suspend fun getGenreItems(genre: String, userId: String? = null): List<MediaItem> = 
+        get("/genre/$genre" + (if (userId != null) "?user_id=$userId" else ""))
     suspend fun createInvite(): String = post("/invite", Unit)
     suspend fun redeemInvite(code: String): Boolean = post("/invite/redeem", mapOf("code" to code))
     suspend fun generateMediaToken(itemId: String): String = post("/media/$itemId/token", Unit)
     suspend fun getUsers(): List<User> = get("/users")
     suspend fun createUser(data: CreateUserRequest): Boolean = post("/users", data)
+    suspend fun deleteUser(id: String): Boolean = delete("/users/$id")
     suspend fun changePassword(id: String, cur: String, new: String): Boolean =
         put("/users/$id/password", mapOf("current_password" to cur, "new_password" to new))
     suspend fun changeUsername(id: String, newUsername: String): Boolean =

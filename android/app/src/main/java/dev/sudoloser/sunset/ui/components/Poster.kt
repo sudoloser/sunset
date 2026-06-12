@@ -32,6 +32,8 @@ fun Poster(
     val imageUrl = "$baseUrl/api/media/${item.id}/asset/folder.jpg"
     val posterWidth = 140.dp
     val posterHeight = 210.dp
+    val displayTitle = if (item.mediaType.name == "EPISODE" && item.showTitle != null) item.showTitle else item.title
+    val displayProgress = progress ?: item.progress?.toFloat()
 
     Column(
         modifier = modifier
@@ -53,7 +55,7 @@ fun Poster(
                 contentScale = ContentScale.Crop
             )
 
-            if (progress != null) {
+            if (displayProgress != null && displayProgress > 0f) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -63,7 +65,7 @@ fun Poster(
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(progress.coerceIn(0.01f, 1f))
+                            .fillMaxWidth(displayProgress.coerceIn(0.01f, 1f))
                             .fillMaxHeight()
                             .background(MaterialTheme.colorScheme.primary)
                     )
@@ -87,10 +89,28 @@ fun Poster(
                     )
                 }
             }
+
+            if (item.versionTag != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = item.versionTag,
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
         }
 
         Text(
-            text = item.title,
+            text = displayTitle,
             color = MaterialTheme.colorScheme.onSurface,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,

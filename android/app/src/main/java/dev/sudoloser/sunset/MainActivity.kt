@@ -253,11 +253,13 @@ fun AppContent(activity: ComponentActivity) {
                     val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }
                     val iconLibrary: @Composable () -> Unit = { Icon(SunsetIcons.Library, contentDescription = "Library") }
                     val iconSettings: @Composable () -> Unit = { Icon(SunsetIcons.Settings, contentDescription = "Settings") }
+                    
                     val tabs = listOf(
                         "home" to iconHome,
                         "library" to iconLibrary,
                         "settings" to iconSettings
                     )
+
                     NavigationSuite(
                         tabs = tabs,
                         activeTab = activeTab,
@@ -268,8 +270,9 @@ fun AppContent(activity: ComponentActivity) {
                                 "home" -> DashboardScreen(
                                     apiClient = client,
                                     baseUrl = baseUrl,
+                                    userId = userId,
                                     onPlayItem = { item ->
-                                    startPlayer(activity, client, item, baseUrl, userId)
+                                        startPlayer(activity, client, item, baseUrl, userId)
                                     },
                                     onSearch = { showSearch = true },
                                     onSelectItem = { item -> selectedItem = item }
@@ -280,7 +283,7 @@ fun AppContent(activity: ComponentActivity) {
                                     userId = userId,
                                     isAdmin = user?.isAdmin == true,
                                     onPlayItem = { item ->
-                                    startPlayer(activity, client, item, baseUrl, userId)
+                                        startPlayer(activity, client, item, baseUrl, userId)
                                     },
                                     onSelectItem = { selectedItem = it },
                                     onGoToSettings = { activeTab = "settings" }
@@ -309,7 +312,7 @@ fun AppContent(activity: ComponentActivity) {
                                             step = "login"
                                         }
                                     },
-                                    onGoToAdmin = { showAdmin = true }
+                                    onGoToAdmin = { /* Handled internally in SettingsScreen */ }
                                 )
                             }
                         }

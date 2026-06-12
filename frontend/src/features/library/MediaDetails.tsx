@@ -269,14 +269,14 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
 
   useEffect(() => {
     if (isShow) {
-      api.getShowEpisodes(title).then(data => {
+      api.getShowEpisodes(title, userId).then(data => {
         setEpisodes(data);
         if (data.length > 0) {
           setSelectedSeason(data[0].season ?? 1);
         }
       });
     }
-  }, [title, isShow]);
+  }, [title, isShow, userId]);
 
   const backdropUrl = `/api/media/${item.id}/asset/backdrop.jpg`;
   const logoUrl = `/api/media/${item.id}/asset/logo.png`;
@@ -421,6 +421,15 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
             <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <span>{item.year}</span>
               {isShow && <span>{seasons.length} Seasons</span>}
+              {item.version_tag && (
+                <span style={{ 
+                  background: 'rgba(255,255,255,0.1)', color: 'white', 
+                  padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.1)' 
+                }}>
+                  {item.version_tag}
+                </span>
+              )}
               {item.rating ? <span>TMDB {item.rating.toFixed(1)}/10</span> : null}
               <span style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
                 {[1,2,3,4,5].map(star => (
@@ -472,8 +481,11 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                       <span style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', width: '30px', textAlign: 'center' }}>
                         {ep.episode}
                       </span>
-                      <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div style={{ fontWeight: 700 }}>{ep.title}</div>
+                        {ep.progress && ep.progress > 0.7 && (
+                          <span title="Watched" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>✓</span>
+                        )}
                       </div>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                         <div ref={episodeTriggerRef}>

@@ -434,6 +434,12 @@ struct MediaItem {
     tmdb_id: Option<String>,
     poster_path: Option<String>,
     backdrop_path: Option<String>,
+    #[serde(default)]
+    #[sqlx(default)]
+    progress: Option<f64>,
+    #[serde(default)]
+    #[sqlx(default)]
+    version_tag: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
@@ -762,6 +768,7 @@ async fn main() {
         .route("/api/media/:id/download", get(download_media))
         .route("/api/media/:id/download-zip", get(download_media_zip))
         .route("/api/users", get(list_users).post(create_user))
+        .route("/api/users/:id", delete(delete_user))
         .route("/api/users/:id/password", put(change_password))
         .route("/api/users/:id/username", put(change_username))
         .route("/api/users/:id/profile-picture", get(get_profile_picture).post(upload_profile_picture))
@@ -1013,9 +1020,13 @@ async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
     Json(true)
 }
 
-async fn get_recently_added(State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items ORDER BY added_at DESC LIMIT 15")
-        .fetch_all(&state.pool).await.unwrap();
+async fn get_recently_added(State(state): State<Arc<AppState>>, Query(params): Query<HashMap<String, String>>) -> Json<Vec<MediaItem>> {
+    let user_id = params.get("user_id").cloned().unwrap_or_default();
+    let items = sqlx::query_as::<_, MediaItem>(
+        "SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi LEFT JOIN playback_state ps ON ps.item_id = mi.id AND ps.user_id = ? ORDER BY mi.added_at DESC LIMIT 15"
+    )
+    .bind(user_id)
+    .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
 
@@ -1055,15 +1066,19 @@ async fn delete_library(Path(id): Path<String>, State(state): State<Arc<AppState
     Json(true)
 }
 
-async fn get_library_items(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items WHERE library_id = ? ORDER BY title ASC")
+async fn get_library_items(Path(id): Path<String>, State(state): State<Arc<AppState>>, Query(params): Query<HashMap<String, String>>) -> Json<Vec<MediaItem>> {
+    let user_id = params.get("user_id").cloned().unwrap_or_default();
+    let items = sqlx::query_as::<_, MediaItem>("SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi LEFT JOIN playback_state ps ON ps.item_id = mi.id AND ps.user_id = ? WHERE mi.library_id = ? ORDER BY mi.title ASC")
+        .bind(user_id)
         .bind(id)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
 
-async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items WHERE show_title = ? ORDER BY season ASC, episode ASC")
+async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<Arc<AppState>>, Query(params): Query<HashMap<String, String>>) -> Json<Vec<MediaItem>> {
+    let user_id = params.get("user_id").cloned().unwrap_or_default();
+    let items = sqlx::query_as::<_, MediaItem>("SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi LEFT JOIN playback_state ps ON ps.item_id = mi.id AND ps.user_id = ? WHERE mi.show_title = ? ORDER BY mi.season ASC, mi.episode ASC")
+        .bind(user_id)
         .bind(show_title)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -1071,8 +1086,10 @@ async fn get_show_episodes(Path(show_title): Path<String>, State(state): State<A
 
 async fn search_media(Query(params): Query<std::collections::HashMap<String, String>>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
     let query = params.get("q").cloned().unwrap_or_default();
+    let user_id = params.get("user_id").cloned().unwrap_or_default();
     let search_pattern = format!("%{}%", query);
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items WHERE title LIKE ? LIMIT 20")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi LEFT JOIN playback_state ps ON ps.item_id = mi.id AND ps.user_id = ? WHERE mi.title LIKE ? LIMIT 20")
+        .bind(user_id)
         .bind(search_pattern)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
@@ -1468,6 +1485,14 @@ async fn create_user(State(state): State<Arc<AppState>>, Json(payload): Json<Cre
     Json(true)
 }
 
+async fn delete_user(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<bool> {
+    info!("Deleting user {}...", id);
+    let _ = sqlx::query("DELETE FROM playback_state WHERE user_id = ?").bind(&id).execute(&state.pool).await;
+    let _ = sqlx::query("DELETE FROM user_items WHERE user_id = ?").bind(&id).execute(&state.pool).await;
+    let _ = sqlx::query("DELETE FROM users WHERE id = ?").bind(&id).execute(&state.pool).await;
+    Json(true)
+}
+
 async fn change_password(Path(id): Path<String>, State(state): State<Arc<AppState>>, Json(payload): Json<ChangePasswordPayload>) -> Json<bool> {
     let row = sqlx::query("SELECT password_hash FROM users WHERE id = ?").bind(&id).fetch_optional(&state.pool).await.unwrap();
     match row {
@@ -1654,7 +1679,7 @@ async fn get_playback(Path(item_id): Path<String>, State(state): State<Arc<AppSt
 
 async fn get_continue_watching(Path(user_id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
     let items = sqlx::query_as::<_, MediaItem>(
-        "SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path FROM media_items mi INNER JOIN playback_state ps ON ps.item_id = mi.id WHERE ps.user_id = ? ORDER BY ps.updated_at DESC"
+        "SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi INNER JOIN playback_state ps ON ps.item_id = mi.id WHERE ps.user_id = ? ORDER BY ps.updated_at DESC"
     )
     .bind(user_id)
     .fetch_all(&state.pool)
@@ -1665,9 +1690,10 @@ async fn get_continue_watching(Path(user_id): Path<String>, State(state): State<
 
 async fn get_user_items(Path(user_id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
     let items = sqlx::query_as::<_, MediaItem>(
-        "SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path FROM media_items mi INNER JOIN user_items ui ON ui.item_id = mi.id WHERE ui.user_id = ? ORDER BY ui.added_at DESC"
+        "SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi INNER JOIN user_items ui ON ui.item_id = mi.id LEFT JOIN playback_state ps ON ps.item_id = mi.id AND ps.user_id = ? WHERE ui.user_id = ? ORDER BY ui.added_at DESC"
     )
-    .bind(user_id)
+    .bind(&user_id)
+    .bind(user_id.clone())
     .fetch_all(&state.pool)
     .await
     .unwrap_or_default();
@@ -1783,9 +1809,11 @@ async fn get_genres(State(state): State<Arc<AppState>>) -> Json<Vec<String>> {
     Json(all_genres)
 }
 
-async fn get_genre_items(Path(genre): Path<String>, State(state): State<Arc<AppState>>) -> Json<Vec<MediaItem>> {
+async fn get_genre_items(Path(genre): Path<String>, State(state): State<Arc<AppState>>, Query(params): Query<HashMap<String, String>>) -> Json<Vec<MediaItem>> {
+    let user_id = params.get("user_id").cloned().unwrap_or_default();
     let pattern = format!("%{}%", genre);
-    let items = sqlx::query_as::<_, MediaItem>("SELECT id, title, show_title, collection_name, media_type, year, season, episode, added_at, file_path, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path FROM media_items WHERE genres LIKE ? LIMIT 30")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi LEFT JOIN playback_state ps ON ps.item_id = mi.id AND ps.user_id = ? WHERE mi.genres LIKE ? LIMIT 30")
+        .bind(user_id)
         .bind(pattern).fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
@@ -1815,20 +1843,44 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
             let folder_path = path.parent().unwrap();
 
             if lib.lib_type == "movies" {
-                let (title, year) = match movie_regex.captures(file_name) {
+                let mut version_tag = None;
+                let full_path_upper = path.to_string_lossy().to_uppercase();
+                if full_path_upper.contains("[DUB]") {
+                    version_tag = Some("DUB".to_string());
+                } else if full_path_upper.contains("[SUB]") {
+                    version_tag = Some("SUB".to_string());
+                }
+
+                let mut cleaned_file_name = file_name.to_string();
+                cleaned_file_name = cleaned_file_name.replace("[DUB]", "").replace("[dub]", "")
+                    .replace("[SUB]", "").replace("[sub]", "").trim().to_string();
+
+                let (title, year) = match movie_regex.captures(&cleaned_file_name) {
                     Some(caps) => (caps[1].to_string(), Some(caps[2].parse::<i32>().unwrap_or(0))),
-                    None => (file_name.to_string(), None),
+                    None => (cleaned_file_name, None),
                 };
 
                 // Fetch metadata and assets
                 let (overview, cast, genres, rating, tmdb_id, collection, poster, backdrop) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
 
-                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, year, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path) VALUES (?, ?, ?, NULL, ?, ?, 'movie', ?, ?, ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(collection).bind(&file_path).bind(year).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).execute(&state.pool).await {
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, year, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path, version_tag) VALUES (?, ?, ?, NULL, ?, ?, 'movie', ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(collection).bind(&file_path).bind(year).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {
                         count += 1;
                     }
             } else {
-                let (show_title, season, episode) = match show_regex.captures(file_name) {
+                let mut version_tag = None;
+                let full_path_upper = path.to_string_lossy().to_uppercase();
+                if full_path_upper.contains("[DUB]") {
+                    version_tag = Some("DUB".to_string());
+                } else if full_path_upper.contains("[SUB]") {
+                    version_tag = Some("SUB".to_string());
+                }
+
+                let mut cleaned_file_name = file_name.to_string();
+                cleaned_file_name = cleaned_file_name.replace("[DUB]", "").replace("[dub]", "")
+                    .replace("[SUB]", "").replace("[sub]", "").trim().to_string();
+
+                let (show_title, season, episode) = match show_regex.captures(&cleaned_file_name) {
                     Some(caps) => {
                         let title = caps[1].trim().to_string();
                         let s = caps.get(2).or(caps.get(4)).map(|m| m.as_str().parse::<i32>().unwrap_or(0)).unwrap_or(0);
@@ -1840,7 +1892,7 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                         // folder are grouped together, instead of each filename becoming its own show.
                         let dir = folder_path.file_name()
                             .and_then(|s| s.to_str())
-                            .unwrap_or(file_name)
+                            .unwrap_or(&cleaned_file_name)
                             .to_string();
                         (dir, 1, 1)
                     }
@@ -1849,8 +1901,10 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 // Fetch metadata and assets for the show if not already done
                 let (overview, cast, genres, rating, tmdb_id, _, poster, backdrop) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
-                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path) VALUES (?, ?, ?, ?, NULL, ?, 'episode', ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(file_name).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).execute(&state.pool).await {
+                let display_title = format!("Episode {}", episode);
+
+                if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path, version_tag) VALUES (?, ?, ?, ?, NULL, ?, 'episode', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(display_title).bind(show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {
                         count += 1;
                     }
             }

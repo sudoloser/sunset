@@ -238,6 +238,19 @@ export const Admin: React.FC = () => {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{u.is_admin ? 'Admin' : 'User'}</div>
                 </div>
               </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={async () => {
+                  if (confirm(`Delete user "${u.username}"?`)) {
+                    await api.deleteUser(u.user_id);
+                    api.getUsers().then(setUsers).catch(() => {});
+                  }
+                }}
+                style={{ color: '#ef4444' }}
+              >
+                Delete
+              </Button>
             </div>
           ))}
         </div>

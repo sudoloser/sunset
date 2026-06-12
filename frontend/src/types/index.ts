@@ -15,6 +15,8 @@ export interface MediaItem {
   genres?: string;
   rating?: number;
   tmdb_id?: string;
+  progress?: number;
+  version_tag?: string;
 }
 
 export interface User {
