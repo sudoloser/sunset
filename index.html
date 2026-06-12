@@ -704,8 +704,8 @@ movies
 
             <h4>TV Show Parsing</h4>
             <p>Each show in its own folder, episodes inside <span class="inline-code">Season XX</span> subfolders. Filenames must use <span class="inline-code">SxxExx</span>:</p>
-            <pre class="code-block"><span class="cmt"># Regex: (?i)^(.*?)\s*S(\d{2})E(\d{2})</span>
-<span class="cmt"># Group 1 = show title, Group 2 = season, Group 3 = episode</span>
+            <pre class="code-block"><span class="cmt"># Regex: (?i)^(.*?)(?:\s*\((\d{4})\))?\s*(?:\[(DUB|SUB)\])?\s*S(\d{2})E(\d{2})</span>
+<span class="cmt"># Group 1 = show title, Group 2 = year (optional), Group 3 = DUB/SUB (optional), Group 4 = season, Group 5 = episode</span>
 
 shows
 |_'Breaking Bad'
@@ -721,11 +721,17 @@ shows
 | |_'Season 01'
 |   |_'peaky-blinders-s01e01.mkv'
 |_'Some Show'
-  |_'Season 00' <span class="cmt"># specials / extras</span>
-    |_'Some Show S00E01 Behind the Scenes.mkv'</pre>
+| |_'Season 00' <span class="cmt"># specials / extras</span>
+|   |_'Some Show S00E01 Behind the Scenes.mkv'
+|_'Anime Show'
+  |_'Season 01'
+    |_'Anime Show (2024) [DUB] S01E01.mkv'
+    |_'Anime Show (2024) [SUB] S01E02.mkv'</pre>
             <ul>
               <li>Only <span class="badge">S01E01</span> / <span class="badge">s01e01</span> is matched — <span class="badge">1x01</span> and flat folder structures are <strong>not</strong> supported</li>
               <li>The show title is everything before <span class="inline-code"> SxxExx</span> (trimmed)</li>
+              <li>Optionally include the year in parentheses: <span class="inline-code">Show Name (2024) S01E01</span> (works on both the filename and the show folder name)</li>
+              <li>Optionally add a language tag in brackets: <span class="inline-code">Show Name [DUB] S01E01</span> or <span class="inline-code">Show Name (2024) [SUB] S01E01</span> (works on both the filename and the show folder name)</li>
               <li>Episode titles after the episode number are optional (the API fills them in)</li>
               <li>Metadata (overview, cast, rating, genres, artwork) is fetched per-show from TMDB</li>
             </ul>
