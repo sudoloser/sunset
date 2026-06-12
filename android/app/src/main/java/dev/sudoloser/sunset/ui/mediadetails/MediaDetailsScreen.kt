@@ -180,7 +180,14 @@ fun MediaDetailsScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         SunsetButton(
                             text = "Play",
-                            onClick = { onPlay(item) },
+                            onClick = {
+                                val epToPlay = if (episodes.isNotEmpty()) {
+                                    episodes.find { (it.progress ?: 0.0) < 0.9 } ?: episodes.first()
+                                } else {
+                                    item
+                                }
+                                onPlay(epToPlay)
+                            },
                             variant = ButtonVariant.Primary,
                             modifier = Modifier.width(160.dp)
                         )

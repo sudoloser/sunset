@@ -60,6 +60,9 @@ import java.util.concurrent.TimeUnit
 import android.widget.Toast
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.MimeTypes
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 @UnstableApi
 class PlayerActivity : ComponentActivity() {
@@ -79,7 +82,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        hideSystemUI()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         videoUrl = intent.getStringExtra("video_url")
@@ -99,6 +102,19 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        hideSystemUI()
+    }
+
+    private fun hideSystemUI() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
     @Composable
     fun CustomPlayerScreen() {
         val context = LocalContext.current
@@ -114,6 +130,7 @@ class PlayerActivity : ComponentActivity() {
         var showSpeedPicker by remember { mutableStateOf(false) }
         var shouldRestorePosition by remember { mutableStateOf(true) }
         var skipDirection by remember { mutableStateOf<String?>(null) }
+        var resizeMode by remember { mutableIntStateOf(0) } // 0: Fit, 3: Fill, 4: Zoom
 
         var subtitleColor by remember { mutableStateOf("#ffffff") }
         var subtitleBgOpacity by remember { mutableFloatStateOf(0f) }
@@ -268,7 +285,12 @@ class PlayerActivity : ComponentActivity() {
                 .background(Color.Black)
                 .pointerInput(Unit) {
                     detectTapGestures(
-                        onTap = { showControls = !showControls },
+                        onTap = { 
+                            showControls = !showControls
+                            if (!showControls) {
+                                hideSystemUI()
+                            }
+                        },
                         onDoubleTap = { offset ->
                             if (offset.x < size.width / 2) {
                                 player?.seekTo((player!!.currentPosition - 10000).coerceAtLeast(0))
@@ -289,11 +311,13 @@ class PlayerActivity : ComponentActivity() {
                     PlayerView(ctx).apply {
                         useController = false
                         setBackgroundColor(android.graphics.Color.BLACK)
+                        this.resizeMode = resizeMode
                         playerViewRef = this
                     }
                 },
                 update = { view ->
                     view.player = player
+                    view.resizeMode = resizeMode
                     view.subtitleView?.let { sv ->
                         sv.setApplyEmbeddedStyles(false)
                         sv.setStyle(
@@ -352,8 +376,15 @@ class PlayerActivity : ComponentActivity() {
                     onSpeedClick = { showSpeedPicker = !showSpeedPicker; showSubtitlePicker = false; showEpisodePicker = false },
                     onSubtitlesClick = { showSubtitlePicker = !showSubtitlePicker; showSpeedPicker = false; showEpisodePicker = false },
                     onEpisodesClick = { showEpisodePicker = !showEpisodePicker; showSubtitlePicker = false; showSpeedPicker = false },
+                    onAspectRatioClick = {
+                        resizeMode = when (resizeMode) {
+                            0 -> 3 // Fill
+                            3 -> 4 // Zoom
+                            else -> 0 // Fit
+                        }
+                    },
                     hasSubtitles = subtitleTracks.isNotEmpty(),
-                    hasEpisodes = isSeries && episodes.isNotEmpty()
+                    hasEpisodes = isSeries
                 )
             }
 
@@ -539,6 +570,7 @@ class PlayerActivity : ComponentActivity() {
         onSpeedClick: () -> Unit,
         onSubtitlesClick: () -> Unit,
         onEpisodesClick: () -> Unit,
+        onAspectRatioClick: () -> Unit,
         hasSubtitles: Boolean,
         hasEpisodes: Boolean
     ) {
@@ -555,6 +587,10 @@ class PlayerActivity : ComponentActivity() {
                 Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.weight(1f))
                 
+                IconButton(onClick = onAspectRatioClick) {
+                    Icon(SunsetIcons.AspectRatio, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+
                 if (hasSubtitles) {
                     IconButton(onClick = onSubtitlesClick) {
                         Icon(SunsetIcons.Subtitles, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))

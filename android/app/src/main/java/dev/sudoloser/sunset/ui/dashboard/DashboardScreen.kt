@@ -29,6 +29,7 @@ fun DashboardScreen(
     onSelectItem: ((MediaItem) -> Unit)? = null
 ) {
     var recentlyAdded by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var continueWatching by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var libraries by remember { mutableStateOf<List<Library>>(emptyList()) }
     var libraryItems by remember { mutableStateOf<Map<String, List<MediaItem>>>(emptyMap()) }
     var genres by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -42,38 +43,30 @@ fun DashboardScreen(
         try {
             val recentData = apiClient.getRecentlyAdded(userId)
             val libs = apiClient.getLibraries()
+            val continueData = if (userId != null) apiClient.getContinueWatching(userId) else emptyList()
             
-            // Deduplicate by show_title for episodes
-            val seen = mutableSetOf<String>()
-            val dedupedRecent = recentData.map { item ->
-                if (item.mediaType.name == "EPISODE" && item.showTitle != null) {
-                    item.copy(title = item.showTitle)
-                } else item
-            }.filter { item ->
-                if (item.mediaType.name == "EPISODE" && item.showTitle != null) {
-                    if (seen.contains(item.showTitle)) return@filter false
-                    seen.add(item.showTitle)
+            fun dedupe(items: List<MediaItem>): List<MediaItem> {
+                val seen = mutableSetOf<String>()
+                return items.map { item ->
+                    if (item.mediaType.name == "EPISODE" && item.showTitle != null) {
+                        item.copy(title = item.showTitle)
+                    } else item
+                }.filter { item ->
+                    val title = item.showTitle ?: item.title
+                    if (seen.contains(title)) return@filter false
+                    seen.add(title)
                     true
-                } else true
+                }
             }
+
+            val dedupedRecent = dedupe(recentData)
+            val dedupedCW = dedupe(continueData)
 
             val itemsMap = mutableMapOf<String, List<MediaItem>>()
             libs.forEach { lib ->
                 try { 
                     val items = apiClient.getLibraryItems(lib.id, userId)
-                    if (lib.libType == LibraryType.SHOWS) {
-                        val libSeen = mutableSetOf<String>()
-                        itemsMap[lib.id] = items.map { item ->
-                            if (item.showTitle != null) item.copy(title = item.showTitle) else item
-                        }.filter { item ->
-                            val title = item.showTitle ?: item.title
-                            if (libSeen.contains(title)) return@filter false
-                            libSeen.add(title)
-                            true
-                        }.take(15)
-                    } else {
-                        itemsMap[lib.id] = items.take(15)
-                    }
+                    itemsMap[lib.id] = dedupe(items).take(15)
                 } catch (_: Exception) {}
             }
 
@@ -82,19 +75,12 @@ fun DashboardScreen(
             gens.take(5).forEach { g ->
                 try { 
                     val items = apiClient.getGenreItems(g, userId)
-                    val gSeen = mutableSetOf<String>()
-                    genreMap[g] = items.map { item ->
-                        if (item.showTitle != null) item.copy(title = item.showTitle) else item
-                    }.filter { item ->
-                        val title = item.showTitle ?: item.title
-                        if (gSeen.contains(title)) return@filter false
-                        gSeen.add(title)
-                        true
-                    }.take(15)
+                    genreMap[g] = dedupe(items).take(15)
                 } catch (_: Exception) {}
             }
 
             recentlyAdded = dedupedRecent
+            continueWatching = dedupedCW
             libraries = libs
             libraryItems = itemsMap
             genres = gens.take(5)
@@ -125,6 +111,17 @@ fun DashboardScreen(
 
             item {
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (continueWatching.isNotEmpty()) {
+                item {
+                    MediaRow(
+                        title = "Continue Watching",
+                        items = continueWatching,
+                        baseUrl = baseUrl,
+                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
+                    )
+                }
             }
 
             item {

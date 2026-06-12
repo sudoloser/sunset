@@ -12,6 +12,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, onSearch }) => {
   const [recent, setRecent] = useState<MediaItem[]>([]);
+  const [continueWatching, setContinueWatching] = useState<MediaItem[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [featured, setFeatured] = useState<MediaItem | undefined>();
   const [genres, setGenres] = useState<string[]>([]);
@@ -23,25 +24,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
 
   const loadData = useCallback(async () => {
     const userId = localStorage.getItem('sunset_user_id') || undefined;
-    const [recentData, libsData] = await Promise.all([
+    const [recentData, libsData, continueData] = await Promise.all([
       api.getRecentlyAdded(userId),
-      api.getLibraries()
+      api.getLibraries(),
+      userId ? api.getContinueWatching(userId) : Promise.resolve([])
     ]);
     
     // Deduplicate by show_title for episodes
-    const seen = new Set();
-    const deduped = recentData.filter(r => {
-      if (r.media_type === 'episode' && r.show_title) {
-        if (seen.has(r.show_title)) return false;
-        seen.add(r.show_title);
-        r.title = r.show_title;
+    const dedupe = (items: MediaItem[]) => {
+      const seen = new Set();
+      return items.filter(r => {
+        if (r.media_type === 'episode' && r.show_title) {
+          if (seen.has(r.show_title)) return false;
+          seen.add(r.show_title);
+          return true;
+        }
         return true;
-      }
-      return true;
-    });
-    setRecent(deduped);
+      }).map(r => ({
+        ...r,
+        title: (r.media_type === 'episode' && r.show_title) ? r.show_title : r.title
+      }));
+    };
+
+    setRecent(dedupe(recentData));
+    setContinueWatching(dedupe(continueData));
     setLibraries(libsData);
-    if (deduped.length > 0) setFeatured(deduped[0]);
+    if (recentData.length > 0) setFeatured(recentData[0]);
 
     // Handle Collections
     const allItems: MediaItem[] = [];
@@ -138,6 +146,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       </div>
 
       <div style={{ position: 'relative', zIndex: 10, marginTop: '-20px' }}>
+        {continueWatching.length > 0 && (
+          <MediaRow title="Continue Watching" items={continueWatching} onPlay={onSelectItem} />
+        )}
         {collections.length > 0 && (
           <MediaRow title="Collections" items={collections} onPlay={(c: any) => onSelectItem(c.items[0])} />
         )}

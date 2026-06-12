@@ -426,7 +426,7 @@ const handleActivity = () => {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {isShow && episodes.length > 0 && (
+            {isShow && (
               <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setShowEpisodes(v => !v); setShowSubtitlePicker(false); setShowSpeedPicker(false); clearTimeout(controlsTimeout.current); }} style={{ color: showEpisodes ? 'var(--primary-color)' : 'white' }}>
                 <EpisodesIcon size={26} />
               </Button>

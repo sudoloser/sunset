@@ -179,4 +179,13 @@ object SunsetIcons {
             moveTo(12f, 14f); arcTo(6f, 6f, 0f, false, false, 6f, 20f); verticalLineToRelative(2f); horizontalLineToRelative(12f); verticalLineToRelative(-2f); arcTo(6f, 6f, 0f, false, false, 12f, 14f); close()
         }
     }.build()
+
+    val AspectRatio: ImageVector = ImageVector.Builder("AspectRatio", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.White)) {
+            moveTo(19f, 12f); horizontalLineToRelative(-2f); verticalLineToRelative(3f); horizontalLineToRelative(-3f); verticalLineToRelative(2f); horizontalLineToRelative(5f); verticalLineToRelative(-5f); close()
+            moveTo(7f, 9f); horizontalLineToRelative(3f); verticalLineToRelative(-2f); horizontalLineToRelative(-5f); verticalLineToRelative(5f); horizontalLineToRelative(2f); verticalLineToRelative(-3f); close()
+            moveTo(21f, 3f); horizontalLineToRelative(-18f); arcTo(2f, 2f, 0f, false, false, 1f, 5f); verticalLineToRelative(14f); arcTo(2f, 2f, 0f, false, false, 3f, 21f); horizontalLineToRelative(18f); arcTo(2f, 2f, 0f, false, false, 23f, 19f); verticalLineToRelative(-14f); arcTo(2f, 2f, 0f, false, false, 21f, 3f); close()
+            moveTo(21f, 19f); horizontalLineToRelative(-18f); verticalLineToRelative(-14f); horizontalLineToRelative(18f); verticalLineToRelative(14f); close()
+        }
+    }.build()
 }

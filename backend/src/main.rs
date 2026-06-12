@@ -1861,8 +1861,8 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                     None => (cleaned_file_name, None),
                 };
 
-                title = title.replace("[DUB]", "").replace("[dub]", "")
-                    .replace("[SUB]", "").replace("[sub]", "").trim().to_string();
+                let tag_regex = Regex::new(r"(?i)\[SUB\]|\[DUB\]|\(SUB\)|\(DUB\)").unwrap();
+                title = tag_regex.replace_all(&title, "").trim().to_string();
 
                 // Fetch metadata and assets
                 let (overview, cast, genres, rating, tmdb_id, collection, poster, backdrop) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
@@ -1902,8 +1902,8 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                     }
                 };
 
-                show_title = show_title.replace("[DUB]", "").replace("[dub]", "")
-                    .replace("[SUB]", "").replace("[sub]", "").trim().to_string();
+                let tag_regex = Regex::new(r"(?i)\[SUB\]|\[DUB\]|\(SUB\)|\(DUB\)").unwrap();
+                show_title = tag_regex.replace_all(&show_title, "").trim().to_string();
 
                 // Fetch metadata and assets for the show if not already done
                 let (overview, cast, genres, rating, tmdb_id, _, poster, backdrop) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;

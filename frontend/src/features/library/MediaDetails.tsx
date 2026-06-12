@@ -376,7 +376,14 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
             {!logoUrl && <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{title}</h1>}
             
             <div style={{ display: 'flex', gap: '1rem' }}>
-              <Button size="lg" onClick={() => onPlay(item)}>
+              <Button size="lg" onClick={() => {
+                if (isShow && episodes.length > 0) {
+                  const nextToWatch = episodes.find(e => (e.progress || 0) < 0.9) || episodes[0];
+                  onPlay(nextToWatch);
+                } else {
+                  onPlay(item);
+                }
+              }}>
                 <PlayIcon size={24} /> Play
               </Button>
               <Button size="lg" variant="secondary" onClick={toggleMyList}>
