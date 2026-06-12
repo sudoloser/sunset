@@ -33,6 +33,7 @@ import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
+import dev.sudoloser.sunset.ui.admin.AdminScreen
 import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
