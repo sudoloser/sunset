@@ -3,6 +3,7 @@ package dev.sudoloser.sunset.player
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.media3.ui.CaptionStyleCompat
