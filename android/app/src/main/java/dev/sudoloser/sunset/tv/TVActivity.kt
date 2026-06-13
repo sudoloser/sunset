@@ -39,11 +39,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -257,13 +257,23 @@ fun TVNavHost(baseUrl: String, userId: String?, onExitTvMode: () -> Unit = {}) {
                     onExitTvMode = onExitTvMode
                 )
             }
+            currentScreen == "search" -> {
+                TVSearch(
+                    apiClient = apiClient,
+                    baseUrl = baseUrl,
+                    userId = userId,
+                    onBack = { currentScreen = "home" },
+                    onSelectItem = { selectedItem = it }
+                )
+            }
             else -> {
                 TVHome(
                     baseUrl = baseUrl,
                     userId = userId,
                     apiClient = apiClient,
                     onSelectItem = { selectedItem = it },
-                    onSettings = { currentScreen = "settings" }
+                    onSettings = { currentScreen = "settings" },
+                    onSearch = { currentScreen = "search" }
                 )
             }
         }
@@ -276,7 +286,8 @@ fun TVHome(
     userId: String?,
     apiClient: ApiClient,
     onSelectItem: (MediaItem) -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onSearch: () -> Unit = {}
 ) {
     var continueWatching by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var recentlyAdded by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -408,6 +419,8 @@ fun TVHome(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                TVBottomNavItem("Search", isSelected = false, onClick = onSearch)
+                Spacer(Modifier.width(24.dp))
                 TVBottomNavItem("Settings", isSelected = false, onClick = onSettings)
             }
         }
@@ -1041,6 +1054,146 @@ fun TVEpisodeCard(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun TVSearch(
+    apiClient: ApiClient,
+    baseUrl: String,
+    userId: String?,
+    onBack: () -> Unit,
+    onSelectItem: (MediaItem) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+    var hasSearched by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    // Debounced search
+    LaunchedEffect(query) {
+        if (query.length >= 2) {
+            loading = true
+            hasSearched = true
+            delay(300)
+            try {
+                results = apiClient.search(query, userId)
+            } catch (_: Exception) {
+                results = emptyList()
+            }
+            loading = false
+        } else if (query.isEmpty()) {
+            results = emptyList()
+            hasSearched = false
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0a0a0a))
+            .padding(horizontal = 64.dp)
+    ) {
+        Spacer(Modifier.height(48.dp))
+
+        // Back button + title
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            TVBackButton(onClick = onBack)
+            Text(
+                text = "Search",
+                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        // Search input
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(Color(0xFF1a1a1a), RoundedCornerShape(12.dp))
+                .padding(horizontal = 20.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (query.isEmpty()) {
+                Text(
+                    text = "Search for movies, shows...",
+                    color = Color.White.copy(alpha = 0.4f),
+                    fontSize = 18.sp
+                )
+            }
+            BasicTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = Color.White,
+                    fontSize = 18.sp
+                ),
+                cursorBrush = Brush.VerticalGradient(
+                    colors = listOf(Color(0xFFE50914), Color(0xFFE50914))
+                ),
+                singleLine = true
+            )
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        // Results
+        when {
+            loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = Color(0xFFE50914),
+                        strokeWidth = 3.dp
+                    )
+                }
+            }
+            hasSearched && results.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No results found",
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 18.sp
+                    )
+                }
+            }
+            results.isNotEmpty() -> {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(5),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(bottom = 64.dp)
+                ) {
+                    items(results, key = { it.id }) { item ->
+                        TVCard(
+                            item = item,
+                            baseUrl = baseUrl,
+                            onClick = { onSelectItem(item) }
+                        )
+                    }
+                }
             }
         }
     }

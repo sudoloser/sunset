@@ -307,14 +307,19 @@ fun AppContent(activity: ComponentActivity) {
                         label = "main_content"
                     ) { target ->
                         when (target) {
-                            "details" -> MediaDetailsScreen(
-                                item = selectedItem!!,
-                                baseUrl = baseUrl,
-                                apiClient = client,
-                                userId = userId,
-                                onPlay = { itemToPlay -> startPlayer(activity, client, itemToPlay, baseUrl, userId) },
-                                onClose = { selectedItem = null }
-                            )
+                            "details" -> {
+                                val item = selectedItem
+                                if (item != null) {
+                                    MediaDetailsScreen(
+                                        item = item,
+                                        baseUrl = baseUrl,
+                                        apiClient = client,
+                                        userId = userId,
+                                        onPlay = { itemToPlay -> startPlayer(activity, client, itemToPlay, baseUrl, userId) },
+                                        onClose = { selectedItem = null }
+                                    )
+                                }
+                            }
                             "admin" -> AdminScreen(
                                 apiClient = client,
                                 baseUrl = baseUrl,
