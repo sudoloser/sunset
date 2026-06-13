@@ -437,6 +437,25 @@ fun TVFeaturedHero(
     val focusRequester = remember { FocusRequester() }
     var isPlayFocused by remember { mutableStateOf(false) }
     var isInfoFocused by remember { mutableStateOf(false) }
+    val infiniteTransition = rememberInfiniteTransition(label = "hero_gradient")
+    val gradientOffset by infiniteTransition.animateFloat(
+        initialValue = -0.5f,
+        targetValue = 1.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(12000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "gradient_offset"
+    )
+    val gradientAngle by infiniteTransition.animateFloat(
+        initialValue = 30f,
+        targetValue = 150f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(18000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "gradient_angle"
+    )
 
     LaunchedEffect(Unit) {
         try { focusRequester.requestFocus() } catch (_: Exception) {}
@@ -482,6 +501,30 @@ fun TVFeaturedHero(
                                 Color(0xFF0a0a0a).copy(alpha = 0.8f),
                                 Color.Transparent,
                                 Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // Animated Netflix-style drifting gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFFE50914).copy(alpha = 0.0f),
+                                Color(0xFFE50914).copy(alpha = 0.12f),
+                                Color(0xFF1a1a6e).copy(alpha = 0.08f),
+                                Color(0xFFE50914).copy(alpha = 0.0f)
+                            ),
+                            start = androidx.compose.ui.geometry.Offset(
+                                x = gradientOffset * 1200f,
+                                y = 0f
+                            ),
+                            end = androidx.compose.ui.geometry.Offset(
+                                x = gradientOffset * 1200f + 600f,
+                                y = gradientAngle
                             )
                         )
                     )
@@ -1145,7 +1188,7 @@ fun TVSearch(
                     color = Color.White,
                     fontSize = 18.sp
                 ),
-                cursorBrush = Brush.VerticalGradient(
+                cursorBrush = Brush.verticalGradient(
                     colors = listOf(Color(0xFFE50914), Color(0xFFE50914))
                 ),
                 singleLine = true
