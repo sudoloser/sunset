@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -161,7 +162,9 @@ fun MediaDetailsScreen(
                 SunsetIconButton(
                     icon = SunsetIcons.Back,
                     onClick = onClose,
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(16.dp),
                     backgroundColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
                 )
 
@@ -275,35 +278,31 @@ fun MediaDetailsScreen(
 
                 if (episodes.isNotEmpty()) {
                     Spacer(Modifier.height(48.dp))
-                    
+
+                    Text("Episodes", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Season tabs - horizontal scroll
+                    val seasons = episodes.map { it.season ?: 1 }.distinct().sorted()
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                     ) {
-                        Text("Episodes", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-                        
-                        val seasons = episodes.map { it.season ?: 1 }.distinct().sorted()
-                        var seasonExpanded by remember { mutableStateOf(false) }
-                        
-                        Box {
-                            TextButton(
-                                onClick = { seasonExpanded = true },
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                        seasons.forEach { s ->
+                            Surface(
+                                onClick = { selectedSeason = s },
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (selectedSeason == s) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.height(36.dp)
                             ) {
-                                Text("Season $selectedSeason ▾", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
-                            }
-                            DropdownMenu(
-                                expanded = seasonExpanded,
-                                onDismissRequest = { seasonExpanded = false },
-                                modifier = Modifier.background(Color(0xFF1A1A1A))
-                            ) {
-                                seasons.forEach { s ->
-                                    DropdownMenuItem(
-                                        text = { Text("Season $s", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
-                                        onClick = { selectedSeason = s; seasonExpanded = false }
-                                    )
-                                }
+                                Text(
+                                    "Season $s",
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                                    color = if (selectedSeason == s) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                             }
                         }
                     }
@@ -312,57 +311,89 @@ fun MediaDetailsScreen(
 
                     val seasonEps = episodes.filter { (it.season ?: 1) == selectedSeason }
                         .sortedBy { it.episode }
-                    
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         seasonEps.forEach { ep ->
-                            // Blurred Pill Row
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
-                                    .clickable { onPlay(ep) }
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                            val isWatched = (ep.progress ?: 0.0) > 0.7
+                            val progressValue = ep.progress?.toFloat()?.coerceIn(0f, 1f) ?: 0f
+
+                            Surface(
+                                onClick = { onPlay(ep) },
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(
-                                    text = ep.episode.toString(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                    fontWeight = FontWeight.ExtraBold,
-                                    modifier = Modifier.width(28.dp),
-                                    textAlign = TextAlign.Center
-                                )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    // Episode number
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         Text(
-                                            ep.title,
+                                            text = "${ep.episode ?: "?"}",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
-                                        if ((ep.progress ?: 0.0) > 0.7) {
+                                    }
+
+                                    // Title + progress
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text(
+                                                ep.title,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1
+                                            )
+                                            if (isWatched) {
+                                                Icon(
+                                                    SunsetIcons.Check,
+                                                    contentDescription = "Watched",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                        // Progress bar
+                                        if (progressValue > 0f) {
+                                            Spacer(Modifier.height(6.dp))
+                                            LinearProgressIndicator(
+                                                progress = { progressValue },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(3.dp)
+                                                    .clip(RoundedCornerShape(2.dp)),
+                                                color = MaterialTheme.colorScheme.primary,
+                                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    // Play button
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
                                             Icon(
-                                                SunsetIcons.Check,
-                                                contentDescription = "Watched",
+                                                SunsetIcons.Play,
+                                                contentDescription = "Play",
                                                 tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(16.dp)
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }
                                 }
-                                Icon(SunsetIcons.Play, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(12.dp))
-                                Icon(
-                                    SunsetIcons.Download,
-                                    contentDescription = "Download",
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clickable { downloadItem(ep.id, ep.title) }
-                                )
                             }
                         }
                     }

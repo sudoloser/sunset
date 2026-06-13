@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sudoloser.sunset.api.ApiClient
@@ -28,7 +27,6 @@ fun DashboardScreen(
     baseUrl: String,
     userId: String? = null,
     onPlayItem: (MediaItem) -> Unit,
-    onSearch: () -> Unit,
     onSelectItem: ((MediaItem) -> Unit)? = null
 ) {
     var recentlyAdded by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -198,21 +196,6 @@ fun DashboardScreen(
             }
 
             item { Spacer(Modifier.height(100.dp)) }
-        }
-
-        // Top Search Icon
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-                .zIndex(20f)
-        ) {
-            SunsetIconButton(
-                icon = SunsetIcons.Search,
-                onClick = onSearch,
-                backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                size = 28.dp
-            )
         }
     }
 }

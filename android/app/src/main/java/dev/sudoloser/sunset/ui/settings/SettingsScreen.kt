@@ -59,7 +59,7 @@ fun SettingsScreen(
 ) {
     var tab by remember { mutableStateOf("account") }
     val tabs = buildList {
-        add("appearance"); add("account"); add("subtitles"); add("discord"); add("downloads")
+        add("media"); add("account"); add("appearance"); add("discord")
         if (isAdmin) add("admin")
     }
 
@@ -109,11 +109,10 @@ fun SettingsScreen(
 
         Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             when (tab) {
+                "media" -> MediaSettings()
                 "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange, useMaterial3, onMaterial3Change, tvMode, onTvModeChange)
                 "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
-                "subtitles" -> SubtitleSettings()
                 "discord" -> DiscordSettings(apiClient, userId)
-                "downloads" -> DownloadSettings()
                 "admin" -> AdminScreen(apiClient, baseUrl, onBack = { tab = "account" })
             }
         }
@@ -250,6 +249,79 @@ fun AppearanceSettings(
         }
 
         Spacer(Modifier.height(80.dp))
+    }
+}
+
+@Composable
+fun MediaSettings() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        // Clip Recording
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            RecordingResolutionSetting()
+        }
+
+        // Subtitles
+        SubtitleSettingsContent()
+
+        // Downloads
+        DownloadSettingsContent()
+
+        Spacer(Modifier.height(80.dp))
+    }
+}
+
+@Composable
+fun RecordingResolutionSetting() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var selectedResolution by remember { mutableIntStateOf(1080) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        selectedResolution = ctx.dataStore.data.first()[PrefKeys.RECORD_RESOLUTION] ?: 1080
+    }
+
+    Column {
+        Text("Clip Recording Resolution", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Resolution for screen clips saved to DCIM",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 13.sp
+        )
+        Spacer(Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf(480, 720, 1080, 1440, 2160).forEach { res ->
+                val label = if (res == 2160) "4K" else "${res}p"
+                val isSelected = selectedResolution == res
+                Surface(
+                    onClick = {
+                        selectedResolution = res
+                        scope.launch { ctx.dataStore.edit { it[PrefKeys.RECORD_RESOLUTION] = res } }
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        label,
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -412,6 +484,20 @@ fun AccountSettings(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadSettings() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        DownloadSettingsContent()
+        Spacer(Modifier.height(80.dp))
+    }
+}
+
+@Composable
+fun DownloadSettingsContent() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var downloadPath by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf(false) }
@@ -421,40 +507,31 @@ fun DownloadSettings() {
         downloadPath = ctx.dataStore.data.first()[PrefKeys.DOWNLOAD_PATH] ?: ""
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Download Location", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(
-                    "Files will be saved to this directory on your device.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp
-                )
-                SunsetInput(
-                    value = downloadPath,
-                    onValueChange = { downloadPath = it; saved = false },
-                    label = "Download Path",
-                    placeholder = "e.g. /storage/emulated/0/Download/SunSet"
-                )
-                SunsetButton(
-                    text = if (saved) "✓ Saved" else "Save Path",
-                    onClick = {
-                        scope.launch {
-                            ctx.dataStore.edit { it[PrefKeys.DOWNLOAD_PATH] = downloadPath }
-                            saved = true
-                        }
-                    },
-                    fullWidth = true
-                )
-            }
+    SunsetCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("Download Location", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                "Files will be saved to this directory on your device.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 14.sp
+            )
+            SunsetInput(
+                value = downloadPath,
+                onValueChange = { downloadPath = it; saved = false },
+                label = "Download Path",
+                placeholder = "e.g. /storage/emulated/0/Download/SunSet"
+            )
+            SunsetButton(
+                text = if (saved) "✓ Saved" else "Save Path",
+                onClick = {
+                    scope.launch {
+                        ctx.dataStore.edit { it[PrefKeys.DOWNLOAD_PATH] = downloadPath }
+                        saved = true
+                    }
+                },
+                fullWidth = true
+            )
         }
-        Spacer(Modifier.height(80.dp))
     }
 }
 
@@ -586,6 +663,21 @@ fun DiscordSettings(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubtitleSettings() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        SubtitleSettingsContent()
+        Spacer(Modifier.height(80.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SubtitleSettingsContent() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -631,14 +723,7 @@ fun SubtitleSettings() {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+    SunsetCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Style", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
@@ -755,7 +840,5 @@ fun SubtitleSettings() {
                 }
             }
         }
-
-        Spacer(Modifier.height(80.dp))
     }
 }

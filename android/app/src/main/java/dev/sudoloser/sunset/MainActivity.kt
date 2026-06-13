@@ -1,7 +1,12 @@
 package dev.sudoloser.sunset
 
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import dev.sudoloser.sunset.api.ApiClient
-import android.util.Log
 import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.data.models.SetupStatus
 import dev.sudoloser.sunset.data.models.User
@@ -25,7 +29,6 @@ import dev.sudoloser.sunset.ui.library.LibrariesScreen
 import dev.sudoloser.sunset.ui.login.LoginScreen
 import dev.sudoloser.sunset.ui.mediadetails.MediaDetailsScreen
 import dev.sudoloser.sunset.ui.onboarding.OnboardingScreen
-import dev.sudoloser.sunset.ui.search.SearchScreen
 import dev.sudoloser.sunset.ui.settings.SettingsScreen
 import dev.sudoloser.sunset.ui.theme.NetflixRed
 import dev.sudoloser.sunset.ui.theme.SunsetTheme
@@ -41,16 +44,65 @@ import dev.sudoloser.sunset.data.dataStore
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import dev.sudoloser.sunset.tv.EmergencyMenu
+import dev.sudoloser.sunset.tv.copyLogcat
+import kotlin.math.sqrt
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), SensorEventListener {
+    private var sensorManager: SensorManager? = null
+    private var lastShakeTime = 0L
+    private var onShakeCallback: (() -> Unit)? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
         setContent {
+            var showEmergencyMenu by remember { mutableStateOf(false) }
+            onShakeCallback = { showEmergencyMenu = true }
+
             AppContent(this)
+
+            if (showEmergencyMenu) {
+                EmergencyMenu(
+                    showExitTv = false,
+                    onCopyLog = { copyLogcat(this) },
+                    onDismiss = { showEmergencyMenu = false }
+                )
+            }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        sensorManager?.registerListener(
+            this,
+            sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+            SensorManager.SENSOR_DELAY_UI
+        )
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager?.unregisterListener(this)
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        val x = event.values[0]
+        val y = event.values[1]
+        val z = event.values[2]
+        val acceleration = sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH
+        if (acceleration > 12f) {
+            val now = System.currentTimeMillis()
+            if (now - lastShakeTime > 1000) {
+                lastShakeTime = now
+                onShakeCallback?.invoke()
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 }
 
 @Composable
@@ -61,7 +113,6 @@ fun AppContent(activity: ComponentActivity) {
     var user by remember { mutableStateOf<User?>(null) }
     var status by remember { mutableStateOf<SetupStatus?>(null) }
     var selectedItem by remember { mutableStateOf<MediaItem?>(null) }
-    var showSearch by remember { mutableStateOf(false) }
     var showAdmin by remember { mutableStateOf(false) }
     var activeTab by remember { mutableStateOf("home") }
     var darkTheme by remember { mutableStateOf(true) }
@@ -72,7 +123,6 @@ fun AppContent(activity: ComponentActivity) {
     // Back button handling
     BackHandler(enabled = step == "main") {
         when {
-            showSearch -> showSearch = false
             selectedItem != null -> selectedItem = null
             showAdmin -> showAdmin = false
             activeTab != "home" -> activeTab = "home"
@@ -210,21 +260,6 @@ fun AppContent(activity: ComponentActivity) {
                 val baseUrl = serverUrl ?: ""
                 val userId = user?.userId
 
-                if (showSearch) {
-                    SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
-                        SearchScreen(
-                            apiClient = client,
-                            baseUrl = baseUrl,
-                            onSelect = { item ->
-                                selectedItem = item
-                                showSearch = false
-                            },
-                            onClose = { showSearch = false }
-                        )
-                    }
-                    return
-                }
-
                 if (selectedItem != null) {
                     SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                         MediaDetailsScreen(
@@ -283,7 +318,6 @@ fun AppContent(activity: ComponentActivity) {
                                     onPlayItem = { item ->
                                         startPlayer(activity, client, item, baseUrl, userId)
                                     },
-                                    onSearch = { showSearch = true },
                                     onSelectItem = { item -> selectedItem = item }
                                 )
                                 "library" -> LibrariesScreen(

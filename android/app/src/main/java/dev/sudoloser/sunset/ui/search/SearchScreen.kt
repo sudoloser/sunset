@@ -35,7 +35,7 @@ fun SearchScreen(
     val scope = rememberCoroutineScope()
     var searchJob by remember { mutableStateOf<Job?>(null) }
 
-    var filterType by remember { mutableStateOf("all") } // "all", "MOVIE", "EPISODE"
+    var filterType by remember { mutableStateOf("all") }
     var filterGenre by remember { mutableStateOf<String?>(null) }
     var genres by remember { mutableStateOf<List<String>>(emptyList()) }
 
@@ -57,6 +57,22 @@ fun SearchScreen(
             val genreMatch = filterGenre == null || item.genres?.contains(filterGenre!!, ignoreCase = true) == true
             typeMatch && genreMatch
         }
+    }
+
+    fun groupEpisodes(items: List<MediaItem>): List<Pair<MediaItem, Int>> {
+        val grouped = mutableMapOf<String, MutableList<MediaItem>>()
+        items.forEach { item ->
+            if (item.mediaType == MediaType.EPISODE && item.showTitle != null) {
+                val key = item.showTitle!!
+                grouped.getOrPut(key) { mutableListOf() }.add(item)
+            } else {
+                grouped[item.title] = mutableListOf(item)
+            }
+        }
+        return grouped.map { (key, eps) ->
+            val representative = eps.minByOrNull { it.season ?: 0 }?.copy(title = key) ?: eps.first().copy(title = key)
+            representative to eps.size
+        }.sortedByDescending { it.second }
     }
 
     Column(
@@ -148,17 +164,19 @@ fun SearchScreen(
         if (query.isBlank()) {
             val filtered = applyFilters(allItems)
             if (filtered.isNotEmpty()) {
+                val grouped = if (filterType == "EPISODE") groupEpisodes(filtered) else filtered.map { it to 0 }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filtered.take(24)) { item ->
+                    items(grouped.take(24), key = { it.first.id }) { (item, count) ->
                         Poster(
                             item = item,
                             baseUrl = baseUrl,
-                            onClick = { onSelect(item) }
+                            onClick = { onSelect(item) },
+                            subtitle = if (count > 1) "$count episodes" else null
                         )
                     }
                 }
@@ -170,17 +188,19 @@ fun SearchScreen(
             } else if (results.isEmpty()) {
                 Text("No results found", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
+                val grouped = if (filterType == "EPISODE") groupEpisodes(filtered) else filtered.map { it to 0 }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     modifier = Modifier.fillMaxSize(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filtered) { item ->
+                    items(grouped, key = { it.first.id }) { (item, count) ->
                         Poster(
                             item = item,
                             baseUrl = baseUrl,
-                            onClick = { onSelect(item) }
+                            onClick = { onSelect(item) },
+                            subtitle = if (count > 1) "$count episodes" else null
                         )
                     }
                 }

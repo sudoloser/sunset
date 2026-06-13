@@ -65,7 +65,7 @@ fun Hero(
                 .fillMaxSize()
                 .padding(24.dp),
             verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.Start
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AsyncImage(
                 model = logoUrl,

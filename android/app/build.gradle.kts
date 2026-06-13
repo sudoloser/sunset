@@ -63,12 +63,11 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.3")
 
-    // Media3 (ExoPlayer + Session + Cast)
+    // Media3 (ExoPlayer + Session)
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("androidx.media3:media3-common:1.4.1")
     implementation("androidx.media3:media3-session:1.4.1")
-    implementation("androidx.media3:media3-cast:1.4.1")
 
     // Lifecycle ViewModel Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
@@ -85,10 +84,6 @@ dependencies {
 
     // OkHttp
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-
-    // Google Cast
-    implementation("androidx.mediarouter:mediarouter:1.7.0")
-    implementation("com.google.android.gms:play-services-cast-framework:16.2.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
