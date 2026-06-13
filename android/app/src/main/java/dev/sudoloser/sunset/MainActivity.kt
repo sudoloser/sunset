@@ -289,7 +289,13 @@ fun AppContent(activity: ComponentActivity) {
                     if (tvMode) {
                         dev.sudoloser.sunset.tv.TVNavHost(
                             baseUrl = baseUrl,
-                            userId = userId
+                            userId = userId,
+                            onExitTvMode = {
+                                tvMode = false
+                                scope.launch {
+                                    activity.dataStore.edit { it[PrefKeys.TV_MODE] = false }
+                                }
+                            }
                         )
                     } else {
                     val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }

@@ -166,6 +166,8 @@ class PlayerActivity : ComponentActivity() {
     @Composable
     fun CustomPlayerScreen() {
         val context = LocalContext.current
+        val composeScope = rememberCoroutineScope()
+
         var isPlaying by remember { mutableStateOf(false) }
         var currentTime by remember { mutableLongStateOf(0L) }
         var duration by remember { mutableLongStateOf(0L) }
@@ -373,7 +375,7 @@ class PlayerActivity : ComponentActivity() {
                                 skipSide = 1f
                                 player?.seekTo((player!!.currentPosition + seekAmount).coerceAtMost(player!!.duration))
                             }
-                            scope.launch {
+                            composeScope.launch {
                                 pulseAnim.snapTo(0f)
                                 pulseAnim.animateTo(1f, animationSpec = tween(500))
                             }
@@ -876,6 +878,10 @@ class PlayerActivity : ComponentActivity() {
                         val fd = contentResolver.openFileDescriptor(uri, "rw")?.fileDescriptor
                         if (fd != null) {
                             withContext(Dispatchers.Main) {
+                                if (Build.VERSION.SDK_INT >= 34) {
+                                    startForegroundService(Intent(this@PlayerActivity, MediaProjectionService::class.java))
+                                    delay(500)
+                                }
                                 setupAndStartRecorder(resultCode, data, fd, width, height, bitrate, uri)
                             }
                         }
@@ -887,6 +893,10 @@ class PlayerActivity : ComponentActivity() {
                     file.parentFile?.mkdirs()
 
                     withContext(Dispatchers.Main) {
+                        if (Build.VERSION.SDK_INT >= 34) {
+                            startForegroundService(Intent(this@PlayerActivity, MediaProjectionService::class.java))
+                            delay(500)
+                        }
                         setupAndStartRecorder(resultCode, data, null, width, height, bitrate, null, file.absolutePath)
                     }
                 }
@@ -966,6 +976,7 @@ class PlayerActivity : ComponentActivity() {
             mediaRecorder?.release()
             mediaRecorder = null
             isRecording = false
+            stopService(Intent(this, MediaProjectionService::class.java))
 
             val endTime = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date())
             val startTime = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(recordingStartTime))
