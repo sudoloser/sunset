@@ -23,4 +23,3 @@ When changing the frontend, you are REQUIRED to also port that change to the And
 ---
 
 After each major feature, bug fix (not from same version bugs) add it to @changelog.md under the latest  version
-if the fix is regarding ANYTHING other than android or the frontend/backend, it should not be included. currently, v0.1.0 is not out yet and will not be out for a bit, so do not add any changelog changes.

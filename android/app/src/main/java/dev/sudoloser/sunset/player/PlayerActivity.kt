@@ -242,7 +242,7 @@ class PlayerActivity : ComponentActivity() {
                 val subs = withContext(Dispatchers.IO) { fetchSubtitleList(currentItemId) }
                 subtitleTracks = subs
                 subs.forEach { name ->
-                    val subUrl = "$baseUrl/api/media/$currentItemId/subtitle/${java.net.URLEncoder.encode(name, "UTF-8")}"
+                    val subUrl = "$baseUrl/api/media/$currentItemId/subtitle/${Uri.encode(name)}"
                     val mimeType = if (name.endsWith(".vtt")) MimeTypes.TEXT_VTT else MimeTypes.APPLICATION_SUBRIP
                     val label = name.substringBeforeLast(".").split(".").last().uppercase()
                     
@@ -680,7 +680,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private suspend fun fetchEpisodes(showTitle: String): List<dev.sudoloser.sunset.data.models.MediaItem> {
-        val request = Request.Builder().url("$baseUrl/api/shows/${java.net.URLEncoder.encode(showTitle, "UTF-8")}/episodes").build()
+        val request = Request.Builder().url("$baseUrl/api/shows/${Uri.encode(showTitle)}/episodes").build()
         val response = httpClient.newCall(request).execute()
         val body = response.body?.string() ?: return emptyList()
         return Json.decodeFromString<List<dev.sudoloser.sunset.data.models.MediaItem>>(body)
