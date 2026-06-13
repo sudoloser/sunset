@@ -61,6 +61,7 @@ import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.data.models.MediaType
 import dev.sudoloser.sunset.player.PlayerActivity
 import dev.sudoloser.sunset.ui.theme.SunsetTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.sqrt
@@ -867,10 +868,10 @@ fun TVMediaDetails(
             }
 
             // Description
-            if (item.description.isNotBlank()) {
+            if (!item.description.isNullOrBlank()) {
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    text = item.description,
+                    text = item.description.orEmpty(),
                     color = Color.White.copy(alpha = 0.75f),
                     fontSize = 16.sp,
                     lineHeight = 24.sp

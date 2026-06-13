@@ -285,14 +285,14 @@ fun AppContent(activity: ComponentActivity) {
                         },
                         transitionSpec = {
                             if (targetState == "tabs") {
-                                slideOutVertically(
-                                    animationSpec = tween(300, easing = FastOutSlowInEasing),
-                                    targetOffsetY = { it }
-                                ) + fadeOut(animationSpec = tween(200)) togetherWith
                                 slideInVertically(
                                     animationSpec = tween(350, easing = FastOutSlowInEasing),
                                     initialOffsetY = { it / 4 }
-                                ) + fadeIn(animationSpec = tween(300))
+                                ) + fadeIn(animationSpec = tween(300)) togetherWith
+                                slideOutVertically(
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                    targetOffsetY = { it }
+                                ) + fadeOut(animationSpec = tween(200))
                             } else {
                                 slideInVertically(
                                     animationSpec = tween(350, easing = FastOutSlowInEasing),
