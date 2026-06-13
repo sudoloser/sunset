@@ -18,6 +18,7 @@ import dev.sudoloser.sunset.api.ApiClient
 import dev.sudoloser.sunset.data.models.Library
 import dev.sudoloser.sunset.data.models.LibraryType
 import dev.sudoloser.sunset.data.models.MediaItem
+import dev.sudoloser.sunset.data.models.MediaType
 import dev.sudoloser.sunset.data.models.PlaybackState
 import dev.sudoloser.sunset.ui.components.*
 
