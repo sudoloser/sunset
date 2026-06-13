@@ -74,8 +74,10 @@ class PlayerActivity : ComponentActivity() {
     private var userId: String? = null
     private var showTitle: String? = null
     private var mediaType: String? = null
+    private var activeItemId: String? = null
     
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val lenientJson = Json { ignoreUnknownKeys = true }
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .build()
@@ -178,7 +180,7 @@ class PlayerActivity : ComponentActivity() {
         }
 
         fun switchEpisode(ep: dev.sudoloser.sunset.data.models.MediaItem) {
-            player?.let { saveCurrentPlayback(it.currentPosition, it.duration) }
+            player?.let { saveCurrentPlayback(it.currentPosition, it.duration, currentId = currentItemId) }
             currentVideoUrl = "$baseUrl/api/stream/${ep.id}"
             currentEpisodeTitle = ep.title
             currentItemId = ep.id
@@ -188,6 +190,7 @@ class PlayerActivity : ComponentActivity() {
 
         // Initialize Player
         LaunchedEffect(currentItemId) {
+            activeItemId = currentItemId
             player?.release()
 
             val trackSelector = DefaultTrackSelector(context)
@@ -201,7 +204,7 @@ class PlayerActivity : ComponentActivity() {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
                     if (!playing) {
-                        exoPlayer.let { saveCurrentPlayback(it.currentPosition, it.duration, false) }
+                        exoPlayer.let { saveCurrentPlayback(it.currentPosition, it.duration, false, currentItemId) }
                     }
                 }
                 override fun onPlaybackStateChanged(state: Int) {
@@ -209,16 +212,18 @@ class PlayerActivity : ComponentActivity() {
                         duration = exoPlayer.duration
                         if (shouldRestorePosition) {
                             shouldRestorePosition = false
+                            exoPlayer.playWhenReady = false
                             scope.launch {
                                 val savedState = withContext(Dispatchers.IO) { currentItemId.let { fetchPlaybackState(it) } }
                                 savedState?.let { exoPlayer.seekTo((it.timestamp * 1000).toLong()) }
+                                exoPlayer.playWhenReady = true
                             }
                         }
                     } else if (state == Player.STATE_ENDED) {
                         val currentIdx = episodes.indexOfFirst { it.id == currentItemId }
                         if (currentIdx >= 0 && currentIdx < episodes.size - 1) {
                             val nextEp = episodes[currentIdx + 1]
-                            saveCurrentPlayback(exoPlayer.currentPosition, exoPlayer.duration, false)
+                            saveCurrentPlayback(exoPlayer.currentPosition, exoPlayer.duration, false, currentItemId)
                             currentVideoUrl = "$baseUrl/api/stream/${nextEp.id}"
                             currentEpisodeTitle = nextEp.title
                             currentItemId = nextEp.id
@@ -274,7 +279,7 @@ class PlayerActivity : ComponentActivity() {
                     if (it.isPlaying) {
                         val now = System.currentTimeMillis()
                         if (now - lastSave >= 2000) {
-                            saveCurrentPlayback(it.currentPosition, it.duration)
+                            saveCurrentPlayback(it.currentPosition, it.duration, currentId = currentItemId)
                             lastSave = now
                         }
                     }
@@ -683,7 +688,7 @@ class PlayerActivity : ComponentActivity() {
         val request = Request.Builder().url("$baseUrl/api/shows/${Uri.encode(showTitle)}/episodes").build()
         val response = httpClient.newCall(request).execute()
         val body = response.body?.string() ?: return emptyList()
-        return Json.decodeFromString<List<dev.sudoloser.sunset.data.models.MediaItem>>(body)
+        return lenientJson.decodeFromString<List<dev.sudoloser.sunset.data.models.MediaItem>>(body)
     }
 
     private suspend fun fetchPlaybackState(id: String): dev.sudoloser.sunset.data.models.PlaybackState? {
@@ -691,14 +696,15 @@ class PlayerActivity : ComponentActivity() {
         val request = Request.Builder().url(url).build()
         val response = httpClient.newCall(request).execute()
         val body = response.body?.string() ?: return null
-        return try { Json.decodeFromString<dev.sudoloser.sunset.data.models.PlaybackState>(body) } catch (_: Exception) { null }
+        return try { lenientJson.decodeFromString<dev.sudoloser.sunset.data.models.PlaybackState>(body) } catch (_: Exception) { null }
     }
 
-    private fun saveCurrentPlayback(pos: Long, dur: Long, playing: Boolean = true) {
-        if (baseUrl == null || itemId == null) return
+    private fun saveCurrentPlayback(pos: Long, dur: Long, playing: Boolean = true, currentId: String? = null) {
+        val id = currentId ?: itemId
+        if (baseUrl == null || id == null) return
         scope.launch(Dispatchers.IO) {
             try {
-                val payload = """{"item_id":"$itemId","timestamp":${pos / 1000.0},"duration":${dur / 1000.0},"user_id":"$userId","is_playing":$playing}"""
+                val payload = """{"item_id":"$id","timestamp":${pos / 1000.0},"duration":${dur / 1000.0},"user_id":"$userId","is_playing":$playing}"""
                 val request = Request.Builder()
                     .url("$baseUrl/api/playback")
                     .post(payload.toRequestBody("application/json".toMediaTypeOrNull()))
@@ -710,7 +716,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        player?.let { saveCurrentPlayback(it.currentPosition, it.duration, false) }
+        player?.let { saveCurrentPlayback(it.currentPosition, it.duration, false, activeItemId) }
     }
 
     override fun onDestroy() {

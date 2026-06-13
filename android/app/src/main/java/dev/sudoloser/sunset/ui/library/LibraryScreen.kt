@@ -42,7 +42,23 @@ fun LibrariesScreen(
         try {
             libraries = apiClient.getLibraries()
             if (userId != null) {
-                continueWatching = apiClient.getContinueWatching(userId)
+                val rawContinueWatching = apiClient.getContinueWatching(userId)
+                
+                fun dedupe(items: List<MediaItem>): List<MediaItem> {
+                    val seen = mutableSetOf<String>()
+                    return items.map { item ->
+                        if (item.mediaType == MediaType.EPISODE && item.showTitle != null) {
+                            item.copy(title = item.showTitle)
+                        } else item
+                    }.filter { item ->
+                        val title = item.showTitle ?: item.title
+                        if (seen.contains(title)) return@filter false
+                        seen.add(title)
+                        true
+                    }
+                }
+                
+                continueWatching = dedupe(rawContinueWatching)
                 myListItems = apiClient.getUserItems(userId)
                 val progress = mutableMapOf<String, Float>()
                 for (item in continueWatching) {

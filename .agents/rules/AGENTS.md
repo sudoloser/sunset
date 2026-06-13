@@ -11,7 +11,10 @@ backend is in @backend
 frontend is in @frontend
 Android is in @android
 ---
-Always build both to make sure that it compiles correctly.
+Always build the ones you changed to make sure that it compiles correctly.
+if you edited the backend, run the backend command. if you edited the frontend, run the frontend command.
+building android locally is not needed as i have it built using github actions.
+
 
 Build commands:
 - Backend: `cargo check'

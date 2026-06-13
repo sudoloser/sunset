@@ -45,6 +45,9 @@ import androidx.activity.compose.BackHandler
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -252,7 +255,7 @@ fun AppContent(activity: ComponentActivity) {
                 SunsetTheme {
                     val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }
                     val iconLibrary: @Composable () -> Unit = { Icon(SunsetIcons.Library, contentDescription = "Library") }
-                    val iconSettings: @Composable () -> Unit = { Icon(SunsetIcons.Settings, contentDescription = "Settings") }
+                    val iconSettings: @Composable () -> Unit = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
                     
                     val tabs = listOf(
                         "home" to iconHome,
