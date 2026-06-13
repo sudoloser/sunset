@@ -52,7 +52,7 @@ export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
         zIndex: 1 
       }} />
 
-      <div style={{ position: 'relative', zIndex: 2, maxWidth: '600px' }}>
+      <div style={{ position: 'relative', zIndex: 2, maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
         <img 
           src={logoUrl} 
           alt={item.title}
@@ -67,21 +67,15 @@ export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
         <h1 style={{ marginBottom: 'var(--spacing-md)', lineHeight: '1.1' }}>
           {item.title}
         </h1>
-        <p style={{ 
-          fontSize: '1.2rem', 
-          color: 'var(--text-secondary)', 
-          marginBottom: 'var(--spacing-xl)',
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden'
+        <p style={{
+          fontSize: '1.1rem',
+          color: 'var(--text-secondary)',
+          marginBottom: 'var(--spacing-xl)'
         }}>
-          {item.year && `${item.year} • `}
-          Experience the latest cinematic addition to your SunSet library. 
-          High-quality streaming and immersive sound await.
+          {item.genres?.split(',').slice(0, 3).join(' · ') || item.year}
         </p>
         
-        <div style={{ display: 'flex', gap: 'var(--spacing-md)' }}>
+        <div style={{ display: 'flex', gap: 'var(--spacing-md)', justifyContent: 'center' }}>
           <Button size="lg" onClick={() => onPlay(item)}>
             <PlayIcon size={24} /> Play
           </Button>

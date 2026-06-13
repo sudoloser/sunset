@@ -277,8 +277,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelec
     }, 3000);
   };
 const [seekingFeedback, setSeekingFeedback] = useState<'forward' | 'backward' | null>(null);
+const [seekAmount, setSeekAmount] = useState(10);
 const [lastTapTime, setLastTapTime] = useState(0);
 const tapTimeout = useRef<any>(null);
+const [skipAccumulator, setSkipAccumulator] = useState(0);
+const skipResetTimer = useRef<any>(null);
 const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
   const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
   const width = window.innerWidth;
@@ -288,12 +291,24 @@ const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
     // Double tap detected
     clearTimeout(tapTimeout.current);
     if (x < width * 0.3) {
-      skip(-10);
-      setSeekingFeedback('backward');
+      setSkipAccumulator((prev) => {
+        const amount = prev + 10;
+        skip(-amount);
+        setSeekAmount(amount);
+        setSeekingFeedback('backward');
+        return amount;
+      });
     } else if (x > width * 0.7) {
-      skip(10);
-      setSeekingFeedback('forward');
+      setSkipAccumulator((prev) => {
+        const amount = prev + 10;
+        skip(amount);
+        setSeekAmount(amount);
+        setSeekingFeedback('forward');
+        return amount;
+      });
     }
+    clearTimeout(skipResetTimer.current);
+    skipResetTimer.current = setTimeout(() => setSkipAccumulator(0), 800);
     setTimeout(() => setSeekingFeedback(null), 800);
     } else {
     setLastTapTime(now);
@@ -339,7 +354,7 @@ const handleActivity = () => {
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
             <SkipBackIcon size={64} />
-            <span style={{ fontWeight: 700, fontSize: '1.2rem' }}>-10s</span>
+            <span style={{ fontWeight: 700, fontSize: '1.2rem' }}>-{seekAmount}s</span>
           </div>
         </div>
       )}
@@ -352,7 +367,7 @@ const handleActivity = () => {
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
             <SkipForwardIcon size={64} />
-            <span style={{ fontWeight: 700, fontSize: '1.2rem' }}>+10s</span>
+            <span style={{ fontWeight: 700, fontSize: '1.2rem' }}>+{seekAmount}s</span>
           </div>
         </div>
       )}

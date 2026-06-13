@@ -18,11 +18,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
   const [genres, setGenres] = useState<string[]>([]);
   const [genreItems, setGenreItems] = useState<Record<string, MediaItem[]>>({});
   const [collections, setCollections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [pulling, setPulling] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pullStartY = useRef(0);
 
   const loadData = useCallback(async () => {
+    setLoading(true);
     const userId = localStorage.getItem('sunset_user_id') || undefined;
     const [recentData, libsData, continueData] = await Promise.all([
       api.getRecentlyAdded(userId),
@@ -100,6 +102,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
       }));
       setGenreItems(itemsMap);
     } catch {}
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -121,7 +124,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
         if (pulling) { setPulling(false); loadData(); }
       }}
     >
-      {pulling && <div className="pull-indicator">Release to refresh</div>}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+      {pulling && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0' }}>
+          <div style={{
+            width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.2)',
+            borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite'
+          }} />
+        </div>
+      )}
+      {loading && recent.length === 0 && collections.length === 0 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{
+            width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.15)',
+            borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite'
+          }} />
+        </div>
+      )}
       <Hero item={featured} onPlay={onPlayItem} onMoreInfo={onSelectItem} />
 
       {/* Search Button */}

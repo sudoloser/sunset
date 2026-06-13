@@ -460,67 +460,111 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
               <div style={{ marginTop: '3rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h2 style={{ margin: 0 }}>Episodes</h2>
-                  <select 
-                    value={selectedSeason ?? undefined} 
-                    onChange={e => setSelectedSeason(parseInt(e.target.value))}
-                    style={{ 
-                      background: 'var(--surface-variant)', color: 'white', border: '1px solid var(--border-color)', 
-                      padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', outline: 'none'
-                    }}
-                  >
-                    {seasons.map(s => <option key={s} value={s}>{s === 0 ? 'Specials' : `Season ${s}`}</option>)}
-                  </select>
+                  <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: '2px' }}>
+                    {seasons.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => setSelectedSeason(s)}
+                        style={{
+                          borderRadius: '20px', padding: '0.5rem 1.25rem', cursor: 'pointer',
+                          background: selectedSeason === s ? 'var(--primary-color)' : 'var(--surface-variant)',
+                          color: selectedSeason === s ? 'white' : 'var(--text-primary)',
+                          border: 'none', fontWeight: 600, fontSize: '0.9rem',
+                          transition: 'background 0.2s', flexShrink: 0
+                        }}
+                        onMouseEnter={e => { if (selectedSeason !== s) e.currentTarget.style.background = 'rgba(var(--primary-color-rgb), 0.3)'; }}
+                        onMouseLeave={e => { if (selectedSeason !== s) e.currentTarget.style.background = 'var(--surface-variant)'; }}
+                      >
+                        {s === 0 ? 'Specials' : `Season ${s}`}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {filteredEpisodes.map(ep => (
                     <div 
                       key={ep.id}
                       style={{ 
-                        display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '1.5rem', alignItems: 'center',
-                        padding: '1rem', borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                        transition: 'background 0.2s'
+                        display: 'flex', alignItems: 'center', gap: '1rem',
+                        padding: '1rem 1.25rem', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                        transition: 'background 0.2s', background: 'var(--surface-color)',
+                        border: '1px solid var(--border-color)'
                       }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-color)'}
                       onClick={() => onPlay(ep)}
                     >
-                      <span style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', width: '30px', textAlign: 'center' }}>
+                      <div style={{
+                        width: '44px', height: '44px', borderRadius: '10px',
+                        background: 'var(--surface-variant)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 700, fontSize: '1rem', flexShrink: 0, color: 'var(--text-secondary)'
+                      }}>
                         {ep.episode}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ fontWeight: 700 }}>{ep.title}</div>
-                        {ep.progress && ep.progress > 0.7 && (
-                          <span title="Watched" style={{ color: 'var(--primary-color)', fontWeight: 'bold' }}>✓</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: ep.progress && ep.progress > 0 ? '0.4rem' : 0 }}>
+                          <span style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ep.title}</span>
+                          {ep.progress && ep.progress > 0.7 && (
+                            <span title="Watched" style={{ color: 'var(--primary-color)', fontWeight: 'bold', flexShrink: 0 }}>✓</span>
+                          )}
+                        </div>
+                        {ep.progress && ep.progress > 0 && (
+                          <div style={{ height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', width: `${Math.round(ep.progress * 100)}%`,
+                              background: 'var(--primary-color)', borderRadius: '2px',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </div>
                         )}
                       </div>
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-                        <div ref={episodeTriggerRef}>
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <button
-                            onClick={e => { e.stopPropagation(); updatePosition(episodeTriggerRef as any, 'right'); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
+                            onClick={() => onPlay(ep)}
                             style={{
-                              background: 'transparent', border: 'none', color: 'var(--text-secondary)',
-                              cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: 'var(--radius-sm)',
-                              transition: 'var(--transition-standard)'
+                              width: '40px', height: '40px', borderRadius: '50%',
+                              background: 'rgba(var(--primary-color-rgb), 0.15)', border: 'none',
+                              color: 'var(--primary-color)', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              transition: 'background 0.2s'
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(var(--primary-color-rgb), 0.3)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(var(--primary-color-rgb), 0.15)'}
                           >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                              <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                              <polygon points="6 3 20 12 6 21 6 3"/>
                             </svg>
                           </button>
+                          <div ref={episodeTriggerRef}>
+                            <button
+                              onClick={e => { e.stopPropagation(); updatePosition(episodeTriggerRef as any, 'right'); setMenuOpen(menuOpen === ep.id ? null : ep.id); }}
+                              style={{
+                                background: 'transparent', border: 'none', color: 'var(--text-secondary)',
+                                cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: 'var(--radius-sm)',
+                                transition: 'var(--transition-standard)'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+                              </svg>
+                            </button>
+                          </div>
+                          {menuOpen === ep.id && (
+                            <ContextMenu 
+                              item={ep} 
+                              onClose={() => setMenuOpen(null)} 
+                              zip={false} 
+                              top={position.top}
+                              left={position.left}
+                              onDownload={handleDownload}
+                            />
+                          )}
                         </div>
-                        {menuOpen === ep.id && (
-                          <ContextMenu 
-                            item={ep} 
-                            onClose={() => setMenuOpen(null)} 
-                            zip={false} 
-                            top={position.top}
-                            left={position.left}
-                            onDownload={handleDownload}
-                          />
-                        )}
                       </div>
                     </div>
                   ))}
@@ -546,7 +590,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
             </div>
             <div>
               <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>Genres:</span>
-              <div style={{ fontSize: '0.9rem' }}>Cinematic, Immersive, SunSet Original</div>
+              <div style={{ fontSize: '0.9rem' }}>{item.genres?.split(',').join(' · ') || 'No genres available'}</div>
             </div>
           </div>
         </div>

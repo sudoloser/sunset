@@ -9,16 +9,19 @@ interface SettingsProps {
   isAdmin: boolean;
 }
 
-type SettingsTab = 'account' | 'subtitles' | 'appearance' | 'discord' | 'admin';
+type SettingsTab = 'media' | 'account' | 'appearance' | 'discord' | 'admin';
 
 export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
-  const [tab, setTab] = useState<SettingsTab>('account');
+  const [tab, setTab] = useState<SettingsTab>('media');
+  const [recordResolution, setRecordResolution] = useState(() => {
+    return localStorage.getItem('sunset_record_resolution') || '1080p';
+  });
   const userId = localStorage.getItem('sunset_user_id') || '';
   const username = localStorage.getItem('sunset_username') || 'User';
 
   const tabs: { id: SettingsTab; label: string }[] = [
+    { id: 'media', label: 'Media' },
     { id: 'account', label: 'Account' },
-    { id: 'subtitles', label: 'Subtitles' },
     { id: 'appearance', label: 'Appearance' },
     { id: 'discord', label: 'Discord' },
   ];
@@ -47,8 +50,40 @@ export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingTop: '1.5rem' }}>
+        {tab === 'media' && (
+          <div style={{ maxWidth: '800px', paddingBottom: 'var(--spacing-xxl)' }}>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '3rem' }}>Media</h2>
+
+            <div style={{ backgroundColor: 'var(--surface-color)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>Clip Recording</h3>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
+                Resolution
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {['480p', '720p', '1080p', '1440p', '4K'].map(res => (
+                  <button
+                    key={res}
+                    onClick={() => {
+                      setRecordResolution(res);
+                      localStorage.setItem('sunset_record_resolution', res);
+                    }}
+                    style={{
+                      padding: '0.6rem 1.2rem', borderRadius: 'var(--radius-md)',
+                      background: recordResolution === res ? 'var(--primary-color)' : 'var(--surface-variant)',
+                      border: 'none', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
+                      transition: 'var(--transition-standard)'
+                    }}
+                  >
+                    {res}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <SubtitleSettings />
+          </div>
+        )}
         {tab === 'account' && <AccountSettings userId={userId} currentUsername={username} isAdmin={isAdmin} />}
-        {tab === 'subtitles' && <SubtitleSettings />}
         {tab === 'appearance' && <AppearanceSettings />}
         {tab === 'discord' && <DiscordSettings />}
         {tab === 'admin' && <Admin />}
