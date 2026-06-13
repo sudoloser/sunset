@@ -287,11 +287,9 @@ fun AppContent(activity: ComponentActivity) {
 
                 SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                     if (tvMode) {
-                        dev.sudoloser.sunset.tv.TVScreen(
+                        dev.sudoloser.sunset.tv.TVNavHost(
                             baseUrl = baseUrl,
-                            userId = userId,
-                            apiKey = "",
-                            apiClient = client
+                            userId = userId
                         )
                     } else {
                     val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }

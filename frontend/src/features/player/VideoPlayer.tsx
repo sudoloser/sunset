@@ -280,7 +280,7 @@ const [seekingFeedback, setSeekingFeedback] = useState<'forward' | 'backward' | 
 const [seekAmount, setSeekAmount] = useState(10);
 const [lastTapTime, setLastTapTime] = useState(0);
 const tapTimeout = useRef<any>(null);
-const [skipAccumulator, setSkipAccumulator] = useState(0);
+const [, setSkipAccumulator] = useState(0);
 const skipResetTimer = useRef<any>(null);
 const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
   const x = 'touches' in e ? e.touches[0].clientX : e.clientX;

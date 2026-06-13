@@ -193,7 +193,7 @@ object SunsetIcons {
         path(fill = SolidColor(Color.White)) {
             moveTo(19f, 7f); horizontalLineToRelative(-8f); verticalLineToRelative(6f); horizontalLineToRelative(8f); verticalLineToRelative(-6f); close()
             moveTo(21f, 3f); horizontalLineToRelative(-18f); arcTo(2f, 2f, 0f, false, false, 1f, 5f); verticalLineToRelative(14f); arcTo(2f, 2f, 0f, false, false, 3f, 21f); horizontalLineToRelative(18f); arcTo(2f, 2f, 0f, false, false, 23f, 19f); verticalLineToRelative(-14f); arcTo(2f, 2f, 0f, false, false, 21f, 3f); close()
-            moveTo(21f, 19f); horizontalLineToRelative(-18f); verticalLineToRelative(-14f); horizontalLineToRelative(18f); verticalLineTorelative(14f); close()
+            moveTo(21f, 19f); horizontalLineToRelative(-18f); verticalLineToRelative(-14f); horizontalLineToRelative(18f); verticalLineToRelative(14f); close()
         }
     }.build()
 

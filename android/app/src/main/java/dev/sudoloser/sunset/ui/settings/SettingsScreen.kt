@@ -841,4 +841,3 @@ fun SubtitleSettingsContent() {
             }
         }
     }
-}

@@ -169,7 +169,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSelect 
                   display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                   gap: '1rem'
                 }}>
-                  {grouped.map((entry, i) => {
+                  {grouped.map((entry) => {
                     if ('showTitle' in entry) {
                       const group = entry as EpisodeGroup;
                       return (
@@ -229,7 +229,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSelect 
               display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
               gap: '1.5rem'
             }}>
-              {grouped.map((entry, i) => {
+              {grouped.map((entry) => {
                 if ('showTitle' in entry) {
                   const group = entry as EpisodeGroup;
                   return (
