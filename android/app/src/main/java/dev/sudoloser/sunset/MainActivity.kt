@@ -10,6 +10,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -180,36 +182,50 @@ fun AppContent(activity: ComponentActivity) {
             var connecting by remember { mutableStateOf(false) }
 
             SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
-                ServerSelectionScreen(
-                    errorMessage = errorMessage,
-                    loading = connecting,
-                    onServerSelected = { url ->
-                        scope.launch {
-                            connecting = true
-                            errorMessage = null
-                            apiClient = ApiClient(url)
-                            try {
-                                val s = apiClient!!.getStatus()
-                                activity.dataStore.edit { it[PrefKeys.SERVER_URL] = url }
-                                serverUrl = url
-                                status = s
-                                step = if (s.setupComplete) "login" else "onboarding"
-                            } catch (e: Exception) {
-                                val type = e::class.simpleName ?: "Exception"
-                                val detail = when {
-                                    e.message?.contains("timeout", ignoreCase = true) == true -> "Connection timed out"
-                                    e.message?.contains("refused", ignoreCase = true) == true -> "Connection refused (server not running on this port)"
-                                    e.message?.contains("resolve", ignoreCase = true) == true -> "Could not resolve hostname"
-                                    e.message?.contains("not permitted", ignoreCase = true) == true -> "Cleartext HTTP blocked by system"
-                                    else -> "${e.message?.take(80) ?: "no message"} ($type)"
+                AnimatedContent(
+                    targetState = step,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(400)) + slideInVertically(
+                            animationSpec = tween(400, easing = FastOutSlowInEasing),
+                            initialOffsetY = { it / 3 }
+                        ) togetherWith fadeOut(animationSpec = tween(200))
+                    },
+                    label = "step"
+                ) { currentStep ->
+                    when (currentStep) {
+                        "server_selection" -> ServerSelectionScreen(
+                            errorMessage = errorMessage,
+                            loading = connecting,
+                            onServerSelected = { url ->
+                                scope.launch {
+                                    connecting = true
+                                    errorMessage = null
+                                    apiClient = ApiClient(url)
+                                    try {
+                                        val s = apiClient!!.getStatus()
+                                        activity.dataStore.edit { it[PrefKeys.SERVER_URL] = url }
+                                        serverUrl = url
+                                        status = s
+                                        step = if (s.setupComplete) "login" else "onboarding"
+                                    } catch (e: Exception) {
+                                        val type = e::class.simpleName ?: "Exception"
+                                        val detail = when {
+                                            e.message?.contains("timeout", ignoreCase = true) == true -> "Connection timed out"
+                                            e.message?.contains("refused", ignoreCase = true) == true -> "Connection refused (server not running on this port)"
+                                            e.message?.contains("resolve", ignoreCase = true) == true -> "Could not resolve hostname"
+                                            e.message?.contains("not permitted", ignoreCase = true) == true -> "Cleartext HTTP blocked by system"
+                                            else -> "${e.message?.take(80) ?: "no message"} ($type)"
+                                        }
+                                        errorMessage = "Can't connect: $detail"
+                                    } finally {
+                                        connecting = false
+                                    }
                                 }
-                                errorMessage = "Can't connect: $detail"
-                            } finally {
-                                connecting = false
                             }
-                        }
+                        )
+                        else -> {}
                     }
-                )
+                }
             }
         }
 
@@ -260,124 +276,157 @@ fun AppContent(activity: ComponentActivity) {
                 val baseUrl = serverUrl ?: ""
                 val userId = user?.userId
 
-                if (selectedItem != null) {
-                    SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
-                        MediaDetailsScreen(
-                            item = selectedItem!!,
-                            baseUrl = baseUrl,
-                            apiClient = client,
-                            userId = userId,
-                            onPlay = { itemToPlay -> startPlayer(activity, client, itemToPlay, baseUrl, userId) },
-                            onClose = { selectedItem = null }
-                        )
-                    }
-                    return
-                }
-
-                if (showAdmin) {
-                    SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
-                        AdminScreen(
-                            apiClient = client,
-                            baseUrl = baseUrl,
-                            onBack = { showAdmin = false }
-                        )
-                    }
-                    return
-                }
-
                 SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
-                    if (tvMode) {
-                        dev.sudoloser.sunset.tv.TVNavHost(
-                            baseUrl = baseUrl,
-                            userId = userId,
-                            onExitTvMode = {
-                                tvMode = false
-                                scope.launch {
-                                    activity.dataStore.edit { it[PrefKeys.TV_MODE] = false }
+                    AnimatedContent(
+                        targetState = when {
+                            selectedItem != null -> "details"
+                            showAdmin -> "admin"
+                            else -> "tabs"
+                        },
+                        transitionSpec = {
+                            if (targetState == "tabs") {
+                                slideOutVertically(
+                                    animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                    targetOffsetY = { it }
+                                ) + fadeOut(animationSpec = tween(200)) togetherWith
+                                slideInVertically(
+                                    animationSpec = tween(350, easing = FastOutSlowInEasing),
+                                    initialOffsetY = { it / 4 }
+                                ) + fadeIn(animationSpec = tween(300))
+                            } else {
+                                slideInVertically(
+                                    animationSpec = tween(350, easing = FastOutSlowInEasing),
+                                    initialOffsetY = { it }
+                                ) + fadeIn(animationSpec = tween(250)) togetherWith
+                                slideOutVertically(
+                                    animationSpec = tween(250, easing = FastOutSlowInEasing),
+                                    targetOffsetY = { it / 3 }
+                                ) + fadeOut(animationSpec = tween(150))
+                            }
+                        },
+                        label = "main_content"
+                    ) { target ->
+                        when (target) {
+                            "details" -> MediaDetailsScreen(
+                                item = selectedItem!!,
+                                baseUrl = baseUrl,
+                                apiClient = client,
+                                userId = userId,
+                                onPlay = { itemToPlay -> startPlayer(activity, client, itemToPlay, baseUrl, userId) },
+                                onClose = { selectedItem = null }
+                            )
+                            "admin" -> AdminScreen(
+                                apiClient = client,
+                                baseUrl = baseUrl,
+                                onBack = { showAdmin = false }
+                            )
+                            else -> {
+                                if (tvMode) {
+                                    dev.sudoloser.sunset.tv.TVNavHost(
+                                        baseUrl = baseUrl,
+                                        userId = userId,
+                                        onExitTvMode = {
+                                            tvMode = false
+                                            scope.launch {
+                                                activity.dataStore.edit { it[PrefKeys.TV_MODE] = false }
+                                            }
+                                        }
+                                    )
+                                } else {
+                                    val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }
+                                    val iconLibrary: @Composable () -> Unit = { Icon(SunsetIcons.Library, contentDescription = "Library") }
+                                    val iconSettings: @Composable () -> Unit = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
+                                    
+                                    val tabs = listOf(
+                                        "home" to iconHome,
+                                        "library" to iconLibrary,
+                                        "settings" to iconSettings
+                                    )
+
+                                    NavigationSuite(
+                                        tabs = tabs,
+                                        activeTab = activeTab,
+                                        onTabSelected = { activeTab = it }
+                                    ) { padding ->
+                                        Box(modifier = Modifier.padding(padding)) {
+                                            AnimatedContent(
+                                                targetState = activeTab,
+                                                transitionSpec = {
+                                                    fadeIn(animationSpec = tween(250)) + slideInVertically(
+                                                        animationSpec = tween(250),
+                                                        initialOffsetY = { it / 20 }
+                                                    ) togetherWith fadeOut(animationSpec = tween(150))
+                                                },
+                                                label = "tab"
+                                            ) { tab ->
+                                                when (tab) {
+                                                    "home" -> DashboardScreen(
+                                                        apiClient = client,
+                                                        baseUrl = baseUrl,
+                                                        userId = userId,
+                                                        onPlayItem = { item ->
+                                                            startPlayer(activity, client, item, baseUrl, userId)
+                                                        },
+                                                        onSelectItem = { item -> selectedItem = item }
+                                                    )
+                                                    "library" -> LibrariesScreen(
+                                                        apiClient = client,
+                                                        baseUrl = baseUrl,
+                                                        userId = userId,
+                                                        isAdmin = user?.isAdmin == true,
+                                                        onPlayItem = { item ->
+                                                            startPlayer(activity, client, item, baseUrl, userId)
+                                                        },
+                                                        onSelectItem = { selectedItem = it },
+                                                        onGoToSettings = { activeTab = "settings" }
+                                                    )
+                                                    "settings" -> SettingsScreen(
+                                                        apiClient = client,
+                                                        baseUrl = baseUrl,
+                                                        userId = userId,
+                                                        currentUsername = user?.username,
+                                                        isAdmin = user?.isAdmin == true,
+                                                        darkTheme = darkTheme,
+                                                        onDarkThemeChange = { newVal ->
+                                                            darkTheme = newVal
+                                                            scope.launch {
+                                                                activity.dataStore.edit { it[PrefKeys.DARK_MODE] = newVal }
+                                                            }
+                                                        },
+                                                        useMaterial3 = useMaterial3,
+                                                        onMaterial3Change = { newVal ->
+                                                            useMaterial3 = newVal
+                                                            scope.launch {
+                                                                activity.dataStore.edit { it[PrefKeys.USE_MATERIAL3] = newVal }
+                                                            }
+                                                        },
+                                                        tvMode = tvMode,
+                                                        onTvModeChange = { newVal ->
+                                                            tvMode = newVal
+                                                            scope.launch {
+                                                                activity.dataStore.edit { it[PrefKeys.TV_MODE] = newVal }
+                                                            }
+                                                        },
+                                                        onLogout = {
+                                                            scope.launch {
+                                                                activity.dataStore.edit {
+                                                                    it.remove(PrefKeys.USER_ID)
+                                                                    it.remove(PrefKeys.USERNAME)
+                                                                    it.remove(PrefKeys.IS_ADMIN)
+                                                                }
+                                                                user = null
+                                                                step = "login"
+                                                            }
+                                                        },
+                                                        onGoToAdmin = { /* Handled internally in SettingsScreen */ }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                        )
-                    } else {
-                    val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }
-                    val iconLibrary: @Composable () -> Unit = { Icon(SunsetIcons.Library, contentDescription = "Library") }
-                    val iconSettings: @Composable () -> Unit = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
-                    
-                    val tabs = listOf(
-                        "home" to iconHome,
-                        "library" to iconLibrary,
-                        "settings" to iconSettings
-                    )
-
-                    NavigationSuite(
-                        tabs = tabs,
-                        activeTab = activeTab,
-                        onTabSelected = { activeTab = it }
-                    ) { padding ->
-                        Box(modifier = Modifier.padding(padding)) {
-                            when (activeTab) {
-                                "home" -> DashboardScreen(
-                                    apiClient = client,
-                                    baseUrl = baseUrl,
-                                    userId = userId,
-                                    onPlayItem = { item ->
-                                        startPlayer(activity, client, item, baseUrl, userId)
-                                    },
-                                    onSelectItem = { item -> selectedItem = item }
-                                )
-                                "library" -> LibrariesScreen(
-                                    apiClient = client,
-                                    baseUrl = baseUrl,
-                                    userId = userId,
-                                    isAdmin = user?.isAdmin == true,
-                                    onPlayItem = { item ->
-                                        startPlayer(activity, client, item, baseUrl, userId)
-                                    },
-                                    onSelectItem = { selectedItem = it },
-                                    onGoToSettings = { activeTab = "settings" }
-                                )
-                                "settings" -> SettingsScreen(
-                                    apiClient = client,
-                                    baseUrl = baseUrl,
-                                    userId = userId,
-                                    currentUsername = user?.username,
-                                    isAdmin = user?.isAdmin == true,
-                                    darkTheme = darkTheme,
-                                    onDarkThemeChange = { newVal ->
-                                        darkTheme = newVal
-                                        scope.launch {
-                                            activity.dataStore.edit { it[PrefKeys.DARK_MODE] = newVal }
-                                        }
-                                    },
-                                    useMaterial3 = useMaterial3,
-                                    onMaterial3Change = { newVal ->
-                                        useMaterial3 = newVal
-                                        scope.launch {
-                                            activity.dataStore.edit { it[PrefKeys.USE_MATERIAL3] = newVal }
-                                        }
-                                    },
-                                    tvMode = tvMode,
-                                    onTvModeChange = { newVal ->
-                                        tvMode = newVal
-                                        scope.launch {
-                                            activity.dataStore.edit { it[PrefKeys.TV_MODE] = newVal }
-                                        }
-                                    },
-                                    onLogout = {
-                                        scope.launch {
-                                            activity.dataStore.edit {
-                                                it.remove(PrefKeys.USER_ID)
-                                                it.remove(PrefKeys.USERNAME)
-                                                it.remove(PrefKeys.IS_ADMIN)
-                                            }
-                                            user = null
-                                            step = "login"
-                                        }
-                                    },
-                                    onGoToAdmin = { /* Handled internally in SettingsScreen */ }
-                                )
-                            }
                         }
-                    }
                     }
                 }
         }

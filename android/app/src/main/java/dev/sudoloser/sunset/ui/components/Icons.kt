@@ -196,16 +196,4 @@ object SunsetIcons {
             moveTo(21f, 19f); horizontalLineToRelative(-18f); verticalLineToRelative(-14f); horizontalLineToRelative(18f); verticalLineToRelative(14f); close()
         }
     }.build()
-
-    val Record: ImageVector = ImageVector.Builder("Record", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(Color.White)) {
-            moveTo(12f, 20f); arcTo(8f, 8f, 0f, true, true, 20f, 12f); arcTo(8f, 8f, 0f, false, true, 12f, 20f); close()
-        }
-    }.build()
-
-    val Stop: ImageVector = ImageVector.Builder("Stop", 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = SolidColor(Color.White)) {
-            moveTo(6f, 6f); horizontalLineToRelative(12f); verticalLineToRelative(12f); horizontalLineToRelative(-12f); close()
-        }
-    }.build()
 }

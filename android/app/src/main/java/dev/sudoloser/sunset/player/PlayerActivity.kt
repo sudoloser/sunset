@@ -1,21 +1,14 @@
 package dev.sudoloser.sunset.player
 
 import android.app.PictureInPictureParams
-import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.media.MediaRecorder
-import android.media.projection.MediaProjectionManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -50,7 +43,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -93,9 +85,6 @@ class PlayerActivity : ComponentActivity() {
     private var mediaType: String? = null
     private var activeItemId: String? = null
     private var isInPiPMode by mutableStateOf(false)
-    private var isRecording by mutableStateOf(false)
-    private var recordingStartTime by mutableLongStateOf(0L)
-    private var mediaRecorder: MediaRecorder? = null
     
     private var mediaSession: MediaSession? = null
     
@@ -104,14 +93,6 @@ class PlayerActivity : ComponentActivity() {
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .build()
-
-    private val projectionLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK && result.data != null) {
-            startRecordingWithPermission(result.resultCode, result.data!!)
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -471,7 +452,6 @@ class PlayerActivity : ComponentActivity() {
                 PlayerControls(
                     title = currentEpisodeTitle,
                     isPlaying = isPlaying,
-                    isRecording = isRecording,
                     currentTime = currentTime,
                     duration = duration,
                     onTogglePlay = { player?.let { if (it.isPlaying) it.pause() else it.play() } },
@@ -490,7 +470,6 @@ class PlayerActivity : ComponentActivity() {
                         }
                     },
                     onPiPClick = { enterPiPMode() },
-                    onRecordClick = { toggleRecording() },
                     hasSubtitles = subtitleTracks.isNotEmpty(),
                     hasEpisodes = isSeries
                 )
@@ -668,7 +647,6 @@ class PlayerActivity : ComponentActivity() {
     fun PlayerControls(
         title: String,
         isPlaying: Boolean,
-        isRecording: Boolean,
         currentTime: Long,
         duration: Long,
         onTogglePlay: () -> Unit,
@@ -681,7 +659,6 @@ class PlayerActivity : ComponentActivity() {
         onEpisodesClick: () -> Unit,
         onAspectRatioClick: () -> Unit,
         onPiPClick: () -> Unit,
-        onRecordClick: () -> Unit,
         hasSubtitles: Boolean,
         hasEpisodes: Boolean
     ) {
@@ -704,15 +681,6 @@ class PlayerActivity : ComponentActivity() {
 
                 IconButton(onClick = onPiPClick) {
                     Icon(SunsetIcons.PiP, contentDescription = "Picture in Picture", tint = Color.White, modifier = Modifier.size(28.dp))
-                }
-
-                IconButton(onClick = onRecordClick) {
-                    Icon(
-                        if (isRecording) SunsetIcons.Stop else SunsetIcons.Record,
-                        contentDescription = if (isRecording) "Stop Recording" else "Record Clip",
-                        tint = if (isRecording) Color.Red else Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
                 }
 
                 if (hasSubtitles) {
@@ -822,177 +790,6 @@ class PlayerActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         player?.let { saveCurrentPlayback(it.currentPosition, it.duration, false, activeItemId) }
-    }
-
-    fun toggleRecording() {
-        if (isRecording) {
-            stopRecording()
-        } else {
-            val projectionManager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-            projectionLauncher.launch(projectionManager.createScreenCaptureIntent())
-        }
-    }
-
-    private fun startRecordingWithPermission(resultCode: Int, data: Intent) {
-        scope.launch(Dispatchers.IO) {
-            try {
-                val prefs = applicationContext.dataStore.data.first()
-                val resolution = prefs[PrefKeys.RECORD_RESOLUTION] ?: 1080
-
-                val (width, height) = when (resolution) {
-                    480 -> 854 to 480
-                    720 -> 1280 to 720
-                    1080 -> 1920 to 1080
-                    1440 -> 2560 to 1440
-                    2160 -> 3840 to 2160
-                    else -> 1920 to 1080
-                }
-
-                val bitrate = when (resolution) {
-                    480 -> 2_000_000
-                    720 -> 5_000_000
-                    1080 -> 8_000_000
-                    1440 -> 16_000_000
-                    2160 -> 30_000_000
-                    else -> 8_000_000
-                }
-
-                val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", java.util.Locale.US).format(java.util.Date())
-                val isSeries = mediaType?.uppercase() == "EPISODE" || !showTitle.isNullOrEmpty()
-                val fileName = if (isSeries) {
-                    "${showTitle ?: videoTitle ?: "clip"} ($timestamp).mp4"
-                } else {
-                    "${videoTitle ?: "clip"} ($timestamp).mp4"
-                }
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    val contentValues = ContentValues().apply {
-                        put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
-                        put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                        put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/SunSet")
-                    }
-                    val collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                    val uri = contentResolver.insert(collection, contentValues)
-
-                    if (uri != null) {
-                        val fd = contentResolver.openFileDescriptor(uri, "rw")?.fileDescriptor
-                        if (fd != null) {
-                            withContext(Dispatchers.Main) {
-                                if (Build.VERSION.SDK_INT >= 34) {
-                                    startForegroundService(Intent(this@PlayerActivity, MediaProjectionService::class.java))
-                                    delay(500)
-                                }
-                                setupAndStartRecorder(resultCode, data, fd, width, height, bitrate, uri)
-                            }
-                        }
-                    }
-                } else {
-                    @Suppress("DEPRECATION")
-                    val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
-                    val file = java.io.File(dir, "SunSet/$fileName")
-                    file.parentFile?.mkdirs()
-
-                    withContext(Dispatchers.Main) {
-                        if (Build.VERSION.SDK_INT >= 34) {
-                            startForegroundService(Intent(this@PlayerActivity, MediaProjectionService::class.java))
-                            delay(500)
-                        }
-                        setupAndStartRecorder(resultCode, data, null, width, height, bitrate, null, file.absolutePath)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("SunSet", "Failed to start recording", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(applicationContext, "Recording failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    private fun setupAndStartRecorder(
-        resultCode: Int,
-        data: Intent,
-        fileDescriptor: java.io.FileDescriptor?,
-        width: Int,
-        height: Int,
-        bitrate: Int,
-        contentUri: Uri?,
-        filePath: String? = null
-    ) {
-        val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(this)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
-        }
-
-        recorder.apply {
-            setVideoSource(MediaRecorder.VideoSource.SURFACE)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-            setVideoSize(width, height)
-            setVideoFrameRate(30)
-            setVideoEncodingBitRate(bitrate)
-            setMaxDuration(60 * 60 * 1000)
-
-            if (fileDescriptor != null) {
-                setOutputFile(fileDescriptor)
-            } else if (filePath != null) {
-                setOutputFile(filePath)
-            }
-
-            setOnInfoListener { _, what, _ ->
-                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
-                    stopRecording()
-                }
-            }
-
-            prepare()
-        }
-
-        val projectionManager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val projection = projectionManager.getMediaProjection(resultCode, data)
-        val inputSurface = recorder.surface
-        val virtualDisplay = projection.createVirtualDisplay(
-            "SunSet",
-            width, height, resources.displayMetrics.densityDpi,
-            0,
-            inputSurface,
-            null,
-            null
-        )
-
-        mediaRecorder = recorder
-        recorder.start()
-        isRecording = true
-        recordingStartTime = System.currentTimeMillis()
-
-        Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun stopRecording() {
-        try {
-            mediaRecorder?.stop()
-            mediaRecorder?.release()
-            mediaRecorder = null
-            isRecording = false
-            stopService(Intent(this, MediaProjectionService::class.java))
-
-            val endTime = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date())
-            val startTime = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(recordingStartTime))
-            val isSeries = mediaType?.uppercase() == "EPISODE" || !showTitle.isNullOrEmpty()
-
-            val msg = if (isSeries) {
-                "Saved as '${showTitle ?: videoTitle} ($startTime > $endTime).mp4'"
-            } else {
-                "Saved as '${videoTitle ?: "clip"} ($startTime > $endTime).mp4'"
-            }
-            Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-        } catch (e: Exception) {
-            Log.e("SunSet", "Failed to stop recording", e)
-            Toast.makeText(this, "Failed to save clip", Toast.LENGTH_SHORT).show()
-            isRecording = false
-        }
     }
 
     override fun onDestroy() {

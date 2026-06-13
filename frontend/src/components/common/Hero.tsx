@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '../common/Button';
 import { PlayIcon, InfoIcon } from '../common/Icons';
 import type { MediaItem } from '../../types';
@@ -10,6 +10,28 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!heroRef.current) return;
+      const rect = heroRef.current.getBoundingClientRect();
+      const heroHeight = heroRef.current.offsetHeight;
+      const progress = Math.max(0, Math.min(1, -rect.top / heroHeight));
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   if (!item) return (
     <div style={{ height: '70vh', backgroundColor: '#111', marginBottom: 'var(--spacing-xl)' }} />
   );
@@ -17,11 +39,18 @@ export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
   const backdropUrl = `/api/media/${item.id}/asset/backdrop.jpg`;
   const logoUrl = `/api/media/${item.id}/asset/logo.png`;
 
+  const parallaxY = scrollProgress * 120;
+  const scale = 1 + scrollProgress * 0.15;
+  const contentOpacity = 1 - scrollProgress * 1.8;
+  const contentTranslateY = scrollProgress * -60;
+  const overlayOpacity = 0.4 + scrollProgress * 0.5;
+
   return (
     <div 
+      ref={heroRef}
       style={{
         position: 'relative',
-        height: '80vh',
+        height: '85vh',
         width: '100%',
         marginBottom: 'var(--spacing-xl)',
         display: 'flex',
@@ -30,21 +59,35 @@ export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
         overflow: 'hidden'
       }}
     >
-      {/* Background Image Placeholder / Video */}
+      {/* Background Image with parallax */}
       <div 
         style={{
           position: 'absolute',
-          inset: 0,
+          inset: '-10%',
           backgroundColor: '#1a1a1a',
           backgroundImage: `url(${backdropUrl})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          zIndex: 0
+          zIndex: 0,
+          transform: `translateY(${parallaxY}px) scale(${scale})`,
+          transition: 'transform 0.1s linear',
+          willChange: 'transform'
         }}
       />
       
-      {/* Gradients */}
+      {/* Darkening overlay on scroll */}
+      <div style={{ 
+        position: 'absolute', 
+        inset: 0, 
+        background: `rgba(0,0,0,${overlayOpacity})`,
+        zIndex: 1,
+        transition: 'background 0.1s linear'
+      }} />
+
+      {/* Bottom gradient */}
       <div className="hero-gradient" style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
+      
+      {/* Side gradient */}
       <div style={{ 
         position: 'absolute', 
         inset: 0, 
@@ -52,7 +95,18 @@ export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
         zIndex: 1 
       }} />
 
-      <div style={{ position: 'relative', zIndex: 2, maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+      {/* Content with scroll animation */}
+      <div style={{ 
+        position: 'relative', 
+        zIndex: 2, 
+        maxWidth: '600px', 
+        margin: '0 auto', 
+        textAlign: 'center',
+        opacity: Math.max(0, contentOpacity),
+        transform: `translateY(${contentTranslateY}px) scale(${1 - scrollProgress * 0.1})`,
+        transition: 'opacity 0.1s linear, transform 0.1s linear',
+        willChange: 'opacity, transform'
+      }}>
         <img 
           src={logoUrl} 
           alt={item.title}
@@ -60,22 +114,45 @@ export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
             maxHeight: '150px', 
             maxWidth: '100%', 
             marginBottom: 'var(--spacing-lg)',
-            filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.5))'
+            filter: 'drop-shadow(0 0 10px rgba(0,0,0,0.5))',
+            opacity: isVisible ? 1 : 0,
+            transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+            transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+            transitionDelay: '0.1s'
           }}
           onError={(e) => e.currentTarget.style.display = 'none'}
         />
-        <h1 style={{ marginBottom: 'var(--spacing-md)', lineHeight: '1.1' }}>
+        <h1 style={{ 
+          marginBottom: 'var(--spacing-md)', 
+          lineHeight: '1.1',
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+          transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+          transitionDelay: '0.2s'
+        }}>
           {item.title}
         </h1>
         <p style={{
           fontSize: '1.1rem',
           color: 'var(--text-secondary)',
-          marginBottom: 'var(--spacing-xl)'
+          marginBottom: 'var(--spacing-xl)',
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+          transitionDelay: '0.35s'
         }}>
           {item.genres?.split(',').slice(0, 3).join(' · ') || item.year}
         </p>
         
-        <div style={{ display: 'flex', gap: 'var(--spacing-md)', justifyContent: 'center' }}>
+        <div style={{ 
+          display: 'flex', 
+          gap: 'var(--spacing-md)', 
+          justifyContent: 'center',
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+          transitionDelay: '0.5s'
+        }}>
           <Button size="lg" onClick={() => onPlay(item)}>
             <PlayIcon size={24} /> Play
           </Button>

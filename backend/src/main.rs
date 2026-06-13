@@ -490,7 +490,7 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
         };
 
         let (mut write, mut read) = ws_stream.split();
-        let mut heartbeat_interval = 41250;
+        let mut heartbeat_interval = 41250u64;
         let mut sequence: Option<u64> = None;
 
         // Discord HELLO
@@ -498,7 +498,9 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
             msg = read.next() => {
                 if let Some(Ok(Message::Text(msg))) = msg {
                     if let Ok(val) = serde_json::from_str::<serde_json::Value>(&msg) {
-                        heartbeat_interval = val["d"]["heartbeat_interval"].as_u64().unwrap_or(41250);
+                        if let Some(interval) = val["d"]["heartbeat_interval"].as_u64() {
+                            heartbeat_interval = interval;
+                        }
                         info!("Discord Gateway HELLO received, heartbeat interval: {}ms", heartbeat_interval);
                     } else {
                         warn!("Discord Gateway: failed to parse HELLO: {}", msg);
@@ -514,6 +516,13 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
             }
         }
 
+        // Send heartbeat immediately (op 1) as required by Discord before IDENTIFY
+        let hb = serde_json::json!({"op": 1, "d": sequence});
+        if let Err(e) = write.send(Message::Text(hb.to_string())).await {
+            warn!("Initial Discord heartbeat failed: {}", e);
+            continue;
+        }
+
         // Identify
         let identify = serde_json::json!({
             "op": 2,
@@ -521,7 +530,7 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                 "token": token.clone(),
                 "properties": {
                     "os": "linux",
-                    "browser": "SunSet Media Server",
+                    "browser": "SunSet",
                     "device": "SunSet"
                 },
                 "presence": {
@@ -530,8 +539,7 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                     "since": 0,
                     "activities": []
                 },
-                "intents": 0,
-                "capabilities": 65
+                "intents": 0
             }
         });
         if let Err(e) = write.send(Message::Text(identify.to_string())).await {
@@ -540,6 +548,9 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
         }
 
         let mut heartbeat_timer = tokio::time::interval(std::time::Duration::from_millis(heartbeat_interval));
+        heartbeat_timer.tick().await; // discard first tick (immediate)
+        
+        let mut identified = false;
         
         loop {
             tokio::select! {
@@ -564,6 +575,11 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                         }
                         None => {
                             debug!("Discord RPC channel closed, shutting down session");
+                            // Send close frame
+                            let _ = write.send(Message::Close(Some(tungstenite::protocol::frame::CloseFrame {
+                                code: tungstenite::protocol::frame::coding::CloseCode::Normal,
+                                reason: std::borrow::Cow::Borrowed("Client disconnect"),
+                            }))).await;
                             return;
                         }
                     }
@@ -578,7 +594,18 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                                     0 => {
                                         let t = val["t"].as_str().unwrap_or("");
                                         if t == "READY" {
+                                            identified = true;
                                             info!("Discord RPC connected successfully (READY received)");
+                                        } else if t == "PRESENCE_UPDATE" {
+                                            debug!("Discord PRESENCE_UPDATE received");
+                                        }
+                                    }
+                                    1 => {
+                                        // Heartbeat request from Discord
+                                        let hb = serde_json::json!({"op": 1, "d": sequence});
+                                        if let Err(e) = write.send(Message::Text(hb.to_string())).await {
+                                            warn!("Discord heartbeat response failed: {}", e);
+                                            break;
                                         }
                                     }
                                     7 => {
@@ -586,8 +613,21 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                                         break;
                                     }
                                     9 => {
-                                        warn!("Discord Invalid Session (op 9)");
+                                        warn!("Discord Invalid Session (op 9), waiting before reconnect...");
+                                        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                                         break;
+                                    }
+                                    10 => {
+                                        // Hello during resume
+                                        if let Some(interval) = val["d"]["heartbeat_interval"].as_u64() {
+                                            heartbeat_interval = interval;
+                                            heartbeat_timer = tokio::time::interval(std::time::Duration::from_millis(heartbeat_interval));
+                                            heartbeat_timer.tick().await;
+                                        }
+                                    }
+                                    11 => {
+                                        // Heartbeat ACK - connection is alive
+                                        debug!("Discord heartbeat ACK received");
                                     }
                                     _ => {}
                                 }
@@ -1089,9 +1129,10 @@ async fn search_media(Query(params): Query<std::collections::HashMap<String, Str
     let query = params.get("q").cloned().unwrap_or_default();
     let user_id = params.get("user_id").cloned().unwrap_or_default();
     let search_pattern = format!("%{}%", query);
-    let items = sqlx::query_as::<_, MediaItem>("SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi LEFT JOIN playback_state ps ON ps.item_id = mi.id AND ps.user_id = ? WHERE mi.title LIKE ? LIMIT 20")
+    let items = sqlx::query_as::<_, MediaItem>("SELECT mi.id, mi.title, mi.show_title, mi.collection_name, mi.media_type, mi.year, mi.season, mi.episode, mi.added_at, mi.file_path, mi.description, mi.\"cast\", mi.genres, mi.rating, mi.tmdb_id, mi.poster_path, mi.backdrop_path, mi.version_tag, (ps.timestamp / ps.duration) as progress FROM media_items mi LEFT JOIN playback_state ps ON ps.item_id = mi.id AND ps.user_id = ? WHERE mi.title LIKE ? OR mi.show_title LIKE ? LIMIT 20")
         .bind(user_id)
-        .bind(search_pattern)
+        .bind(&search_pattern)
+        .bind(&search_pattern)
         .fetch_all(&state.pool).await.unwrap();
     Json(items)
 }
@@ -1591,9 +1632,16 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                 manager.sessions.get(&user_id).unwrap()
             };
 
+            // When paused, clear the activity instead of killing the session
             if payload.is_playing == Some(false) {
-                manager.sessions.remove(&user_id);
-                info!("Closed Discord RPC session for user {} (playback stopped)", user_id);
+                let clear_presence = DiscordPresence {
+                    status: status,
+                    since: None,
+                    activities: vec![],
+                    afk: false,
+                };
+                let _ = session.presence_tx.send(clear_presence);
+                debug!("Cleared Discord presence for user {} (playback stopped)", user_id);
                 return Json(true);
             }
 
@@ -1617,7 +1665,7 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                 debug!("Sending Discord presence: {} ({}%)", name, progress);
 
                 let image_url = if let Some(path) = poster_path {
-                    format!("https://image.tmdb.org/t/p/original{}", path)
+                    format!("https://image.tmdb.org/t/p/w500{}", path)
                 } else {
                     format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)
                 };
@@ -1625,10 +1673,14 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                 let state_text = if media_type == "episode" {
                     let ep = item.get::<Option<i32>, _>("episode").unwrap_or(1);
                     let season = item.get::<Option<i32>, _>("season").unwrap_or(1);
-                    format!("Season {} Episode {} ({}%)", season, ep, progress)
+                    format!("S{}E{} ({}%)", season, ep, progress)
                 } else {
-                    format!("Progress: {}%", progress)
+                    format!("{}%", progress)
                 };
+
+                // Calculate start timestamp: now - playback position
+                let now_secs = chrono::Utc::now().timestamp();
+                let start_ms = ((now_secs as f64 - payload.timestamp) * 1000.0).max(0.0) as u64;
 
                 let presence = DiscordPresence {
                     status: status,
@@ -1645,8 +1697,7 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                             small_text: None,
                         }),
                         timestamps: Some(DiscordTimestamps {
-                            // Discord expects timestamps in milliseconds for activities
-                            start: Some((chrono::Utc::now().timestamp() as u64 - payload.timestamp as u64) * 1000),
+                            start: Some(start_ms),
                             end: None,
                         }),
                     }],
