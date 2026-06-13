@@ -47,7 +47,7 @@ class ApiClient(baseUrl: String) {
         json.decodeFromString<T>(responseBody)
     }
 
-    private suspend inline fun <reified T> put(endpoint: String, body: Any): T = withContext(Dispatchers.IO) {
+    private suspend inline fun <reified T, reified B> put(endpoint: String, body: B): T = withContext(Dispatchers.IO) {
         val requestBody = json.encodeToString(body).toRequestBody(mediaType)
         val request = Request.Builder()
             .url("$baseUrl/api$endpoint")

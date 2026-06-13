@@ -45,6 +45,7 @@ fun SearchScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.95f))
+            .statusBarsPadding()
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
