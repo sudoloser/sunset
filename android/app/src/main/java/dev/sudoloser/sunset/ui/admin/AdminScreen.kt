@@ -13,11 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sudoloser.sunset.api.ApiClient
+import android.util.Log
 import dev.sudoloser.sunset.data.models.*
 import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.delay
@@ -57,13 +57,13 @@ fun AdminScreen(
                 uptime = apiClient.getUptime()
                 delay(1000)
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("SunSet", "Failed to load admin data", e) }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(32.dp)
@@ -74,8 +74,8 @@ fun AdminScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Admin Panel", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
-            SunsetButton(text = "Scan All", onClick = { scope.launch { try { apiClient.triggerScan() } catch (_: Exception) {} } })
+            Text("Admin Panel", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+            SunsetButton(text = "Scan All", onClick = { scope.launch { try { apiClient.triggerScan() } catch (e: Exception) { Log.e("SunSet", "Scan failed", e) } } })
         }
 
         // Server Status
@@ -85,29 +85,29 @@ fun AdminScreen(
                 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
-                        Text("UPTIME", style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontWeight = FontWeight.Bold)
-                        Text(formatUptime(uptime), color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                        Text("UPTIME", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                        Text(formatUptime(uptime), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("VERSION", style = MaterialTheme.typography.labelSmall, color = Color.Gray, fontWeight = FontWeight.Bold)
-                        Text("v0.2.0", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                        Text("VERSION", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                        Text("v0.2.0", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                     }
                 }
 
                 storage?.let { s ->
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Column {
-                            Text("ITEMS", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                            Text(s.itemCount.toString(), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("ITEMS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(s.itemCount.toString(), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                         }
                         Column {
-                            Text("USERS", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                            Text(s.userCount.toString(), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("USERS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(s.userCount.toString(), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("TOTAL SIZE", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                            Text(formatBytes(s.totalSize), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("TOTAL SIZE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(formatBytes(s.totalSize), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -120,7 +120,7 @@ fun AdminScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Libraries", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     IconButton(onClick = { showAddLib = !showAddLib }) {
-                        Icon(SunsetIcons.Plus, null, tint = Color.White)
+                        Icon(SunsetIcons.Plus, null, tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 
@@ -146,7 +146,7 @@ fun AdminScreen(
                                     apiClient.addLibrary(LibraryInput(newLibName, newLibPath, newLibType))
                                     libraries = apiClient.getLibraries()
                                     showAddLib = false
-                                } catch (_: Exception) {}
+                                } catch (e: Exception) { Log.e("SunSet", "Failed to add library", e) }
                             }
                         }, fullWidth = true)
                     }
@@ -157,17 +157,17 @@ fun AdminScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                             .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(lib.name, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text(lib.path, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                            Text(lib.name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(lib.path, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         IconButton(onClick = {
-                            scope.launch { try { apiClient.deleteLibrary(lib.id); libraries = apiClient.getLibraries() } catch (_: Exception) {} }
+                            scope.launch { try { apiClient.deleteLibrary(lib.id); libraries = apiClient.getLibraries() } catch (e: Exception) { Log.e("SunSet", "Failed to delete library", e) } }
                         }) {
                             Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
                         }
@@ -182,7 +182,7 @@ fun AdminScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("User Management", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     IconButton(onClick = { showNewUser = !showNewUser }) {
-                        Icon(SunsetIcons.Plus, null, tint = Color.White)
+                        Icon(SunsetIcons.Plus, null, tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 
@@ -192,7 +192,7 @@ fun AdminScreen(
                         SunsetInput(value = newUserPass, onValueChange = { newUserPass = it }, label = "Password", password = true)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = newUserAdmin, onCheckedChange = { newUserAdmin = it })
-                            Text("Administrator", color = Color.White)
+                            Text("Administrator", color = MaterialTheme.colorScheme.onSurface)
                         }
                         SunsetButton(text = "Create User", onClick = {
                             scope.launch {
@@ -200,7 +200,7 @@ fun AdminScreen(
                                     apiClient.createUser(CreateUserRequest(newUserName, newUserPass, newUserAdmin))
                                     users = apiClient.getUsers()
                                     showNewUser = false
-                                } catch (_: Exception) {}
+                                } catch (e: Exception) { Log.e("SunSet", "Failed to create user", e) }
                             }
                         }, fullWidth = true)
                     }
@@ -213,12 +213,12 @@ fun AdminScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(u.username, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(u.username, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             val isAdminUser = u.isAdmin
-                            Text(if (isAdminUser) "ADMIN" else "USER", style = MaterialTheme.typography.labelSmall, color = if (isAdminUser) MaterialTheme.colorScheme.primary else Color.Gray)
+                            Text(if (isAdminUser) "ADMIN" else "USER", style = MaterialTheme.typography.labelSmall, color = if (isAdminUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         TextButton(onClick = {
-                            scope.launch { try { apiClient.deleteUser(u.userId); users = apiClient.getUsers() } catch (_: Exception) {} }
+                            scope.launch { try { apiClient.deleteUser(u.userId); users = apiClient.getUsers() } catch (e: Exception) { Log.e("SunSet", "Failed to delete user", e) } }
                         }) { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) }
                     }
                 }
@@ -229,17 +229,17 @@ fun AdminScreen(
         SunsetCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Invite Codes", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Text("Generate single-use registration codes.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                Text("Generate single-use registration codes.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 
                 SunsetButton(text = "Generate Code", onClick = {
-                    scope.launch { try { inviteCode = apiClient.createInvite() } catch (_: Exception) {} }
+                    scope.launch { try { inviteCode = apiClient.createInvite() } catch (e: Exception) { Log.e("SunSet", "Failed to create invite", e) } }
                 }, variant = ButtonVariant.Secondary, fullWidth = true)
 
                 if (inviteCode.isNotEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {

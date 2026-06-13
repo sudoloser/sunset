@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.sudoloser.sunset.api.ApiClient
+import android.util.Log
 import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.Job
@@ -35,16 +36,16 @@ fun SearchScreen(
             val libs = apiClient.getLibraries()
             val allItems = mutableListOf<MediaItem>()
             libs.forEach { lib ->
-                try { allItems.addAll(apiClient.getLibraryItems(lib.id)) } catch (_: Exception) {}
+                try { allItems.addAll(apiClient.getLibraryItems(lib.id)) } catch (e: Exception) { Log.e("SunSet", "Failed to load library items", e) }
             }
             libraryItems = allItems
-        } catch (_: Exception) {}
+                            } catch (e: Exception) { Log.e("SunSet", "Search failed", e) }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.95f))
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .padding(16.dp)
     ) {
@@ -66,7 +67,7 @@ fun SearchScreen(
                                     seen.add(title)
                                     true
                                 }
-                            } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("SunSet", "Failed to load libraries", e) }
                         }                    } else {
                         results = emptyList()
                     }
@@ -99,7 +100,7 @@ fun SearchScreen(
             }
         } else {
             if (results.isEmpty()) {
-                Text("No results found", color = androidx.compose.ui.graphics.Color.Gray)
+                Text("No results found", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),

@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,7 +61,7 @@ fun Poster(
                         .fillMaxWidth()
                         .height(4.dp)
                         .align(Alignment.BottomCenter)
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f))
                 ) {
                     Box(
                         modifier = Modifier
@@ -78,12 +77,12 @@ fun Poster(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(8.dp)
-                        .background(Color(0xCC000000), RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.8f), RoundedCornerShape(4.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "COLLECTION",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp
@@ -96,13 +95,13 @@ fun Poster(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
-                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = item.versionTag,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.ExtraBold
                     )

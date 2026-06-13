@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,7 +36,7 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -59,7 +58,7 @@ fun LoginScreen(
                 Text(
                     text = "Sign In",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.Start)
                 )
@@ -109,14 +108,14 @@ fun LoginScreen(
                 Spacer(Modifier.height(24.dp))
 
                 TextButton(onClick = { mode = "signup"; step = 0; error = null }) {
-                    Text("Don't have an account? Sign Up", color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text("Don't have an account? Sign Up", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
             } else {
                 // SIGN UP FLOW
                 Text(
                     text = if (step == 0) "Enter Invite Code" else "Create Account",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.Start)
                 )
@@ -200,7 +199,7 @@ fun LoginScreen(
                 Spacer(Modifier.height(24.dp))
 
                 TextButton(onClick = { mode = "login"; error = null }) {
-                    Text("Already have an account? Sign In", color = Color.Gray, fontWeight = FontWeight.Bold)
+                    Text("Already have an account? Sign In", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
             }
         }

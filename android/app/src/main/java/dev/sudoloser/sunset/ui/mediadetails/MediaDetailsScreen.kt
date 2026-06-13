@@ -29,6 +29,7 @@ import android.net.Uri
 import android.widget.Toast
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
+import android.util.Log
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.data.models.MediaItem
@@ -105,14 +106,14 @@ fun MediaDetailsScreen(
                 val userItems = apiClient.getUserItems(userId)
                 inMyList = userItems.any { it.id == item.id }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("SunSet", "Failed to load media details", e) }
         loading = false
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Heavy blurred backdrop
         AsyncImage(
@@ -151,7 +152,7 @@ fun MediaDetailsScreen(
                         .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.95f)),
+                                colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background.copy(alpha = 0.95f)),
                                 startY = 400f
                             )
                         )
@@ -161,7 +162,7 @@ fun MediaDetailsScreen(
                     icon = SunsetIcons.Back,
                     onClick = onClose,
                     modifier = Modifier.padding(16.dp),
-                    backgroundColor = Color.Black.copy(alpha = 0.5f)
+                    backgroundColor = MaterialTheme.colorScheme.background.copy(alpha = 0.5f)
                 )
 
                 Column(
@@ -202,7 +203,7 @@ fun MediaDetailsScreen(
                                             else apiClient.addUserItem(userId, item.id)
                                             inMyList = !inMyList
                                         }
-                                    } catch (_: Exception) {}
+                                    } catch (e: Exception) { Log.e("SunSet", "Failed to update My List", e) }
                                 }
                             },
                             variant = ButtonVariant.Secondary,
@@ -213,7 +214,7 @@ fun MediaDetailsScreen(
                             SunsetIconButton(
                                 icon = SunsetIcons.Download,
                                 onClick = { downloadItem(item.id, item.title) },
-                                backgroundColor = Color.White.copy(alpha = 0.15f)
+                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             )
                         }
                     }
@@ -229,24 +230,24 @@ fun MediaDetailsScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item.year?.let {
-                        Text(it.toString(), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                        Text(it.toString(), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     }
                     if (episodes.isNotEmpty()) {
                         val seasonCount = episodes.map { it.season ?: 1 }.distinct().size
-                        Text("$seasonCount Seasons", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                        Text("$seasonCount Seasons", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     }
                     item.rating?.let {
-                        Text("TMDB ${"%.1f".format(it)}/10", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                        Text("TMDB ${"%.1f".format(it)}/10", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     }
 
                     if (item.versionTag != null) {
                         Box(
                             modifier = Modifier
-                                .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
-                            Text(item.versionTag, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(item.versionTag, color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     
@@ -255,7 +256,7 @@ fun MediaDetailsScreen(
                             Icon(
                                 imageVector = if (star <= userRating) SunsetIcons.Star else SunsetIcons.StarOutline,
                                 contentDescription = null,
-                                tint = if (star <= userRating) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.3f),
+                                tint = if (star <= userRating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                                 modifier = Modifier.size(24.dp).clickable { userRating = star }
                             )
                         }
@@ -268,7 +269,7 @@ fun MediaDetailsScreen(
                     text = item.description ?: "No description available for this title.",
                     style = MaterialTheme.typography.bodyLarge,
                     lineHeight = 26.sp,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Medium
                 )
 
@@ -280,7 +281,7 @@ fun MediaDetailsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Episodes", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                        Text("Episodes", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                         
                         val seasons = episodes.map { it.season ?: 1 }.distinct().sorted()
                         var seasonExpanded by remember { mutableStateOf(false) }
@@ -288,9 +289,9 @@ fun MediaDetailsScreen(
                         Box {
                             TextButton(
                                 onClick = { seasonExpanded = true },
-                                colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                             ) {
-                                Text("Season $selectedSeason ▾", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                                Text("Season $selectedSeason ▾", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                             DropdownMenu(
                                 expanded = seasonExpanded,
@@ -299,7 +300,7 @@ fun MediaDetailsScreen(
                             ) {
                                 seasons.forEach { s ->
                                     DropdownMenuItem(
-                                        text = { Text("Season $s", color = Color.White, fontWeight = FontWeight.Bold) },
+                                        text = { Text("Season $s", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
                                         onClick = { selectedSeason = s; seasonExpanded = false }
                                     )
                                 }
@@ -319,8 +320,8 @@ fun MediaDetailsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(Color.White.copy(alpha = 0.08f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
                                     .clickable { onPlay(ep) }
                                     .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -329,7 +330,7 @@ fun MediaDetailsScreen(
                                 Text(
                                     text = ep.episode.toString(),
                                     style = MaterialTheme.typography.titleLarge,
-                                    color = Color.White.copy(alpha = 0.5f),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                     fontWeight = FontWeight.ExtraBold,
                                     modifier = Modifier.width(28.dp),
                                     textAlign = TextAlign.Center
@@ -340,7 +341,7 @@ fun MediaDetailsScreen(
                                             ep.title,
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.ExtraBold,
-                                            color = Color.White
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         if ((ep.progress ?: 0.0) > 0.7) {
                                             Icon(
@@ -352,12 +353,12 @@ fun MediaDetailsScreen(
                                         }
                                     }
                                 }
-                                Icon(SunsetIcons.Play, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(SunsetIcons.Play, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(12.dp))
                                 Icon(
                                     SunsetIcons.Download,
                                     contentDescription = "Download",
-                                    tint = Color.White.copy(alpha = 0.7f),
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                     modifier = Modifier
                                         .size(20.dp)
                                         .clickable { downloadItem(ep.id, ep.title) }
@@ -371,7 +372,7 @@ fun MediaDetailsScreen(
                 val castList = item.cast?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
                 if (castList.isNotEmpty()) {
                     Spacer(Modifier.height(48.dp))
-                    Text("Cast", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text("Cast", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(24.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         castList.take(6).forEach { actor ->
@@ -386,13 +387,13 @@ fun MediaDetailsScreen(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.1f))
-                                        .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape),
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(initials, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                                    Text(initials, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                                 }
-                                Text(actor, style = MaterialTheme.typography.bodyLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(actor, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

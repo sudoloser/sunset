@@ -8,11 +8,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sudoloser.sunset.api.ApiClient
+import android.util.Log
 import dev.sudoloser.sunset.data.models.Library
 import dev.sudoloser.sunset.data.models.LibraryType
 import dev.sudoloser.sunset.data.models.MediaItem
@@ -67,7 +67,7 @@ fun DashboardScreen(
                 try { 
                     val items = apiClient.getLibraryItems(lib.id, userId)
                     itemsMap[lib.id] = dedupe(items).take(15)
-                } catch (_: Exception) {}
+                } catch (e: Exception) { Log.e("SunSet", "Failed to load library items", e) }
             }
 
             val gens = apiClient.getGenres()
@@ -76,7 +76,7 @@ fun DashboardScreen(
                 try { 
                     val items = apiClient.getGenreItems(g, userId)
                     genreMap[g] = dedupe(items).take(15)
-                } catch (_: Exception) {}
+                } catch (e: Exception) { Log.e("SunSet", "Failed to load library items", e) }
             }
 
             recentlyAdded = dedupedRecent
@@ -86,7 +86,7 @@ fun DashboardScreen(
             genres = gens.take(5)
             genreItems = genreMap
             featured = dedupedRecent.firstOrNull()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("SunSet", "Failed to load dashboard data", e) }
         loading = false
     }
 
@@ -191,7 +191,7 @@ fun DashboardScreen(
             SunsetIconButton(
                 icon = SunsetIcons.Search,
                 onClick = onSearch,
-                backgroundColor = Color.Black.copy(alpha = 0.4f),
+                backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                 size = 28.dp
             )
         }

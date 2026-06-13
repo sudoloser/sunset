@@ -36,7 +36,7 @@ fun NavigationSuite(
     if (useRail) {
         Row(modifier = Modifier.fillMaxSize()) {
             NavigationRail(
-                containerColor = Color(0xFF121212),
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             ) {
                 Spacer(Modifier.height(48.dp))
@@ -51,9 +51,9 @@ fun NavigationSuite(
                             }
                         },
                         colors = NavigationRailItemDefaults.colors(
-                            selectedIconColor = Color.White,
+                            selectedIconColor = MaterialTheme.colorScheme.onSurface,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            selectedTextColor = Color.White,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
                             indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                         )
                     )
@@ -61,7 +61,7 @@ fun NavigationSuite(
             }
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
-                containerColor = Color.Black
+                containerColor = MaterialTheme.colorScheme.background
             ) { padding ->
                 content(padding)
             }
@@ -70,7 +70,7 @@ fun NavigationSuite(
         Scaffold(
             bottomBar = {
                 NavigationBar(
-                    containerColor = Color(0xFF121212),
+                    containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp,
                     modifier = Modifier.border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 ) {
@@ -82,9 +82,9 @@ fun NavigationSuite(
                             icon = { icon() },
                             label = { Text(label, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, fontSize = 10.sp) },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.White,
+                                selectedIconColor = MaterialTheme.colorScheme.onSurface,
                                 unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                selectedTextColor = Color.White,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
                                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 indicatorColor = Color.Transparent
                             )
@@ -92,7 +92,7 @@ fun NavigationSuite(
                     }
                 }
             },
-            containerColor = Color.Black
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             content(padding)
         }

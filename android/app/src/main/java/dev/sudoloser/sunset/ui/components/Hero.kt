@@ -51,8 +51,8 @@ fun Hero(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.4f),
-                            Color.Black.copy(alpha = 0.9f)
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.4f),
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.9f)
                         ),
                         startY = 0f,
                         endY = 1400f
@@ -78,7 +78,7 @@ fun Hero(
             if (item.genres != null) {
                 Text(
                     text = item.genres.split(",").take(3).joinToString(" • "),
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 20.dp)
@@ -86,7 +86,7 @@ fun Hero(
             } else if (item.year != null) {
                 Text(
                     text = item.year.toString(),
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontSize = 14.sp,
                     modifier = Modifier.padding(bottom = 20.dp)
                 )

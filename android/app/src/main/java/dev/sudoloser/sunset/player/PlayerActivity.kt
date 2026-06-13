@@ -258,7 +258,7 @@ class PlayerActivity : ComponentActivity() {
                         .build()
                     subtitleConfigs.add(subConfig)
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("SunSet", "Failed to load subtitles", e) }
 
             val mediaItem = MediaItem.Builder()
                 .setUri(currentVideoUrl)
@@ -710,7 +710,7 @@ class PlayerActivity : ComponentActivity() {
                     .post(payload.toRequestBody("application/json".toMediaTypeOrNull()))
                     .build()
                 httpClient.newCall(request).execute()
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("SunSet", "Failed to save playback", e) }
         }
     }
 

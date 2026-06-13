@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sudoloser.sunset.api.ApiClient
+import android.util.Log
 import dev.sudoloser.sunset.data.models.Library
 import dev.sudoloser.sunset.data.models.LibraryType
 import dev.sudoloser.sunset.data.models.MediaItem
@@ -68,11 +69,11 @@ fun LibrariesScreen(
                         if (state.duration != null && state.duration > 0) {
                             progress[item.id] = (state.timestamp.toFloat() / state.duration.toFloat()).coerceIn(0f, 1f)
                         }
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { Log.e("SunSet", "Failed to load playback", e) }
                 }
                 playbackProgress = progress
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("SunSet", "Failed to load library data", e) }
         loading = false
     }
 

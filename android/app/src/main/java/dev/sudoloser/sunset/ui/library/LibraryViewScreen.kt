@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sudoloser.sunset.api.ApiClient
+import android.util.Log
 import dev.sudoloser.sunset.data.models.Library
 import dev.sudoloser.sunset.data.models.LibraryType
 import dev.sudoloser.sunset.data.models.MediaItem
@@ -38,7 +39,7 @@ fun LibraryViewScreen(
     LaunchedEffect(library.id) {
         try {
             items = apiClient.getLibraryItems(library.id)
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("SunSet", "Failed to load library items", e) }
         loading = false
     }
 

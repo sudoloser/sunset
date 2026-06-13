@@ -28,6 +28,9 @@ class ApiClient(baseUrl: String) {
             .get()
             .build()
         val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            throw Exception("HTTP ${response.code}: ${response.message}")
+        }
         val body = response.body?.string() ?: throw Exception("Empty response")
         json.decodeFromString<T>(body)
     }
@@ -43,6 +46,9 @@ class ApiClient(baseUrl: String) {
             .post(requestBody)
             .build()
         val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            throw Exception("HTTP ${response.code}: ${response.message}")
+        }
         val responseBody = response.body?.string() ?: return@withContext json.decodeFromString<T>("null")
         json.decodeFromString<T>(responseBody)
     }
@@ -54,6 +60,9 @@ class ApiClient(baseUrl: String) {
             .put(requestBody)
             .build()
         val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            throw Exception("HTTP ${response.code}: ${response.message}")
+        }
         val responseBody = response.body?.string() ?: throw Exception("Empty response")
         json.decodeFromString<T>(responseBody)
     }

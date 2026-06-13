@@ -68,7 +68,7 @@ fun SunsetIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: androidx.compose.ui.unit.Dp = 24.dp,
-    tint: Color = Color.White,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
     backgroundColor: Color = Color.Transparent
 ) {
     Box(

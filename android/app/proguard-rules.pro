@@ -1,11 +1,23 @@
 # Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in /data/data/com.termux/files/home/android-sdk/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.
 
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Keep data models for serialization
+-keep class dev.sudoloser.sunset.data.models.** { *; }
+-keep class dev.sudoloser.sunset.api.** { *; }
 
-# Add any project specific keep rules here:
--keep class dev.sudoloser.sunset.** { *; }
+# kotlinx.serialization
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
+-keepclasseswithmembers class kotlinx.serialization.json.** { kotlinx.serialization.KSerializer serializer(...); }
+-keep,includedescriptorclasses class dev.sudoloser.sunset.**$$serializer { *; }
+-keepclassmembers class dev.sudoloser.sunset.** { *** Companion; }
+-keepclasseswithmembers class dev.sudoloser.sunset.** { kotlinx.serialization.KSerializer serializer(...); }
+
+# OkHttp
+-dontwarn okhttp3.internal.platform.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+
+# Coil
+-dontwarn coil.**

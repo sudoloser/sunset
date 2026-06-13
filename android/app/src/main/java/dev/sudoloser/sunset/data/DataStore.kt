@@ -15,6 +15,7 @@ object PrefKeys {
     val USERNAME = stringPreferencesKey("username")
     val IS_ADMIN = stringPreferencesKey("is_admin")
     val DARK_MODE = booleanPreferencesKey("dark_mode")
+    val USE_MATERIAL3 = booleanPreferencesKey("use_material3")
     val SUBTITLE_COLOR = stringPreferencesKey("subtitle_color")
     val SUBTITLE_BACKGROUND_OPACITY = floatPreferencesKey("subtitle_background_opacity")
     val SUBTITLE_SIZE = intPreferencesKey("subtitle_size")

@@ -1,13 +1,7 @@
 package dev.sudoloser.sunset
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.webkit.JavascriptInterface
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,9 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
 import dev.sudoloser.sunset.api.ApiClient
+import android.util.Log
 import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.data.models.SetupStatus
 import dev.sudoloser.sunset.data.models.User
@@ -71,6 +65,7 @@ fun AppContent(activity: ComponentActivity) {
     var showAdmin by remember { mutableStateOf(false) }
     var activeTab by remember { mutableStateOf("home") }
     var darkTheme by remember { mutableStateOf(true) }
+    var useMaterial3 by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
     // Back button handling
@@ -87,6 +82,7 @@ fun AppContent(activity: ComponentActivity) {
     // Load saved state
     LaunchedEffect(Unit) {
         darkTheme = activity.dataStore.data.first()[PrefKeys.DARK_MODE] ?: true
+        useMaterial3 = activity.dataStore.data.first()[PrefKeys.USE_MATERIAL3] ?: true
         val url = activity.dataStore.data.first()[PrefKeys.SERVER_URL]
         if (url != null) {
             serverUrl = url
@@ -104,7 +100,7 @@ fun AppContent(activity: ComponentActivity) {
                                 step = "main"
                                 return@LaunchedEffect
                             }
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) { Log.e("SunSet", "Failed to load user profile", e) }
                     }
                     step = "login"
                 } else {
@@ -120,7 +116,7 @@ fun AppContent(activity: ComponentActivity) {
 
         when (step) {
         "loading" -> {
-            SunsetTheme {
+            SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = NetflixRed)
                 }
@@ -131,7 +127,7 @@ fun AppContent(activity: ComponentActivity) {
             var errorMessage by remember { mutableStateOf<String?>(null) }
             var connecting by remember { mutableStateOf(false) }
 
-            SunsetTheme {
+            SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                 ServerSelectionScreen(
                     errorMessage = errorMessage,
                     loading = connecting,
@@ -167,7 +163,7 @@ fun AppContent(activity: ComponentActivity) {
 
         "onboarding" -> {
             apiClient?.let { client ->
-                SunsetTheme {
+                SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                     OnboardingScreen(
                         apiClient = client,
                         onComplete = { u ->
@@ -188,7 +184,7 @@ fun AppContent(activity: ComponentActivity) {
 
         "login" -> {
             apiClient?.let { client ->
-                SunsetTheme {
+                SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                     LoginScreen(
                         apiClient = client,
                         onLogin = { u ->
@@ -213,7 +209,7 @@ fun AppContent(activity: ComponentActivity) {
                 val userId = user?.userId
 
                 if (showSearch) {
-                    SunsetTheme {
+                    SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                         SearchScreen(
                             apiClient = client,
                             baseUrl = baseUrl,
@@ -228,7 +224,7 @@ fun AppContent(activity: ComponentActivity) {
                 }
 
                 if (selectedItem != null) {
-                    SunsetTheme {
+                    SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                         MediaDetailsScreen(
                             item = selectedItem!!,
                             baseUrl = baseUrl,
@@ -242,7 +238,7 @@ fun AppContent(activity: ComponentActivity) {
                 }
 
                 if (showAdmin) {
-                    SunsetTheme {
+                    SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                         AdminScreen(
                             apiClient = client,
                             baseUrl = baseUrl,
@@ -252,7 +248,7 @@ fun AppContent(activity: ComponentActivity) {
                     return
                 }
 
-                SunsetTheme {
+                SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
                     val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }
                     val iconLibrary: @Composable () -> Unit = { Icon(SunsetIcons.Library, contentDescription = "Library") }
                     val iconSettings: @Composable () -> Unit = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
@@ -302,6 +298,13 @@ fun AppContent(activity: ComponentActivity) {
                                         darkTheme = newVal
                                         scope.launch {
                                             activity.dataStore.edit { it[PrefKeys.DARK_MODE] = newVal }
+                                        }
+                                    },
+                                    useMaterial3 = useMaterial3,
+                                    onMaterial3Change = { newVal ->
+                                        useMaterial3 = newVal
+                                        scope.launch {
+                                            activity.dataStore.edit { it[PrefKeys.USE_MATERIAL3] = newVal }
                                         }
                                     },
                                     onLogout = {

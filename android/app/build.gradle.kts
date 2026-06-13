@@ -23,7 +23,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -58,19 +59,14 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
-    // WebView
-    implementation("androidx.webkit:webkit:1.12.1")
-
-    // Material Design
-    implementation("com.google.android.material:material:1.12.0")
-
     // Media3 (ExoPlayer)
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("androidx.media3:media3-common:1.4.1")
 
-    // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.8.4")
+    // Lifecycle ViewModel Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")

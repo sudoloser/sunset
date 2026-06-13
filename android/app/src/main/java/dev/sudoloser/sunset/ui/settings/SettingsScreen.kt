@@ -31,6 +31,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import coil.compose.AsyncImage
 import dev.sudoloser.sunset.api.ApiClient
+import android.util.Log
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.admin.AdminScreen
@@ -49,28 +50,30 @@ fun SettingsScreen(
     isAdmin: Boolean,
     darkTheme: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
+    useMaterial3: Boolean,
+    onMaterial3Change: (Boolean) -> Unit,
     onLogout: () -> Unit,
     onGoToAdmin: () -> Unit
 ) {
     var tab by remember { mutableStateOf("account") }
     val tabs = buildList {
-        add("account"); add("subtitles"); add("discord"); add("downloads")
+        add("appearance"); add("account"); add("subtitles"); add("discord"); add("downloads")
         if (isAdmin) add("admin")
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Text(
             text = "Settings",
             style = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp),
-            color = Color.White
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         ScrollableTabRow(
             selectedTabIndex = tabs.indexOf(tab),
             containerColor = Color.Transparent,
-            contentColor = Color.White,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             divider = {},
             indicator = { tabPositions ->
                 Box(
@@ -93,7 +96,7 @@ fun SettingsScreen(
                             t.replaceFirstChar { it.uppercase() },
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                             fontSize = 15.sp,
-                            color = if (selected) Color.White else Color.Gray
+                            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 )
@@ -104,6 +107,7 @@ fun SettingsScreen(
 
         Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             when (tab) {
+                "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange, useMaterial3, onMaterial3Change)
                 "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
                 "subtitles" -> SubtitleSettings()
                 "discord" -> DiscordSettings(apiClient, userId)
@@ -111,6 +115,111 @@ fun SettingsScreen(
                 "admin" -> AdminScreen(apiClient, baseUrl, onBack = { tab = "account" })
             }
         }
+    }
+}
+
+@Composable
+fun AppearanceSettings(
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+    useMaterial3: Boolean,
+    onMaterial3Change: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Theme", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onDarkThemeChange(!darkTheme) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Dark Mode", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (darkTheme) "Dark theme active" else "Light theme active",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Switch(
+                        checked = darkTheme,
+                        onCheckedChange = onDarkThemeChange,
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onMaterial3Change(!useMaterial3) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Material 3", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (useMaterial3) "Modern Material 3 design" else "Classic Material 2 design",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Switch(
+                        checked = useMaterial3,
+                        onCheckedChange = onMaterial3Change,
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                    )
+                }
+            }
+        }
+
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Preview", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    SunsetButton(
+                        text = "Primary",
+                        onClick = {},
+                        modifier = Modifier.weight(1f)
+                    )
+                    SunsetButton(
+                        text = "Secondary",
+                        onClick = {},
+                        variant = ButtonVariant.Secondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                SunsetCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "This is how content cards will look with the current theme.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(80.dp))
     }
 }
 
@@ -294,7 +403,7 @@ fun DownloadSettings() {
                 Text("Download Location", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
                     "Files will be saved to this directory on your device.",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp
                 )
                 SunsetInput(
@@ -339,7 +448,7 @@ fun DiscordSettings(
                 val profile = apiClient.getUserProfile(userId)
                 if (profile?.discordToken != null) token = profile.discordToken
                 if (profile?.discordStatus != null) status = profile.discordStatus
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("SunSet", "Failed to load Discord config", e) }
         }
     }
 
@@ -355,7 +464,7 @@ fun DiscordSettings(
                 Text("Discord Rich Presence", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
                     "Show what you're watching on your Discord profile. This requires your User Token.",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp
                 )
 
@@ -433,7 +542,7 @@ fun DiscordSettings(
                 Text("How to find your token?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
                     "1. Open Discord in browser\n2. Ctrl+Shift+I > Network tab\n3. Filter by '/api' and refresh\n4. Look for 'authorization' header in any request",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp,
                     lineHeight = 20.sp
                 )
@@ -504,7 +613,7 @@ fun SubtitleSettings() {
                 Text("Style", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
                 Column {
-                    Text("Text Color", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                    Text("Text Color", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         COLORS.forEach { c ->
                             val isSelected = color == c
@@ -513,7 +622,7 @@ fun SubtitleSettings() {
                                     .size(36.dp)
                                     .clip(CircleShape)
                                     .background(Color(android.graphics.Color.parseColor(c)))
-                                    .border(if (isSelected) 3.dp else 1.5.dp, if (isSelected) Color.White else Color.White.copy(alpha = 0.3f), CircleShape)
+                                    .border(if (isSelected) 3.dp else 1.5.dp, if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
                                     .clickable { color = c; save() }
                             )
                         }
@@ -521,7 +630,7 @@ fun SubtitleSettings() {
                 }
 
                 Column {
-                    Text("Background", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                    Text("Background", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(0f to "None", 0.85f to "Black Rectangle (CC)").forEach { (value, label) ->
                             val selected = backgroundOpacity == value
@@ -536,7 +645,7 @@ fun SubtitleSettings() {
                 }
 
                 Column {
-                    Text("Size: $size%", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                    Text("Size: $size%", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
                     Slider(
                         value = size.toFloat(),
                         onValueChange = { size = it.toInt(); save() },
@@ -551,7 +660,7 @@ fun SubtitleSettings() {
                 }
 
                 Column {
-                    Text("Font", color = Color.Gray, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                    Text("Font", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
                     FONT_OPTIONS.forEach { (value, label) ->
                         val selected = font == value
                         Row(
@@ -564,7 +673,7 @@ fun SubtitleSettings() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(label, color = if (selected) MaterialTheme.colorScheme.primary else Color.White, fontWeight = FontWeight.SemiBold)
+                            Text(label, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                             if (selected) Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
@@ -579,7 +688,7 @@ fun SubtitleSettings() {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Bold text", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Text("Bold text", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
                     Switch(
                         checked = bold,
                         onCheckedChange = { bold = it; save() },
@@ -607,7 +716,7 @@ fun SubtitleSettings() {
                         modifier = Modifier
                             .padding(bottom = 32.dp)
                             .background(
-                                if (backgroundOpacity > 0) Color.Black.copy(alpha = backgroundOpacity)
+                                if (backgroundOpacity > 0) MaterialTheme.colorScheme.background.copy(alpha = backgroundOpacity)
                                 else Color.Transparent
                             )
                             .padding(horizontal = 16.dp, vertical = 6.dp),
