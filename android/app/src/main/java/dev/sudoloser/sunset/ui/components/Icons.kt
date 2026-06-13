@@ -188,4 +188,23 @@ object SunsetIcons {
             moveTo(21f, 19f); horizontalLineToRelative(-18f); verticalLineToRelative(-14f); horizontalLineToRelative(18f); verticalLineToRelative(14f); close()
         }
     }.build()
+
+    val PiP: ImageVector = ImageVector.Builder("PiP", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.White)) {
+            moveTo(19f, 7f); horizontalLineToRelative(-8f); verticalLineToRelative(6f); horizontalLineToRelative(8f); verticalLineToRelative(-6f); close()
+            moveTo(21f, 3f); horizontalLineToRelative(-18f); arcTo(2f, 2f, 0f, false, false, 1f, 5f); verticalLineToRelative(14f); arcTo(2f, 2f, 0f, false, false, 3f, 21f); horizontalLineToRelative(18f); arcTo(2f, 2f, 0f, false, false, 23f, 19f); verticalLineToRelative(-14f); arcTo(2f, 2f, 0f, false, false, 21f, 3f); close()
+            moveTo(21f, 19f); horizontalLineToRelative(-18f); verticalLineToRelative(-14f); horizontalLineToRelative(18f); verticalLineToRelative(14f); close()
+        }
+    }.build()
+
+    val Cast: ImageVector = ImageVector.Builder("Cast", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.White)) {
+            moveTo(21.5f, 3f); lineTo(2.5f, 3f); arcTo(1f, 1f, 0f, false, false, 1.5f, 4f); lineTo(1.5f, 18.5f); lineTo(5.5f, 18.5f); lineTo(5.5f, 22.5f); lineTo(21.5f, 22.5f); lineTo(21.5f, 4f); arcTo(1f, 1f, 0f, false, false, 21.5f, 3f); close()
+            moveTo(5.5f, 15.5f); lineTo(5.5f, 18.5f); lineTo(18.5f, 18.5f); lineTo(18.5f, 15.5f); close()
+            moveTo(5.5f, 11.5f); lineTo(5.5f, 14.5f); lineTo(18.5f, 14.5f); lineTo(18.5f, 11.5f); close()
+            moveTo(5.5f, 7.5f); lineTo(5.5f, 10.5f); lineTo(18.5f, 10.5f); lineTo(18.5f, 7.5f); close()
+        }
+    }.build()
+}
+    }.build()
 }

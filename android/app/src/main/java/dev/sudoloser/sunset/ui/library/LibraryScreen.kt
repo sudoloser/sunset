@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +24,7 @@ import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.data.models.MediaType
 import dev.sudoloser.sunset.data.models.PlaybackState
 import dev.sudoloser.sunset.ui.components.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun LibrariesScreen(
@@ -39,8 +42,11 @@ fun LibrariesScreen(
     var playbackProgress by remember { mutableStateOf<Map<String, Float>>(emptyMap()) }
     var selectedLibrary by remember { mutableStateOf<Library?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val refreshState = rememberPullToRefreshState()
 
-    LaunchedEffect(Unit) {
+    suspend fun loadData() {
         try {
             libraries = apiClient.getLibraries()
             if (userId != null) {
@@ -77,6 +83,8 @@ fun LibrariesScreen(
         loading = false
     }
 
+    LaunchedEffect(Unit) { loadData() }
+
     if (loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -96,11 +104,23 @@ fun LibrariesScreen(
         return
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            scope.launch {
+                loadData()
+                isRefreshing = false
+            }
+        },
+        state = refreshState,
+        modifier = Modifier.fillMaxSize()
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
         Spacer(Modifier.height(16.dp))
 
         Text(
@@ -189,5 +209,6 @@ fun LibrariesScreen(
         }
 
         Spacer(Modifier.height(80.dp))
+    }
     }
 }

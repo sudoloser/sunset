@@ -52,6 +52,8 @@ fun SettingsScreen(
     onDarkThemeChange: (Boolean) -> Unit,
     useMaterial3: Boolean,
     onMaterial3Change: (Boolean) -> Unit,
+    tvMode: Boolean,
+    onTvModeChange: (Boolean) -> Unit,
     onLogout: () -> Unit,
     onGoToAdmin: () -> Unit
 ) {
@@ -107,7 +109,7 @@ fun SettingsScreen(
 
         Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             when (tab) {
-                "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange, useMaterial3, onMaterial3Change)
+                "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange, useMaterial3, onMaterial3Change, tvMode, onTvModeChange)
                 "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
                 "subtitles" -> SubtitleSettings()
                 "discord" -> DiscordSettings(apiClient, userId)
@@ -123,7 +125,9 @@ fun AppearanceSettings(
     darkTheme: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
     useMaterial3: Boolean,
-    onMaterial3Change: (Boolean) -> Unit
+    onMaterial3Change: (Boolean) -> Unit,
+    tvMode: Boolean,
+    onTvModeChange: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -182,6 +186,32 @@ fun AppearanceSettings(
                     Switch(
                         checked = useMaterial3,
                         onCheckedChange = onMaterial3Change,
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onTvModeChange(!tvMode) }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("TV / Leanback Mode", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (tvMode) "Large UI optimized for TV & D-pad" else "Standard mobile interface",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Switch(
+                        checked = tvMode,
+                        onCheckedChange = onTvModeChange,
                         colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
                     )
                 }

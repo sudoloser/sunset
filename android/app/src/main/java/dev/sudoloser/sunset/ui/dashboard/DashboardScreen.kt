@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,9 +39,11 @@ fun DashboardScreen(
     var collections by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var featured by remember { mutableStateOf<MediaItem?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val refreshState = rememberPullToRefreshState()
 
-    LaunchedEffect(Unit) {
+    suspend fun loadData() {
         try {
             val recentData = apiClient.getRecentlyAdded(userId)
             val libs = apiClient.getLibraries()
@@ -90,6 +94,8 @@ fun DashboardScreen(
         loading = false
     }
 
+    LaunchedEffect(Unit) { loadData() }
+
     if (loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -97,10 +103,22 @@ fun DashboardScreen(
         return
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
-        ) {
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            scope.launch {
+                loadData()
+                isRefreshing = false
+            }
+        },
+        state = refreshState,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+            ) {
             item {
                 Hero(
                     item = featured,
@@ -196,4 +214,5 @@ fun DashboardScreen(
             )
         }
     }
+}
 }

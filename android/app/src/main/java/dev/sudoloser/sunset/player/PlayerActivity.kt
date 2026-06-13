@@ -1,7 +1,11 @@
 package dev.sudoloser.sunset.player
 
+import android.app.PictureInPictureParams
+import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
@@ -37,12 +41,16 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionToken
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
+import com.google.common.util.concurrent.ListenableFuture
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.components.*
@@ -76,6 +84,9 @@ class PlayerActivity : ComponentActivity() {
     private var showTitle: String? = null
     private var mediaType: String? = null
     private var activeItemId: String? = null
+    private var isInPiPMode by mutableStateOf(false)
+    
+    private var mediaSession: MediaSession? = null
     
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val lenientJson = Json { ignoreUnknownKeys = true }
@@ -103,6 +114,21 @@ class PlayerActivity : ComponentActivity() {
                 CustomPlayerScreen()
             }
         }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        isInPiPMode = isInPictureInPictureMode
+        if (isInPictureInPictureMode) hideSystemUI()
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (player?.isPlaying == true) enterPiPMode()
+    }
+
+    private fun enterPiPMode() {
+        enterPictureInPictureMode(PictureInPictureParams.Builder().build())
     }
 
     override fun onResume() {
@@ -200,7 +226,8 @@ class PlayerActivity : ComponentActivity() {
                 .build()
             
             player = exoPlayer
-                    
+
+            mediaSession = MediaSession.Builder(this, exoPlayer).build()
             exoPlayer.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
@@ -403,6 +430,7 @@ class PlayerActivity : ComponentActivity() {
                             else -> 0 // Fit
                         }
                     },
+                    onPiPClick = { enterPiPMode() },
                     hasSubtitles = subtitleTracks.isNotEmpty(),
                     hasEpisodes = isSeries
                 )
@@ -591,6 +619,7 @@ class PlayerActivity : ComponentActivity() {
         onSubtitlesClick: () -> Unit,
         onEpisodesClick: () -> Unit,
         onAspectRatioClick: () -> Unit,
+        onPiPClick: () -> Unit,
         hasSubtitles: Boolean,
         hasEpisodes: Boolean
     ) {
@@ -609,6 +638,14 @@ class PlayerActivity : ComponentActivity() {
                 
                 IconButton(onClick = onAspectRatioClick) {
                     Icon(SunsetIcons.AspectRatio, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+
+                IconButton(onClick = onPiPClick) {
+                    Icon(SunsetIcons.PiP, contentDescription = "Picture in Picture", tint = Color.White, modifier = Modifier.size(28.dp))
+                }
+
+                IconButton(onClick = { /* Cast handled by MediaRouteButton */ }) {
+                    Icon(SunsetIcons.Cast, contentDescription = "Cast", tint = Color.White, modifier = Modifier.size(28.dp))
                 }
 
                 if (hasSubtitles) {
@@ -723,6 +760,8 @@ class PlayerActivity : ComponentActivity() {
     override fun onDestroy() {
         player?.release()
         player = null
+        mediaSession?.release()
+        mediaSession = null
         scope.cancel()
         super.onDestroy()
     }

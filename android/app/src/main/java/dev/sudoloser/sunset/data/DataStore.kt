@@ -22,4 +22,5 @@ object PrefKeys {
     val SUBTITLE_FONT = stringPreferencesKey("subtitle_font")
     val SUBTITLE_BOLD = booleanPreferencesKey("subtitle_bold")
     val DOWNLOAD_PATH = stringPreferencesKey("download_path")
+    val TV_MODE = booleanPreferencesKey("tv_mode")
 }

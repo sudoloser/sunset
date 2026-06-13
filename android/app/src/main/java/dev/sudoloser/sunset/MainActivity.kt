@@ -66,6 +66,7 @@ fun AppContent(activity: ComponentActivity) {
     var activeTab by remember { mutableStateOf("home") }
     var darkTheme by remember { mutableStateOf(true) }
     var useMaterial3 by remember { mutableStateOf(true) }
+    var tvMode by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     // Back button handling
@@ -83,6 +84,7 @@ fun AppContent(activity: ComponentActivity) {
     LaunchedEffect(Unit) {
         darkTheme = activity.dataStore.data.first()[PrefKeys.DARK_MODE] ?: true
         useMaterial3 = activity.dataStore.data.first()[PrefKeys.USE_MATERIAL3] ?: true
+        tvMode = activity.dataStore.data.first()[PrefKeys.TV_MODE] ?: false
         val url = activity.dataStore.data.first()[PrefKeys.SERVER_URL]
         if (url != null) {
             serverUrl = url
@@ -249,6 +251,14 @@ fun AppContent(activity: ComponentActivity) {
                 }
 
                 SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
+                    if (tvMode) {
+                        dev.sudoloser.sunset.tv.TVScreen(
+                            baseUrl = baseUrl,
+                            userId = userId,
+                            apiKey = "",
+                            apiClient = client
+                        )
+                    } else {
                     val iconHome: @Composable () -> Unit = { Icon(SunsetIcons.Home, contentDescription = "Home") }
                     val iconLibrary: @Composable () -> Unit = { Icon(SunsetIcons.Library, contentDescription = "Library") }
                     val iconSettings: @Composable () -> Unit = { Icon(Icons.Default.Settings, contentDescription = "Settings") }
@@ -307,6 +317,13 @@ fun AppContent(activity: ComponentActivity) {
                                             activity.dataStore.edit { it[PrefKeys.USE_MATERIAL3] = newVal }
                                         }
                                     },
+                                    tvMode = tvMode,
+                                    onTvModeChange = { newVal ->
+                                        tvMode = newVal
+                                        scope.launch {
+                                            activity.dataStore.edit { it[PrefKeys.TV_MODE] = newVal }
+                                        }
+                                    },
                                     onLogout = {
                                         scope.launch {
                                             activity.dataStore.edit {
@@ -322,6 +339,7 @@ fun AppContent(activity: ComponentActivity) {
                                 )
                             }
                         }
+                    }
                     }
                 }
         }
