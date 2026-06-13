@@ -206,5 +206,3 @@ object SunsetIcons {
         }
     }.build()
 }
-    }.build()
-}

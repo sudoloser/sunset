@@ -3,7 +3,6 @@ package dev.sudoloser.sunset.player
 import android.app.PendingIntent
 import android.content.Intent
 import androidx.annotation.OptIn
-import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
@@ -31,12 +30,10 @@ class SunsetMediaService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = mediaSession?.player
+        val session = mediaSession
+        val player = session?.player
         if (player == null || !player.playWhenReady) {
-            mediaSession?.run {
-                player.release()
-                release()
-            }
+            session?.release()
             mediaSession = null
         }
         stopSelf()

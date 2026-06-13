@@ -21,6 +21,7 @@ import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     apiClient: ApiClient,

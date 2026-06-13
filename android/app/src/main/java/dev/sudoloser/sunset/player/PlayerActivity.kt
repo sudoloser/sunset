@@ -47,10 +47,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.session.MediaSession
-import androidx.media3.session.SessionToken
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
-import com.google.common.util.concurrent.ListenableFuture
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.components.*
@@ -227,7 +225,7 @@ class PlayerActivity : ComponentActivity() {
             
             player = exoPlayer
 
-            mediaSession = MediaSession.Builder(this, exoPlayer).build()
+            mediaSession = MediaSession.Builder(context, exoPlayer).build()
             exoPlayer.addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
