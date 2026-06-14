@@ -476,6 +476,7 @@ fun AppContent(activity: ComponentActivity) {
 }
 }
 
+}
 private fun startPlayer(activity: ComponentActivity, client: ApiClient, item: MediaItem, baseUrl: String, userId: String?) {
     val intent = Intent(activity, PlayerActivity::class.java).apply {
         putExtra("video_url", client.getStreamUrl(item.id))
