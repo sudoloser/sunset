@@ -14,6 +14,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -122,6 +123,7 @@ fun AppContent(activity: ComponentActivity) {
     var themeMode by remember { mutableStateOf("system") }
     var useMaterial3 by remember { mutableStateOf(true) }
     var tvMode by remember { mutableStateOf(false) }
+    var showServerSwitcher by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val resolvedDarkTheme = when (themeMode) {
         "dark" -> true
@@ -284,6 +286,33 @@ fun AppContent(activity: ComponentActivity) {
                 val userId = user?.userId
 
                 SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
+                    if (showServerSwitcher) {
+                        var swError by remember { mutableStateOf<String?>(null) }
+                        var swLoading by remember { mutableStateOf(false) }
+                        ServerSelectionScreen(
+                            errorMessage = swError,
+                            loading = swLoading,
+                            onCancel = { showServerSwitcher = false },
+                            onServerSelected = { url ->
+                                scope.launch {
+                                    swLoading = true
+                                    swError = null
+                                    val newClient = ApiClient(url)
+                                    try {
+                                        newClient.getStatus()
+                                        activity.dataStore.edit { it[PrefKeys.SERVER_URL] = url }
+                                        serverUrl = url
+                                        apiClient = newClient
+                                        showServerSwitcher = false
+                                    } catch (e: Exception) {
+                                        swError = "Can't connect: ${e.message?.take(80) ?: "no message"}"
+                                    } finally {
+                                        swLoading = false
+                                    }
+                                }
+                            }
+                        )
+                    } else {
                     AnimatedContent(
                         targetState = when {
                             selectedItem != null -> "details"
@@ -430,7 +459,8 @@ fun AppContent(activity: ComponentActivity) {
                                                                 step = "login"
                                                             }
                                                         },
-                                                        onGoToAdmin = { /* Handled internally in SettingsScreen */ }
+                                                        onGoToAdmin = { /* Handled internally in SettingsScreen */ },
+                                                        onChangeServer = { showServerSwitcher = true }
                                                     )
                                                 }
                                             }
@@ -464,6 +494,7 @@ private fun startPlayer(activity: ComponentActivity, client: ApiClient, item: Me
 fun ServerSelectionScreen(
     errorMessage: String? = null,
     loading: Boolean = false,
+    onCancel: (() -> Unit)? = null,
     onServerSelected: (String) -> Unit
 ) {
     var input by remember { mutableStateOf("") }
@@ -473,6 +504,19 @@ fun ServerSelectionScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        if (onCancel != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                TextButton(onClick = onCancel) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Spacer(Modifier.width(4.dp))
+                    Text("Back")
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
         Text("SunSet", style = MaterialTheme.typography.displayLarge, color = NetflixRed)
         Spacer(Modifier.height(32.dp))
         Surface(

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
-import { api } from '../../api/client';
+import { api, setServerUrl, getCurrentServerUrl } from '../../api/client';
 
 interface AccountSettingsProps {
   userId: string;
@@ -15,6 +15,9 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ userId, curren
   const [newPassword, setNewPassword] = useState('');
   const [passwordMsg, setPasswordMsg] = useState('');
   const [usernameMsg, setUsernameMsg] = useState('');
+  const [serverUrl, setServerUrlState] = useState(getCurrentServerUrl());
+  const [serverMsg, setServerMsg] = useState('');
+  const [serverLoading, setServerLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleLogout = () => {
@@ -53,6 +56,24 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ userId, curren
     reader.readAsDataURL(file);
   };
 
+  const handleChangeServer = async () => {
+    const url = serverUrl.trim();
+    if (!url) return;
+    setServerLoading(true);
+    setServerMsg('');
+    try {
+      const resp = await fetch(`${url.replace(/\/+$/, '')}/api/status`);
+      if (!resp.ok) throw new Error('Server returned ' + resp.status);
+      setServerUrl(url);
+      setServerMsg('Connected! Reloading...');
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (e: any) {
+      setServerMsg(`Can't connect: ${e.message}`);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div>
@@ -82,6 +103,29 @@ export const AccountSettings: React.FC<AccountSettingsProps> = ({ userId, curren
         <Input label="New Password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
         <div style={{ marginTop: '0.5rem' }}><Button size="sm" onClick={handleChangePassword}>Change Password</Button></div>
         {passwordMsg && <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>{passwordMsg}</p>}
+      </div>
+
+      <div>
+        <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Server</h3>
+        <Input
+          value={serverUrl}
+          onChange={e => setServerUrlState(e.target.value)}
+          placeholder="http://192.168.1.100:7867"
+        />
+        <div style={{ marginTop: '0.5rem' }}>
+          <Button size="sm" onClick={handleChangeServer} disabled={serverLoading}>
+            {serverLoading ? 'Connecting...' : 'Connect'}
+          </Button>
+        </div>
+        {serverMsg && (
+          <p style={{
+            fontSize: '0.85rem',
+            marginTop: '0.5rem',
+            color: serverMsg.startsWith('Connected') ? 'var(--primary-color)' : '#ef4444'
+          }}>
+            {serverMsg}
+          </p>
+        )}
       </div>
 
       <div>

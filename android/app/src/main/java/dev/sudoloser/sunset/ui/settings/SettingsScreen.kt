@@ -55,7 +55,8 @@ fun SettingsScreen(
     tvMode: Boolean,
     onTvModeChange: (Boolean) -> Unit,
     onLogout: () -> Unit,
-    onGoToAdmin: () -> Unit
+    onGoToAdmin: () -> Unit,
+    onChangeServer: () -> Unit
 ) {
     var tab by remember { mutableStateOf("account") }
     val tabs = buildList {
@@ -111,7 +112,7 @@ fun SettingsScreen(
             when (tab) {
                 "media" -> MediaSettings()
                 "appearance" -> AppearanceSettings(themeMode, onThemeModeChange, useMaterial3, onMaterial3Change, tvMode, onTvModeChange)
-                "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
+                "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout, onChangeServer)
                 "discord" -> DiscordSettings(apiClient, userId)
                 "admin" -> AdminScreen(apiClient, baseUrl, onBack = { tab = "account" })
             }
@@ -286,7 +287,8 @@ fun AccountSettings(
     baseUrl: String,
     userId: String?,
     currentUsername: String?,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onChangeServer: () -> Unit
 ) {
     var username by remember { mutableStateOf(currentUsername ?: "") }
     var currentPassword by remember { mutableStateOf("") }
@@ -420,6 +422,30 @@ fun AccountSettings(
                             } catch (e: Exception) { passwordMsg = e.message }
                         }
                     },
+                    fullWidth = true
+                )
+            }
+        }
+
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Server", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    baseUrl,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "Switch to a different server.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                SunsetButton(
+                    text = "Change Server",
+                    onClick = onChangeServer,
+                    variant = ButtonVariant.Secondary,
                     fullWidth = true
                 )
             }

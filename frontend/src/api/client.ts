@@ -1,14 +1,36 @@
-import type { 
-  MediaItem, Library, OnboardRequest, LoginRequest, 
-  User, StorageInfo, PlaybackState 
+import type {
+  MediaItem, Library, OnboardRequest, LoginRequest,
+  User, StorageInfo, PlaybackState
 } from '../types';
 
-const BASE_URL = import.meta.env.DEV 
-  ? 'http://localhost:7867/api' 
-  : '/api';
+function getDefaultBaseUrl(): string {
+  return import.meta.env.DEV
+    ? 'http://localhost:7867/api'
+    : '/api';
+}
+
+function loadBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('sunset_server_url');
+    if (custom) return `${custom.replace(/\/+$/, '')}/api`;
+  }
+  return getDefaultBaseUrl();
+}
+
+let baseUrl = loadBaseUrl();
+
+export function setServerUrl(url: string) {
+  localStorage.setItem('sunset_server_url', url);
+  baseUrl = `${url.replace(/\/+$/, '')}/api`;
+}
+
+export function getCurrentServerUrl(): string {
+  const stored = localStorage.getItem('sunset_server_url');
+  return stored || getDefaultBaseUrl().replace(/\/api$/, '');
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const url = `${BASE_URL}${path}`;
+  const url = `${baseUrl}${path}`;
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -39,9 +61,9 @@ export const api = {
   getShowEpisodes: (showTitle: string, userId?: string) => request<MediaItem[]>(`/shows/${encodeURIComponent(showTitle)}/episodes${userId ? `?user_id=${userId}` : ''}`),
   search: (query: string, userId?: string) => request<MediaItem[]>(`/search?q=${encodeURIComponent(query)}${userId ? `&user_id=${userId}` : ''}`),
   triggerScan: () => request<boolean>('/scan', { method: 'POST' }),
-  getStreamUrl: (id: string) => `${BASE_URL}/stream/${id}`,
+  getStreamUrl: (id: string) => `${baseUrl}/stream/${id}`,
   getSubtitles: (id: string) => request<string[]>(`/media/${id}/subtitles`),
-  getSubtitleUrl: (id: string, name: string) => `${BASE_URL}/media/${id}/subtitle/${encodeURIComponent(name)}`,
+  getSubtitleUrl: (id: string, name: string) => `${baseUrl}/media/${id}/subtitle/${encodeURIComponent(name)}`,
   savePlayback: (data: any) => request<boolean>('/playback', { method: 'POST', body: JSON.stringify(data) }),
   getPlayback: (itemId: string) => request<PlaybackState>(`/playback/${itemId}`),
   updateDiscordConfig: (id: string, token: string, status: string) => request<boolean>(`/users/${id}/discord-config`, { method: 'PUT', body: JSON.stringify({ token, status }) }),
@@ -59,7 +81,7 @@ export const api = {
   deleteUser: (id: string) => request<boolean>(`/users/${id}`, { method: 'DELETE' }),
   changePassword: (id: string, current_password: string, new_password: string) => request<boolean>(`/users/${id}/password`, { method: 'PUT', body: JSON.stringify({ current_password, new_password }) }),
   changeUsername: (id: string, new_username: string) => request<boolean>(`/users/${id}/username`, { method: 'PUT', body: JSON.stringify({ new_username }) }),
-  getProfilePictureUrl: (id: string) => `${BASE_URL}/users/${id}/profile-picture`,
+  getProfilePictureUrl: (id: string) => `${baseUrl}/users/${id}/profile-picture`,
   uploadProfilePicture: (id: string, image: string) => request<boolean>(`/users/${id}/profile-picture`, { method: 'POST', body: JSON.stringify({ image }) }),
   getContinueWatching: (userId: string) => request<MediaItem[]>(`/continue-watching/${userId}`),
   getUserItems: (userId: string) => request<MediaItem[]>(`/user-items/${userId}`),
