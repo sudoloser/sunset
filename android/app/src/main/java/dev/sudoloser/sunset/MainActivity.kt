@@ -320,24 +320,25 @@ fun AppContent(activity: ComponentActivity) {
                             else -> "tabs"
                         },
                         transitionSpec = {
-                            if (targetState == "tabs") {
-                                slideInVertically(
-                                    animationSpec = tween(350, easing = FastOutSlowInEasing),
-                                    initialOffsetY = { it / 4 }
-                                ) + fadeIn(animationSpec = tween(300)) togetherWith
-                                slideOutVertically(
-                                    animationSpec = tween(300, easing = FastOutSlowInEasing),
-                                    targetOffsetY = { it }
-                                ) + fadeOut(animationSpec = tween(200))
-                            } else {
-                                slideInVertically(
-                                    animationSpec = tween(350, easing = FastOutSlowInEasing),
-                                    initialOffsetY = { it }
-                                ) + fadeIn(animationSpec = tween(250)) togetherWith
-                                slideOutVertically(
-                                    animationSpec = tween(250, easing = FastOutSlowInEasing),
-                                    targetOffsetY = { it / 3 }
-                                ) + fadeOut(animationSpec = tween(150))
+                            val springSpec = spring<Float>(
+                                dampingRatio = 0.7f,
+                                stiffness = 280f
+                            )
+                            when {
+                                targetState == "details" -> {
+                                    scaleIn(animationSpec = springSpec, initialScale = 0.92f) +
+                                    fadeIn(animationSpec = tween(220))
+                                } togetherWith
+                                fadeOut(animationSpec = tween(150))
+                                initialState == "details" -> {
+                                    scaleOut(animationSpec = tween(200), targetScale = 0.92f) +
+                                    fadeOut(animationSpec = tween(180))
+                                } togetherWith
+                                fadeIn(animationSpec = tween(200))
+                                else -> {
+                                    fadeIn(animationSpec = tween(250)) togetherWith
+                                    fadeOut(animationSpec = tween(250))
+                                }
                             }
                         },
                         label = "main_content"
