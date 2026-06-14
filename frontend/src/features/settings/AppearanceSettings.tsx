@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/common/Card';
 
-type Theme = 'dark' | 'light';
+type ThemeMode = 'system' | 'dark' | 'light';
 
 const THEME_KEY = 'sunset_theme';
 
-function loadTheme(): Theme {
-  return (localStorage.getItem(THEME_KEY) as Theme) || 'dark';
+function loadThemeMode(): ThemeMode {
+  return (localStorage.getItem(THEME_KEY) as ThemeMode) || 'system';
 }
 
-function applyTheme(theme: Theme) {
+function getSystemTheme(): 'dark' | 'light' {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function resolveTheme(mode: ThemeMode): 'dark' | 'light' {
+  return mode === 'system' ? getSystemTheme() : mode;
+}
+
+function applyTheme(mode: ThemeMode) {
+  const theme = resolveTheme(mode);
   const root = document.documentElement;
   if (theme === 'light') {
     root.style.setProperty('--bg-color', '#f5f5f7');
@@ -29,17 +38,27 @@ function applyTheme(theme: Theme) {
 }
 
 export const AppearanceSettings: React.FC = () => {
-  const [theme, setTheme] = useState<Theme>(loadTheme);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
   const [useNativePlayer, setUseNativePlayer] = useState<boolean>(() => {
     return localStorage.getItem('sunset_use_native_player') === 'true';
   });
 
   const isAndroid = !!(window as any).SunSetAndroid;
+  const [systemDark, setSystemDark] = useState(getSystemTheme() === 'dark');
 
+  // Listen for system theme changes
   useEffect(() => {
-    localStorage.setItem(THEME_KEY, theme);
-    applyTheme(theme);
-  }, [theme]);
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // Apply theme whenever mode or system preference changes
+  useEffect(() => {
+    localStorage.setItem(THEME_KEY, themeMode);
+    applyTheme(themeMode);
+  }, [themeMode, systemDark]);
 
   useEffect(() => {
     localStorage.setItem('sunset_use_native_player', useNativePlayer.toString());
@@ -51,25 +70,32 @@ export const AppearanceSettings: React.FC = () => {
       
       <Card style={{ backgroundColor: 'var(--surface-color)', marginBottom: '2rem' }}>
         <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>Theme</h3>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          {[
-            { id: 'dark' as Theme, label: 'Dark', icon: '🌙' },
-            { id: 'light' as Theme, label: 'Light', icon: '☀️' },
-          ].map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => setTheme(opt.id)}
-              style={{
-                flex: 1, padding: '2rem 1rem', borderRadius: 'var(--radius-lg)',
-                background: theme === opt.id ? 'var(--primary-color)' : 'var(--surface-variant)',
-                border: theme === opt.id ? '2px solid white' : '2px solid transparent',
-                color: 'white', cursor: 'pointer', textAlign: 'center', transition: 'var(--transition-standard)'
-              }}
-            >
-              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{opt.icon}</div>
-              <div style={{ fontWeight: 700 }}>{opt.label}</div>
-            </button>
-          ))}
+        <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>
+          Theme Mode
+        </label>
+        <div style={{ position: 'relative' }}>
+          <select
+            value={themeMode}
+            onChange={e => setThemeMode(e.target.value as ThemeMode)}
+            style={{
+              width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)',
+              background: 'var(--surface-variant)', border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 500,
+              cursor: 'pointer', outline: 'none', appearance: 'none',
+              WebkitAppearance: 'none', MozAppearance: 'none',
+              transition: 'var(--transition-standard)'
+            }}
+          >
+            <option value="system">System — follow device theme</option>
+            <option value="dark">Dark — always dark mode</option>
+            <option value="light">Light — always light mode</option>
+          </select>
+          <div style={{
+            position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)',
+            pointerEvents: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem'
+          }}>
+            ▼
+          </div>
         </div>
       </Card>
 

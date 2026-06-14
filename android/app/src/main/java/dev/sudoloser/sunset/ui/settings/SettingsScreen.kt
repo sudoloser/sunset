@@ -48,8 +48,8 @@ fun SettingsScreen(
     userId: String?,
     currentUsername: String?,
     isAdmin: Boolean,
-    darkTheme: Boolean,
-    onDarkThemeChange: (Boolean) -> Unit,
+    themeMode: String,
+    onThemeModeChange: (String) -> Unit,
     useMaterial3: Boolean,
     onMaterial3Change: (Boolean) -> Unit,
     tvMode: Boolean,
@@ -110,7 +110,7 @@ fun SettingsScreen(
         Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             when (tab) {
                 "media" -> MediaSettings()
-                "appearance" -> AppearanceSettings(darkTheme, onDarkThemeChange, useMaterial3, onMaterial3Change, tvMode, onTvModeChange)
+                "appearance" -> AppearanceSettings(themeMode, onThemeModeChange, useMaterial3, onMaterial3Change, tvMode, onTvModeChange)
                 "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout)
                 "discord" -> DiscordSettings(apiClient, userId)
                 "admin" -> AdminScreen(apiClient, baseUrl, onBack = { tab = "account" })
@@ -121,8 +121,8 @@ fun SettingsScreen(
 
 @Composable
 fun AppearanceSettings(
-    darkTheme: Boolean,
-    onDarkThemeChange: (Boolean) -> Unit,
+    themeMode: String,
+    onThemeModeChange: (String) -> Unit,
     useMaterial3: Boolean,
     onMaterial3Change: (Boolean) -> Unit,
     tvMode: Boolean,
@@ -138,30 +138,10 @@ fun AppearanceSettings(
         SunsetCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Theme", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onDarkThemeChange(!darkTheme) }
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Dark Mode", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            if (darkTheme) "Dark theme active" else "Light theme active",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp
-                        )
-                    }
-                    Switch(
-                        checked = darkTheme,
-                        onCheckedChange = onDarkThemeChange,
-                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
-                    )
-                }
+
+                ThemeOption("system", "System", "Follow your device theme", themeMode, onThemeModeChange)
+                ThemeOption("dark", "Dark", "Dark theme active", themeMode, onThemeModeChange)
+                ThemeOption("light", "Light", "Light theme active", themeMode, onThemeModeChange)
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
@@ -253,6 +233,35 @@ fun AppearanceSettings(
 }
 
 @Composable
+fun ThemeOption(
+    id: String,
+    label: String,
+    description: String,
+    current: String,
+    onSelect: (String) -> Unit
+) {
+    val selected = current == id
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
+            .clickable { onSelect(id) }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
+            Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+        }
+        if (selected) {
+            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
 fun MediaSettings() {
     Column(
         modifier = Modifier
@@ -261,11 +270,6 @@ fun MediaSettings() {
             .padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Clip Recording
-        SunsetCard(modifier = Modifier.fillMaxWidth()) {
-            RecordingResolutionSetting()
-        }
-
         // Subtitles
         SubtitleSettingsContent()
 
@@ -273,55 +277,6 @@ fun MediaSettings() {
         DownloadSettingsContent()
 
         Spacer(Modifier.height(80.dp))
-    }
-}
-
-@Composable
-fun RecordingResolutionSetting() {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    var selectedResolution by remember { mutableIntStateOf(1080) }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        selectedResolution = ctx.dataStore.data.first()[PrefKeys.RECORD_RESOLUTION] ?: 1080
-    }
-
-    Column {
-        Text("Clip Recording Resolution", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Resolution for screen clips saved to DCIM",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 13.sp
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            listOf(480, 720, 1080, 1440, 2160).forEach { res ->
-                val label = if (res == 2160) "4K" else "${res}p"
-                val isSelected = selectedResolution == res
-                Surface(
-                    onClick = {
-                        selectedResolution = res
-                        scope.launch { ctx.dataStore.edit { it[PrefKeys.RECORD_RESOLUTION] = res } }
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        label,
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
     }
 }
 

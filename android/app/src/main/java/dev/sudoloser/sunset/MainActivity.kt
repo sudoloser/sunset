@@ -12,9 +12,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -117,10 +119,15 @@ fun AppContent(activity: ComponentActivity) {
     var selectedItem by remember { mutableStateOf<MediaItem?>(null) }
     var showAdmin by remember { mutableStateOf(false) }
     var activeTab by remember { mutableStateOf("home") }
-    var darkTheme by remember { mutableStateOf(true) }
+    var themeMode by remember { mutableStateOf("system") }
     var useMaterial3 by remember { mutableStateOf(true) }
     var tvMode by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val resolvedDarkTheme = when (themeMode) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemInDarkTheme()
+    }
 
     // Back button handling
     BackHandler(enabled = step == "main") {
@@ -134,7 +141,7 @@ fun AppContent(activity: ComponentActivity) {
 
     // Load saved state
     LaunchedEffect(Unit) {
-        darkTheme = activity.dataStore.data.first()[PrefKeys.DARK_MODE] ?: true
+        themeMode = activity.dataStore.data.first()[PrefKeys.THEME_MODE] ?: "system"
         useMaterial3 = activity.dataStore.data.first()[PrefKeys.USE_MATERIAL3] ?: true
         tvMode = activity.dataStore.data.first()[PrefKeys.TV_MODE] ?: false
         val url = activity.dataStore.data.first()[PrefKeys.SERVER_URL]
@@ -170,7 +177,7 @@ fun AppContent(activity: ComponentActivity) {
 
         when (step) {
         "loading" -> {
-            SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
+            SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = NetflixRed)
                 }
@@ -181,7 +188,7 @@ fun AppContent(activity: ComponentActivity) {
             var errorMessage by remember { mutableStateOf<String?>(null) }
             var connecting by remember { mutableStateOf(false) }
 
-            SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
+            SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
                 AnimatedContent(
                     targetState = step,
                     transitionSpec = {
@@ -231,7 +238,7 @@ fun AppContent(activity: ComponentActivity) {
 
         "onboarding" -> {
             apiClient?.let { client ->
-                SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
+                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
                     OnboardingScreen(
                         apiClient = client,
                         onComplete = { u ->
@@ -252,7 +259,7 @@ fun AppContent(activity: ComponentActivity) {
 
         "login" -> {
             apiClient?.let { client ->
-                SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
+                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
                     LoginScreen(
                         apiClient = client,
                         onLogin = { u ->
@@ -276,7 +283,7 @@ fun AppContent(activity: ComponentActivity) {
                 val baseUrl = serverUrl ?: ""
                 val userId = user?.userId
 
-                SunsetTheme(darkTheme = darkTheme, useMaterial3 = useMaterial3) {
+                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
                     AnimatedContent(
                         targetState = when {
                             selectedItem != null -> "details"
@@ -391,11 +398,11 @@ fun AppContent(activity: ComponentActivity) {
                                                         userId = userId,
                                                         currentUsername = user?.username,
                                                         isAdmin = user?.isAdmin == true,
-                                                        darkTheme = darkTheme,
-                                                        onDarkThemeChange = { newVal ->
-                                                            darkTheme = newVal
+                                                        themeMode = themeMode,
+                                                        onThemeModeChange = { newVal ->
+                                                            themeMode = newVal
                                                             scope.launch {
-                                                                activity.dataStore.edit { it[PrefKeys.DARK_MODE] = newVal }
+                                                                activity.dataStore.edit { it[PrefKeys.THEME_MODE] = newVal }
                                                             }
                                                         },
                                                         useMaterial3 = useMaterial3,
@@ -468,18 +475,33 @@ fun ServerSelectionScreen(
     ) {
         Text("SunSet", style = MaterialTheme.typography.displayLarge, color = NetflixRed)
         Spacer(Modifier.height(32.dp))
-        OutlinedTextField(
-            value = input,
-            onValueChange = { input = it.trim() },
-            label = { Text("Server URL") },
-            placeholder = { Text("http://192.168.1.100:7867") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !loading,
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it.trim() },
+                label = { Text("Server URL") },
+                placeholder = { Text("http://192.168.1.100:7867") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(4.dp),
+                enabled = !loading,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = NetflixRed,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    cursorColor = NetflixRed,
+                    focusedLabelColor = NetflixRed,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                ),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri
+                )
             )
-        )
+        }
         if (errorMessage != null) {
             Spacer(Modifier.height(8.dp))
             Text(
