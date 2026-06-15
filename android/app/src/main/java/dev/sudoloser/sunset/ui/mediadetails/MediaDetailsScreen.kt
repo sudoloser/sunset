@@ -1,10 +1,5 @@
 package dev.sudoloser.sunset.ui.mediadetails
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -289,59 +283,25 @@ fun MediaDetailsScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Season tabs - animated bouncy pills
+                    // Season tabs
                     val seasons = episodes.map { it.season ?: 1 }.distinct().sorted()
-                    var animatingSeason by remember { mutableIntStateOf(selectedSeason) }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                     ) {
                         seasons.forEach { s ->
                             val isSelected = selectedSeason == s
-                            val scale = remember { Animatable(if (isSelected) 1.05f else 1f) }
-                            LaunchedEffect(isSelected) {
-                                if (isSelected) {
-                                    animatingSeason = s
-                                    scale.snapTo(1.15f)
-                                    scale.animateTo(
-                                        targetValue = 1.05f,
-                                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                                    )
-                                } else if (animatingSeason == s) {
-                                    scale.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = spring(dampingRatio = Spring.DampingRatioHighBouncy, stiffness = Spring.StiffnessMedium)
-                                    )
-                                }
-                            }
-                            val bgColor by animateColorAsState(
-                                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                                label = "bg"
-                            )
-                            val textColor by animateColorAsState(
-                                targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                                label = "text"
-                            )
-                            val elevation by animateDpAsState(
-                                targetValue = if (isSelected) 6.dp else 0.dp,
-                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                                label = "elevation"
-                            )
                             Surface(
                                 onClick = { selectedSeason = s },
                                 shape = RoundedCornerShape(20.dp),
-                                color = bgColor,
-                                shadowElevation = elevation,
-                                modifier = Modifier
-                                    .height(36.dp)
-                                    .scale(scale.value)
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                shadowElevation = if (isSelected) 6.dp else 0.dp,
+                                modifier = Modifier.height(36.dp)
                             ) {
                                 Text(
                                     "Season $s",
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                                    color = textColor,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp
                                 )
@@ -354,18 +314,7 @@ fun MediaDetailsScreen(
                     val seasonEps = episodes.filter { (it.season ?: 1) == selectedSeason }
                         .sortedBy { it.episode }
 
-                    AnimatedContent(
-                        targetState = selectedSeason,
-                        transitionSpec = {
-                            val springSpec = spring<Float>(dampingRatio = 0.75f, stiffness = 300f)
-                            (slideInVertically(animationSpec = springSpec, initialOffsetY = { it / 3 }) +
-                             fadeIn(animationSpec = tween(200))) togetherWith
-                            (slideOutVertically(animationSpec = tween(150), targetOffsetY = { -it / 4 }) +
-                             fadeOut(animationSpec = tween(120)))
-                        },
-                        label = "season_eps"
-                    ) { season ->
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         seasonEps.forEach { ep ->
                             val isWatched = (ep.progress ?: 0.0) > 0.7
                             val progressValue = ep.progress?.toFloat()?.coerceIn(0f, 1f) ?: 0f
@@ -450,7 +399,6 @@ fun MediaDetailsScreen(
                             }
                         }
                     }
-                }
                 }
 
                 // Cast Section

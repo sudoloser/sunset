@@ -212,16 +212,26 @@ class PlayerActivity : ComponentActivity() {
         }
 
         fun switchEpisode(ep: dev.sudoloser.sunset.data.models.MediaItem) {
-            player?.let { saveCurrentPlayback(it.currentPosition, it.duration, currentId = currentItemId) }
-            currentVideoUrl = "$baseUrl/api/stream/${ep.id}"
-            currentEpisodeTitle = ep.title
-            currentItemId = ep.id
-            shouldRestorePosition = true
-            showEpisodePicker = false
+            player?.let { p ->
+                saveCurrentPlayback(p.currentPosition, p.duration, currentId = currentItemId)
+                currentItemId = ep.id
+                currentEpisodeTitle = ep.title
+                showEpisodePicker = false
+                shouldRestorePosition = true
+
+                val newItem = MediaItem.Builder()
+                    .setUri("$baseUrl/api/stream/${ep.id}")
+                    .build()
+                p.stop()
+                p.clearMediaItems()
+                p.setMediaItem(newItem)
+                p.prepare()
+                p.playWhenReady = true
+            }
         }
 
-        // Initialize Player
-        LaunchedEffect(currentItemId) {
+        // Initialize Player (once)
+        LaunchedEffect(Unit) {
             activeItemId = currentItemId
             player?.release()
 
@@ -257,10 +267,17 @@ class PlayerActivity : ComponentActivity() {
                         if (currentIdx >= 0 && currentIdx < episodes.size - 1) {
                             val nextEp = episodes[currentIdx + 1]
                             saveCurrentPlayback(exoPlayer.currentPosition, exoPlayer.duration, false, currentItemId)
-                            currentVideoUrl = "$baseUrl/api/stream/${nextEp.id}"
-                            currentEpisodeTitle = nextEp.title
                             currentItemId = nextEp.id
+                            currentEpisodeTitle = nextEp.title
                             shouldRestorePosition = false
+                            val nextItem = MediaItem.Builder()
+                                .setUri("$baseUrl/api/stream/${nextEp.id}")
+                                .build()
+                            exoPlayer.stop()
+                            exoPlayer.clearMediaItems()
+                            exoPlayer.setMediaItem(nextItem)
+                            exoPlayer.prepare()
+                            exoPlayer.playWhenReady = true
                         }
                     }
                 }
@@ -560,77 +577,79 @@ class PlayerActivity : ComponentActivity() {
 
             // Episode Picker
             if (showEpisodePicker) {
-                Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 64.dp)) {
-                    Surface(
-                        color = Color.Black.copy(alpha = 0.95f),
-                        shape = RoundedCornerShape(16.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp).width(300.dp).heightIn(max = 420.dp)) {
-                            Text(
-                                text = episodeShowTitle ?: "Episodes",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
-                            )
+                Box(modifier = Modifier.fillMaxSize().clickable { showEpisodePicker = false }) {
+                    Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 64.dp)) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.95f),
+                            shape = RoundedCornerShape(16.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp).width(300.dp).heightIn(max = 420.dp)) {
+                                Text(
+                                    text = episodeShowTitle ?: "Episodes",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                                )
 
-                            val grouped = episodes.groupBy { it.season ?: 1 }
-                            val sortedSeasons = grouped.keys.sorted()
+                                val grouped = episodes.groupBy { it.season ?: 1 }
+                                val sortedSeasons = grouped.keys.sorted()
 
-                            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                sortedSeasons.forEach { season ->
-                                    val seasonEpisodes = grouped[season]!!
-                                    item {
-                                        Text(
-                                            text = "Season $season",
-                                            color = Color.White.copy(alpha = 0.6f),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)
-                                        )
-                                    }
-                                    items(seasonEpisodes, key = { it.id }) { ep ->
-                                        val isCurrent = ep.id == currentItemId
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(
-                                                    if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                                    else Color.Transparent
-                                                )
-                                                .clickable {
-                                                    if (!isCurrent) switchEpisode(ep)
-                                                }
-                                                .padding(horizontal = 8.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
+                                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                    sortedSeasons.forEach { season ->
+                                        val seasonEpisodes = grouped[season]!!
+                                        item {
                                             Text(
-                                                text = "${ep.episode ?: "?"}",
-                                                color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f),
-                                                fontSize = 14.sp,
+                                                text = "Season $season",
+                                                color = Color.White.copy(alpha = 0.6f),
+                                                fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.width(28.dp)
+                                                modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)
                                             )
-                                            Spacer(Modifier.width(8.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
+                                        }
+                                        items(seasonEpisodes, key = { it.id }) { ep ->
+                                            val isCurrent = ep.id == currentItemId
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(
+                                                        if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                                        else Color.Transparent
+                                                    )
+                                                    .clickable {
+                                                        if (!isCurrent) switchEpisode(ep)
+                                                    }
+                                                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
                                                 Text(
-                                                    text = ep.title,
-                                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White,
+                                                    text = "${ep.episode ?: "?"}",
+                                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f),
                                                     fontSize = 14.sp,
-                                                    fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Normal,
-                                                    maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.width(28.dp)
                                                 )
-                                            }
-                                            if (isCurrent) {
-                                                Icon(
-                                                    SunsetIcons.Play,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
+                                                Spacer(Modifier.width(8.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = ep.title,
+                                                        color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White,
+                                                        fontSize = 14.sp,
+                                                        fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Normal,
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                                if (isCurrent) {
+                                                    Icon(
+                                                        SunsetIcons.Play,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }

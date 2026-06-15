@@ -320,21 +320,11 @@ fun AppContent(activity: ComponentActivity) {
                             else -> "tabs"
                         },
                         transitionSpec = {
-                            val springSpec = spring<Float>(
-                                dampingRatio = 0.7f,
-                                stiffness = 280f
-                            )
                             when {
                                 targetState == "details" -> {
-                                    scaleIn(animationSpec = springSpec, initialScale = 0.92f) +
-                                    fadeIn(animationSpec = tween(220))
+                                    scaleIn(animationSpec = tween(300), initialScale = 0.92f)
                                 } togetherWith
                                 fadeOut(animationSpec = tween(150))
-                                initialState == "details" -> {
-                                    scaleOut(animationSpec = tween(200), targetScale = 0.92f) +
-                                    fadeOut(animationSpec = tween(180))
-                                } togetherWith
-                                fadeIn(animationSpec = tween(200))
                                 else -> {
                                     fadeIn(animationSpec = tween(250)) togetherWith
                                     fadeOut(animationSpec = tween(250))
