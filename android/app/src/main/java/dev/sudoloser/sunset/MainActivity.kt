@@ -319,6 +319,7 @@ fun AppContent(activity: ComponentActivity) {
                             showAdmin -> "admin"
                             else -> "tabs"
                         },
+                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                         transitionSpec = {
                             when {
                                 targetState == "details" ->
