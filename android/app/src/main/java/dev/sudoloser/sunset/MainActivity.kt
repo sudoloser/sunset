@@ -321,14 +321,12 @@ fun AppContent(activity: ComponentActivity) {
                         },
                         transitionSpec = {
                             when {
-                                targetState == "details" -> {
-                                    scaleIn(animationSpec = tween(300), initialScale = 0.92f)
-                                } togetherWith
-                                fadeOut(animationSpec = tween(150))
-                                else -> {
+                                targetState == "details" ->
+                                    scaleIn(animationSpec = tween(300), initialScale = 0.92f) togetherWith
+                                    fadeOut(animationSpec = tween(150))
+                                else ->
                                     fadeIn(animationSpec = tween(250)) togetherWith
                                     fadeOut(animationSpec = tween(250))
-                                }
                             }
                         },
                         label = "main_content"
