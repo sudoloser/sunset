@@ -130,7 +130,11 @@ class ApiClient(baseUrl: String) {
     fun getAssetUrl(itemId: String, asset: String): String = "$baseUrl/api/media/$itemId/asset/$asset"
     fun getDownloadUrl(itemId: String, token: String): String = "$baseUrl/api/media/$itemId/download?token=$token"
     fun getDownloadZipUrl(itemId: String, token: String): String = "$baseUrl/api/media/$itemId/download-zip?token=$token"
-
     fun getSubtitleUrl(itemId: String, name: String): String =
         "$baseUrl/api/media/$itemId/subtitle/$name"
+
+    // OpenSubtitles settings
+    suspend fun getOpenSubtitlesSettings(): OpenSubtitlesSettings = get("/settings/open-subtitles")
+    suspend fun updateOpenSubtitlesSettings(data: OpenSubtitlesSettingsInput): Boolean =
+        put("/settings/open-subtitles", data)
 }
