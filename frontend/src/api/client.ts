@@ -87,4 +87,9 @@ export const api = {
   getUserItems: (userId: string) => request<MediaItem[]>(`/user-items/${userId}`),
   addUserItem: (userId: string, itemId: string) => request<boolean>(`/user-items/${userId}`, { method: 'POST', body: JSON.stringify({ item_id: itemId }) }),
   removeUserItem: (userId: string, itemId: string) => request<boolean>(`/user-items/${userId}/${itemId}`, { method: 'DELETE' }),
+  
+  // OpenSubtitles settings
+  getOpenSubtitlesSettings: () => request<{ enabled: boolean; api_key: string | null; user_agent: string | null }>('/settings/open-subtitles'),
+  updateOpenSubtitlesSettings: (data: { enabled: boolean; api_key: string | null; user_agent: string | null }) =>
+    request<boolean>('/settings/open-subtitles', { method: 'PUT', body: JSON.stringify(data) }),
 };
