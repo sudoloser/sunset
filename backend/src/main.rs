@@ -28,6 +28,8 @@ use rust_embed::RustEmbed;
 use std::fs::File as StdFile;
 use std::io::Write;
 
+mod opensubtitles;
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct DiscordActivity {
     name: String,
@@ -747,6 +749,12 @@ async fn main() {
     info!("Verifying database schema...");
     sqlx::query("CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK (id = 1), server_name TEXT, setup_complete BOOLEAN DEFAULT 0)").execute(&pool).await.unwrap();
     sqlx::query("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, is_admin BOOLEAN DEFAULT 0, discord_token TEXT, discord_status TEXT DEFAULT 'online', profile_picture TEXT)").execute(&pool).await.unwrap();
+    // Migrations for OpenSubtitles settings
+    let _ = sqlx::query("ALTER TABLE settings ADD COLUMN open_subtitles_enabled BOOLEAN DEFAULT 0").execute(&pool).await;
+    let _ = sqlx::query("ALTER TABLE settings ADD COLUMN opensubtitles_api_key TEXT").execute(&pool).await;
+    let _ = sqlx::query("ALTER TABLE settings ADD COLUMN opensubtitles_user_agent TEXT").execute(&pool).await;
+    // Ensure the settings row exists
+    let _ = sqlx::query("INSERT OR IGNORE INTO settings (id, setup_complete) VALUES (1, 0)").execute(&pool).await;
     // Migrations for existing databases
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN discord_token TEXT").execute(&pool).await;
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN discord_status TEXT DEFAULT 'online'").execute(&pool).await;
@@ -813,6 +821,7 @@ async fn main() {
         .route("/api/users/:id/password", put(change_password))
         .route("/api/users/:id/username", put(change_username))
         .route("/api/users/:id/profile-picture", get(get_profile_picture).post(upload_profile_picture))
+        .route("/settings/open-subtitles", get(get_opensubtitles_settings).put(update_opensubtitles_settings))
         .fallback(static_handler)
         .layer(CorsLayer::permissive())
         .with_state(state.clone());
@@ -1505,6 +1514,41 @@ async fn stop_discord_rpc(Path(id): Path<String>, State(state): State<Arc<AppSta
     Json(true)
 }
 
+async fn get_opensubtitles_settings(State(state): State<Arc<AppState>>) -> Json<opensubtitles::OpenSubtitlesConfig> {
+    let mut config = opensubtitles::get_config(&state.pool).await;
+    if let Some(ref key) = config.api_key {
+        if key.len() > 8 {
+            config.api_key = Some(format!("{}...{}", &key[..4], &key[key.len()-4..]));
+        } else if !key.is_empty() {
+            config.api_key = Some("****".to_string());
+        }
+    }
+    Json(config)
+}
+
+async fn update_opensubtitles_settings(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<opensubtitles::OpenSubtitlesConfig>,
+) -> Json<bool> {
+    let current = opensubtitles::get_config(&state.pool).await;
+    let mut new_config = payload;
+
+    // Only update the API key if it's not masked
+    if let Some(ref key) = new_config.api_key {
+        if key.starts_with("****") || (key.len() > 8 && key.contains("...")) {
+            new_config.api_key = current.api_key;
+        }
+    }
+
+    match opensubtitles::update_config(&state.pool, &new_config).await {
+        Ok(_) => Json(true),
+        Err(e) => {
+            error!("Failed to update OpenSubtitles settings: {}", e);
+            Json(false)
+        }
+    }
+}
+
 async fn list_users(State(state): State<Arc<AppState>>) -> Json<Vec<LoginResponse>> {
     let rows = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status, profile_picture FROM users ORDER BY username")
         .fetch_all(&state.pool).await.unwrap();
@@ -1918,9 +1962,30 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 // Fetch metadata and assets
                 let (overview, cast, genres, rating, tmdb_id, collection, poster, backdrop) = fetch_metadata(&state, &title, year, "movie", folder_path).await;
 
+                let item_id = uuid::Uuid::new_v4().to_string();
                 if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, year, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path, version_tag) VALUES (?, ?, ?, NULL, ?, ?, 'movie', ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(title).bind(collection).bind(&file_path).bind(year).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {
+                    .bind(&item_id).bind(&lib.id).bind(&title).bind(collection).bind(&file_path).bind(year).bind(overview).bind(cast).bind(genres).bind(rating).bind(&tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {
                         count += 1;
+                        // Trigger OpenSubtitles download in background
+                        let state_clone = state.clone();
+                        let item_id_clone = item_id.clone();
+                        let title_clone = title.clone();
+                        let file_path_clone = file_path.clone();
+                        let tmdb_id_clone = tmdb_id.clone();
+                        tokio::spawn(async move {
+                            opensubtitles::download_subtitles_for_item(
+                                &state_clone.client,
+                                &state_clone.pool,
+                                &item_id_clone,
+                                &title_clone,
+                                None,
+                                "movie",
+                                None,
+                                None,
+                                tmdb_id_clone.as_deref(),
+                                &file_path_clone,
+                            ).await;
+                        });
                     }
             } else {
                 let mut version_tag = None;
@@ -1959,11 +2024,32 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 // Fetch metadata and assets for the show if not already done
                 let (overview, cast, genres, rating, tmdb_id, _, poster, backdrop) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
+                let item_id = uuid::Uuid::new_v4().to_string();
                 let display_title = format!("Episode {}", episode);
-
                 if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path, version_tag) VALUES (?, ?, ?, ?, NULL, ?, 'episode', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                    .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(display_title).bind(&show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {
+                    .bind(&item_id).bind(&lib.id).bind(&display_title).bind(&show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(&tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {
                         count += 1;
+                        // Trigger OpenSubtitles download in background
+                        let state_clone = state.clone();
+                        let item_id_clone = item_id.clone();
+                        let display_title_clone = display_title.clone();
+                        let show_title_clone = show_title.clone();
+                        let file_path_clone = file_path.clone();
+                        let tmdb_id_clone = tmdb_id.clone();
+                        tokio::spawn(async move {
+                            opensubtitles::download_subtitles_for_item(
+                                &state_clone.client,
+                                &state_clone.pool,
+                                &item_id_clone,
+                                &display_title_clone,
+                                Some(&show_title_clone),
+                                "episode",
+                                Some(season),
+                                Some(episode),
+                                tmdb_id_clone.as_deref(),
+                                &file_path_clone,
+                            ).await;
+                        });
                     }
             }
         }
