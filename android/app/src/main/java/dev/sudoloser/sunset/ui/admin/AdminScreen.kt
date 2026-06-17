@@ -46,6 +46,12 @@ fun AdminScreen(
 
     var inviteCode by remember { mutableStateOf("") }
 
+    // OpenSubtitles settings
+    var osEnabled by remember { mutableStateOf(false) }
+    var osApiKey by remember { mutableStateOf("") }
+    var osUserAgent by remember { mutableStateOf("") }
+    var osSaving by remember { mutableStateOf(false) }
+
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -53,6 +59,15 @@ fun AdminScreen(
             libraries = apiClient.getLibraries()
             storage = apiClient.getStorage()
             users = apiClient.getUsers()
+            // Load OpenSubtitles settings
+            try {
+                val os = apiClient.getOpenSubtitlesSettings()
+                osEnabled = os.enabled
+                osApiKey = os.apiKey ?: ""
+                osUserAgent = os.userAgent ?: ""
+            } catch (e: Exception) {
+                Log.e("SunSet", "Failed to load OpenSubtitles settings", e)
+            }
             while(true) {
                 uptime = apiClient.getUptime()
                 delay(1000)
@@ -173,6 +188,48 @@ fun AdminScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // Open Subtitles Settings
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Open Subtitles", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Switch(
+                        checked = osEnabled,
+                        onCheckedChange = { osEnabled = it },
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                    )
+                }
+                
+                Text("Auto-download English subtitles when new items are detected. Requires an API key from opensubtitles.com.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+
+                SunsetInput(value = osApiKey, onValueChange = { osApiKey = it }, label = "API Key", password = true)
+                SunsetInput(value = osUserAgent, onValueChange = { osUserAgent = it }, label = "User Agent")
+
+                SunsetButton(
+                    text = if (osSaving) "Saving..." else "Save Settings",
+                    onClick = {
+                        osSaving = true
+                        scope.launch {
+                            try {
+                                apiClient.updateOpenSubtitlesSettings(
+                                    OpenSubtitlesSettingsInput(osEnabled, osApiKey.ifBlank { null }, osUserAgent.ifBlank { null })
+                                )
+                            } catch (e: Exception) {
+                                Log.e("SunSet", "Failed to save OpenSubtitles settings", e)
+                            }
+                            osSaving = false
+                        }
+                    },
+                    enabled = !osSaving,
+                    fullWidth = true
+                )
             }
         }
 
