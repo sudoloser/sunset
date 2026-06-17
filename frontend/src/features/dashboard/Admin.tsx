@@ -25,6 +25,13 @@ export const Admin: React.FC = () => {
   const [showNewUser, setShowNewUser] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', password_hash: '', is_admin: false });
 
+  // OpenSubtitles settings
+  const [osEnabled, setOsEnabled] = useState(false);
+  const [osApiKey, setOsApiKey] = useState('');
+  const [osUserAgent, setOsUserAgent] = useState('');
+  const [osSaving, setOsSaving] = useState(false);
+  const [osSaved, setOsSaved] = useState(false);
+
   const loadData = useCallback(async () => {
     const [libs, storageData] = await Promise.all([
       api.getLibraries(),
@@ -35,13 +42,23 @@ export const Admin: React.FC = () => {
     api.getUsers().then(setUsers).catch(() => {});
   }, []);
 
+  const loadOsSettings = useCallback(async () => {
+    try {
+      const settings = await api.getOpenSubtitlesSettings();
+      setOsEnabled(settings.enabled);
+      setOsApiKey(settings.api_key || '');
+      setOsUserAgent(settings.user_agent || '');
+    } catch {}
+  }, []);
+
   useEffect(() => {
     loadData();
+    loadOsSettings();
     const interval = setInterval(() => {
       api.getUptime().then(setUptime);
     }, 1000);
     return () => clearInterval(interval);
-  }, [loadData]);
+  }, [loadData, loadOsSettings]);
 
   const handleAdd = async () => {
     await api.addLibrary(newLib);
@@ -69,6 +86,20 @@ export const Admin: React.FC = () => {
     navigator.clipboard.writeText(inviteCode);
     setInviteCopied(true);
     setTimeout(() => setInviteCopied(false), 2000);
+  };
+
+  const handleSaveOsSettings = async () => {
+    setOsSaving(true);
+    try {
+      await api.updateOpenSubtitlesSettings({
+        enabled: osEnabled,
+        api_key: osApiKey || null,
+        user_agent: osUserAgent || null,
+      });
+      setOsSaved(true);
+      setTimeout(() => setOsSaved(false), 2000);
+    } catch {}
+    setOsSaving(false);
   };
 
   return (
@@ -186,6 +217,65 @@ export const Admin: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Open Subtitles Settings */}
+      <Card style={{ backgroundColor: 'var(--surface-color)', marginTop: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <h3 style={{ fontSize: '1.4rem' }}>Open Subtitles</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              {osEnabled ? 'Enabled' : 'Disabled'}
+            </span>
+            <button
+              onClick={() => setOsEnabled(!osEnabled)}
+              style={{
+                width: '48px', height: '26px', borderRadius: '13px', border: 'none',
+                background: osEnabled ? 'var(--primary-color)' : 'var(--surface-variant)',
+                cursor: 'pointer', position: 'relative', transition: 'var(--transition-standard)'
+              }}
+            >
+              <div style={{
+                width: '22px', height: '22px', borderRadius: '50%', background: 'white',
+                position: 'absolute', top: '2px',
+                left: osEnabled ? '24px' : '2px',
+                transition: 'var(--transition-standard)'
+              }} />
+            </button>
+          </div>
+        </div>
+
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+          Automatically download English subtitles from OpenSubtitles when new media is detected.
+          Subtitles are downloaded per-item and apply to all users. Applies to both movies and TV shows.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <Input 
+            label="API Key (required)" 
+            type="password"
+            value={osApiKey} 
+            onChange={e => setOsApiKey(e.target.value)} 
+            placeholder="Enter your OpenSubtitles API key"
+          />
+          <Input 
+            label="User Agent" 
+            value={osUserAgent} 
+            onChange={e => setOsUserAgent(e.target.value)} 
+            placeholder="SunSet v0.2.0 (default)"
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <Button onClick={handleSaveOsSettings} disabled={osSaving}>
+            {osSaving ? 'Saving...' : osSaved ? '✓ Saved' : 'Save Settings'}
+          </Button>
+          {osSaved && (
+            <span style={{ fontSize: '0.85rem', color: 'var(--primary-color)' }}>
+              Settings saved!
+            </span>
+          )}
+        </div>
+      </Card>
 
       <Card style={{ backgroundColor: 'var(--surface-color)', marginTop: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
