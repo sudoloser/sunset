@@ -115,3 +115,17 @@ data class DiscordConfig(
     val token: String,
     val status: String
 )
+
+@Serializable
+data class OpenSubtitlesSettings(
+    val enabled: Boolean,
+    @SerialName("api_key") val apiKey: String? = null,
+    @SerialName("user_agent") val userAgent: String? = null
+)
+
+@Serializable
+data class OpenSubtitlesSettingsInput(
+    val enabled: Boolean,
+    @SerialName("api_key") val apiKey: String? = null,
+    @SerialName("user_agent") val userAgent: String? = null
+)
