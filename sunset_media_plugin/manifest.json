@@ -1,0 +1,9 @@
+{
+  "id": "sunset-media",
+  "name": "SunSet Media",
+  "author": "dev.sudoloser",
+  "description": "Monitors the SunSet Media Server",
+  "mainScript": "src/main.kts",
+  "logicScript": "src/script.kts",
+  "settingsScript": "src/settings.kts"
+}

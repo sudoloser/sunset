@@ -1,0 +1,664 @@
+--------- beginning of crash
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: FATAL EXCEPTION: main
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: Process: dev.sudoloser.sunset, PID: 23513
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: java.lang.IllegalStateException: Session ID must be unique. ID=
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at em1.<init>(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:44)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at r52.invokeSuspend(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:166)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at xj.resumeWith(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:8)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at bc0.run(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:116)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at qb.I(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:24)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at pb.run(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:3)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:1001)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:105)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:268)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:384)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:8936)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:580)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:907)
+06-15 00:09:36.651 23513 23513 E AndroidRuntime: 	Suppressed: lb0: [er1@26e6284, zm@11c5a6d, mv2{Cancelling}@9ede6a2, qb@9dcbf33]
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: FATAL EXCEPTION: main
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: Process: dev.sudoloser.sunset, PID: 27458
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: java.lang.IllegalStateException: Session ID must be unique. ID=
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at em1.<init>(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:44)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at r52.invokeSuspend(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:166)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at xj.resumeWith(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:8)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at bc0.run(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:116)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at qb.I(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:24)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at pb.run(r8-map-id-8305ebc001b9c2dfb01c85c65ba7255ad6f6bdbdbc1135928a455eab7e973277:3)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:1001)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:105)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:268)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:384)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:8936)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:580)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:907)
+06-15 00:33:02.886 27458 27458 E AndroidRuntime: 	Suppressed: lb0: [er1@b574171, zm@87d7b56, mv2{Cancelling}@385e7d7, qb@3f168c4]
+--------- beginning of main
+06-15 17:53:59.888 21967 21967 I udoloser.sunset: Using generational CollectorTypeCMC GC.
+06-15 17:53:59.898 21967 21967 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+06-15 17:53:59.917 21967 21967 D CompatChangeReporter: Compat change id reported: 242716250; UID 10503; state: ENABLED
+06-15 17:53:59.934 21967 21967 D nativeloader: Configuring clns-7 for other apk /data/app/~~vEvilwRNH-oluR-0kJ1E5w==/dev.sudoloser.sunset-UUWA47qk9MuWx84vBnDJgg==/base.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~vEvilwRNH-oluR-0kJ1E5w==/dev.sudoloser.sunset-UUWA47qk9MuWx84vBnDJgg==/lib/arm64:/data/app/~~vEvilwRNH-oluR-0kJ1E5w==/dev.sudoloser.sunset-UUWA47qk9MuWx84vBnDJgg==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/dev.sudoloser.sunset
+06-15 17:53:59.939 21967 21967 V GraphicsEnvironment: Currently set values for:
+06-15 17:53:59.939 21967 21967 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+06-15 17:53:59.939 21967 21967 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+06-15 17:53:59.939 21967 21967 V GraphicsEnvironment: Global.Settings values are invalid: number of packages: 0, number of values: 0
+06-15 17:53:59.939 21967 21967 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+06-15 17:53:59.946 21967 21967 I Typeface: updateThemeFont new=Rookery-Regular;old=sans-serif;new=Rookery-Stacked;old=
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: QUALCOMM build                   : 0c393b63cf, I94e2bd5684
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: Build Date                       : 05/02/25
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: OpenGL ES Shader Compiler Version: EV031.36.08.33
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: Local Branch                     : 
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: Remote Branch                    : refs/tags/AU_LINUX_ANDROID_LA.VENDOR.1.0.R1.11.00.00.816.269
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: Remote Branch                    : NONE
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: Reconstruct Branch               : NOTHING
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: Build Config                     : S P 12.1.1 AArch64
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: Driver Path                      : /vendor/lib64/egl/libGLESv2_adreno.so
+06-15 17:54:00.026 21967 21989 I AdrenoGLES-0: Driver Version                   : 0615.98
+06-15 17:54:00.029 21967 21989 I AdrenoGLES-0: PFP: 0x01710181, ME: 0x00000000
+06-15 17:54:00.046 21967 21989 I HWUI    : setGrContext nullptr-->validptr
+06-15 17:54:00.127 21967 21967 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+06-15 17:54:00.127 21967 21967 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+06-15 17:54:01.262 21967 21967 W udoloser.sunset: Unable to open libdolphin.so: dlopen failed: library "libdolphin.so" not found.
+06-15 17:54:01.514 21967 21967 I ExoPlayerImpl: Init 45f9c40 [AndroidXMedia3/1.4.1] [boston, moto g stylus 5G - 2024, motorola, 35]
+06-15 17:54:01.521 21967 21967 W AidlConversionCppNdk: aidl2legacy_AudioChannelLayout_audio_channel_mask_t: no legacy output audio_channel_mask_t found for AudioChannelLayout{layoutMask: 16}
+06-15 17:54:01.538 21967 21967 I MediaSessionImpl: Init 837d6ca [AndroidXMedia3/1.4.1] [boston, moto g stylus 5G - 2024, motorola, 35]
+06-15 17:54:01.544 21967 21967 W MediaSessionCompat: Couldn't find a unique registered media button receiver in the given context.
+06-15 17:54:01.809 21967 22079 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+06-15 17:54:01.809 21967 22079 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+06-15 17:54:01.820 21967 22079 I DMCodecAdapterFactory: Creating an asynchronous MediaCodec adapter for track type video
+06-15 17:54:01.821 21967 22079 I MediaCodec: (0xb4000070f2b96d50) init name(c2.qti.avc.decoder)
+06-15 17:54:01.822 21967 22087 D CCodec  : allocate(c2.qti.avc.decoder)
+06-15 17:54:01.825 21967 22087 I Codec2Client: Available Codec2 services: "default" "default9" "software"
+06-15 17:54:01.829 21967 22087 I CCodec  : setting up 'default' as default (vendor) store
+06-15 17:54:01.835 21967 22087 I CCodec  : Created component [c2.qti.avc.decoder]
+06-15 17:54:01.835 21967 22087 D CCodecConfig: read media type: video/avc
+06-15 17:54:01.837 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: vendor.qti-ext-dec-info-misr.misr_info_first_field.misr_dpb_luma
+06-15 17:54:01.837 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: vendor.qti-ext-dec-info-misr.misr_info_first_field.misr_dpb_chroma
+06-15 17:54:01.837 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: vendor.qti-ext-dec-info-misr.misr_info_first_field.misr_opb_luma
+06-15 17:54:01.837 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: vendor.qti-ext-dec-info-misr.misr_info_first_field.misr_opb_chroma
+06-15 17:54:01.837 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: vendor.qti-ext-dec-info-misr.misr_info_second_field.misr_dpb_luma
+06-15 17:54:01.837 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: vendor.qti-ext-dec-info-misr.misr_info_second_field.misr_dpb_chroma
+06-15 17:54:01.837 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: vendor.qti-ext-dec-info-misr.misr_info_second_field.misr_opb_luma
+06-15 17:54:01.837 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: vendor.qti-ext-dec-info-misr.misr_info_second_field.misr_opb_chroma
+06-15 17:54:01.839 21967 22087 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.pool-ids.values
+06-15 17:54:01.841 21967 22087 D CCodecConfig: ignoring local param raw.size (0xd2001800) as it is already supported
+06-15 17:54:01.841 21967 22087 D CCodecConfig: ignoring local param default.color (0x5200180b) as it is already supported
+06-15 17:54:01.841 21967 22087 D CCodecConfig: ignoring local param raw.hdr-static-info (0xd200180a) as it is already supported
+06-15 17:54:01.841 21967 22087 I CCodecConfig: query failed after returning 17 values (BAD_INDEX)
+06-15 17:54:01.841 21967 22087 D CCodecConfig: c2 config diff is Dict {
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::i32 algo.priority.value = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::float algo.rate.value = 30
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 algo.secure-mode.value = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::float coded.frame-rate.value = 30
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 coded.pl.level = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 coded.pl.profile = 20484
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 coded.vui.color.matrix = 255
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 coded.vui.color.primaries = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 coded.vui.color.range = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 coded.vui.color.transfer = 255
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 default.color.matrix = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 default.color.primaries = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 default.color.range = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 default.color.transfer = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 input.buffers.max-size.value = 13271040
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 input.delay.value = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   string input.media-type.value = "video/avc"
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 output.delay.value = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   string output.media-type.value = "video/raw"
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 raw.color.matrix = 255
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 raw.color.primaries = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 raw.color.range = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::u32 raw.color.transfer = 255
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::float raw.hdr-static-info.mastering.blue.x = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::float raw.hdr-static-info.mastering.blue.y = 0
+06-15 17:54:01.841 21967 22087 D CCodecConfig:   c2::float raw.hdr-static-info.mastering.gr
+06-15 17:54:01.842 21967 22087 W ColorUtils: expected specified color aspects (0:0:255:255)
+06-15 17:54:01.842 21967 22086 I MediaCodec: (0xb4000070f2b96d50) Component Allocated (c2.qti.avc.decoder)
+06-15 17:54:01.844 21967 22086 I MediaCodec: MediaCodec will operate in async mode
+06-15 17:54:01.844 21967 22079 I MediaCodec: (0xb4000070f2b96d50) configure surface(0xb400007212b2a630) crypto(0x0) flags(4)
+06-15 17:54:01.844 21967 22079 D MediaCodec: (0xb4000070f2b96d50) configure format: AMessage(what = 0x00000000) = {
+06-15 17:54:01.844 21967 22079 D MediaCodec:       int32_t max-height = 480
+06-15 17:54:01.844 21967 22079 D MediaCodec:       string log-session-id = "eGxiHPNmfkIXNmKO"
+06-15 17:54:01.844 21967 22079 D MediaCodec:       int32_t importance = 1000
+06-15 17:54:01.844 21967 22079 D MediaCodec:       string mime = "video/avc"
+06-15 17:54:01.844 21967 22079 D MediaCodec:       int32_t priority = 0
+06-15 17:54:01.844 21967 22079 D MediaCodec:       Buffer csd-1 = {
+06-15 17:54:01.844 21967 22079 D MediaCodec:         00000000:  00 00 00 01 68 e9 7b 2c  8b                       ....h.{,.
+06-15 17:54:01.844 21967 22079 D MediaCodec:       }
+06-15 17:54:01.844 21967 22079 D MediaCodec:       int32_t max-width = 852
+06-15 17:54:01.844 21967 22079 D MediaCodec:       int32_t width = 852
+06-15 17:54:01.844 21967 22079 D MediaCodec:       float frame-rate = 23.976015
+06-15 17:54:01.844 21967 22079 D MediaCodec:       int32_t rotation-degrees = 0
+06-15 17:54:01.844 21967 22079 D MediaCodec:       int32_t max-input-size = 138604
+06-15 17:54:01.844 21967 22079 D MediaCodec:       int32_t height = 480
+06-15 17:54:01.844 21967 22079 D MediaCodec:       Buffer csd-0 = {
+06-15 17:54:01.844 21967 22079 D MediaCodec:         00000000:  00 00 00 01 67 64 00 1e  ac d9 80 d8 3d e7 ff f0  ....gd......=...
+06-15 17:54:01.844 21967 22079 D MediaCodec:         00000010:  28 00 27 f1 00 00 03 03  e9 00 00 bb 80 0f 16 2d  (.'............-
+06-15 17:54:01.844 21967 22079 D MediaCodec:         00000020:  9a                                                .
+06-15 17:54:01.844 21967 22079 D MediaCodec:       }
+06-15 17:54:01.844 21967 22079 D MediaCodec:     }
+06-15 17:54:01.844 21967 22086 D SurfaceUtils: connecting to surface 0xb400007212b2a640, reason connectToSurface
+06-15 17:54:01.845 21967 22086 I MediaCodec: [c2.qti.avc.decoder] setting surface generation to 22494209
+06-15 17:54:01.845 21967 22086 D SurfaceUtils: disconnecting from surface 0xb400007212b2a640, reason connectToSurface(reconnect)
+06-15 17:54:01.845 21967 22086 D Surface : Surface::disconnect
+06-15 17:54:01.845 21967 22086 D BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) disconnect: api 3
+06-15 17:54:01.845 21967 22086 D SurfaceUtils: connecting to surface 0xb400007212b2a630, reason connectToSurface(reconnect-with-listener)
+06-15 17:54:01.846 21967 22087 D CCodec  : [c2.qti.avc.decoder] buffers are bound to CCodec for this session
+06-15 17:54:01.846 21967 22087 D CCodecConfig: no c2 equivalents for log-session-id
+06-15 17:54:01.846 21967 22087 D CCodecConfig: no c2 equivalents for importance
+06-15 17:54:01.846 21967 22087 D CCodecConfig: no c2 equivalents for csd-1
+06-15 17:54:01.846 21967 22087 D CCodecConfig: no c2 equivalents for native-window
+06-15 17:54:01.846 21967 22087 D CCodecConfig: no c2 equivalents for native-window-generation
+06-15 17:54:01.846 21967 22087 D CCodecConfig: no c2 equivalents for flags
+06-15 17:54:01.847 21967 22087 D CCodecConfig: c2 config diff is   c2::float coded.frame-rate.value = 23.976
+06-15 17:54:01.847 21967 22087 D CCodecConfig:   c2::u32 input.buffers.max-size.value = 3133440
+06-15 17:54:01.847 21967 22087 D CCodecConfig:   c2::u32 raw.max-size.height = 480
+06-15 17:54:01.847 21967 22087 D CCodecConfig:   c2::u32 raw.max-size.width = 852
+06-15 17:54:01.847 21967 22087 D CCodecConfig:   c2::u32 raw.size.width = 852
+06-15 17:54:01.847 21967 22087 W Codec2Client: query -- param skipped: index = 1107298332.
+06-15 17:54:01.847 21967 22087 D CCodec  : client requested max input size 138604, which is smaller than what component recommended (3133440); overriding with component recommendation.
+06-15 17:54:01.847 21967 22087 W CCodec  : This behavior is subject to change. It is recommended that app developers double check whether the requested max input size is in reasonable range.
+06-15 17:54:01.847 21967 22087 D CCodec  : encoding statistics level = 0
+06-15 17:54:01.847 21967 22087 D CCodec  : setup formats input: AMessage(what = 0x00000000) = {
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t feature-secure-playback = 0
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t frame-rate = 24
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t height = 480
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t max-input-size = 3133440
+06-15 17:54:01.847 21967 22087 D CCodec  :   string mime = "video/avc"
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t priority = 0
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t profile = 8
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t width = 852
+06-15 17:54:01.847 21967 22087 D CCodec  :   Rect crop(0, 0, 851, 479)
+06-15 17:54:01.847 21967 22087 D CCodec  : }
+06-15 17:54:01.847 21967 22087 D CCodec  : setup formats output: AMessage(what = 0x00000000) = {
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t android._color-format = 0
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t android._video-scaling = 1
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t android._dataspace = 260
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t color-standard = 130817
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t color-range = 2
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t color-transfer = 65791
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t sar-height = 1
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t rotation-degrees = 0
+06-15 17:54:01.847 21967 22087 D CCodec  :   Buffer hdr-static-info = {
+06-15 17:54:01.847 21967 22087 D CCodec  :     00000000:  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................
+06-15 17:54:01.847 21967 22087 D CCodec  :     00000010:  00 00 00 00 00 00 00 00  00                       .........
+06-15 17:54:01.847 21967 22087 D CCodec  :   }
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t sar-width = 1
+06-15 17:54:01.847 21967 22087 D CCodec  :   Rect crop(0, 0, 851, 479)
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t width = 852
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t feature-secure-playback = 0
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t frame-rate = 24
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t height = 480
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t max-height = 480
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t max-width = 852
+06-15 17:54:01.847 21967 22087 D CCodec  :   string mime = "video/raw"
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t priority = 0
+06-15 17:54:01.847 21967 22087 D CCodec  :   int32_t color-format = 2130708361
+06-15 17:54:01.847 21967 22087 D CCodec  : }
+06-15 17:54:01.848 21967 22087 I CCodecConfig: query failed after returning 17 values (BAD_INDEX)
+06-15 17:54:01.848 21967 22079 I MediaCodec: (0xb4000070f2b96d50) start
+06-15 17:54:01.848 21967 22079 D MediaCodec: keep callback message for reclaim
+06-15 17:54:01.852 21967 22087 W Codec2Client: query -- param skipped: index = 1342179345.
+06-15 17:54:01.852 21967 22087 W Codec2Client: query -- param skipped: index = 2415921170.
+06-15 17:54:01.852 21967 22087 W Codec2Client: query -- param skipped: index = 1610614798.
+06-15 17:54:01.852 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Query input allocators returned 0 params => BAD_INDEX (6)
+06-15 17:54:01.853 21967 22087 D C2Store : debug.c2.use_dmabufheaps set, forcing DMABUF Heaps
+06-15 17:54:01.853 21967 22087 D C2Store : Using DMABUF Heaps
+06-15 17:54:01.853 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Created input block pool with allocatorID 16 => poolID 17 - OK (0)
+06-15 17:54:01.853 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] start: max output delay 11
+06-15 17:54:01.853 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Query output allocators returned 0 params => BAD_INDEX (6)
+06-15 17:54:01.854 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Query output surface allocator returned 0 params => BAD_INDEX (6)
+06-15 17:54:01.854 21967 22087 I CCodecBufferChannel: [c2.qti.avc.decoder#726] Created output block pool with allocatorID 18 => poolID 1130 - OK
+06-15 17:54:01.854 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Configured output block pool ids 1130 => OK
+06-15 17:54:01.854 21967 22087 D Codec2-OutputBufferQueue: remote graphic buffer migration 0/0
+06-15 17:54:01.855 21967 22087 D Codec2Client: setOutputSurface -- failed to set consumer usage (6/BAD_INDEX)
+06-15 17:54:01.855 21967 22087 D Codec2Client: setOutputSurface -- generation=22494209 consumer usage=0x900
+06-15 17:54:01.857 21967 22087 D Codec2Client: Surface configure completed
+06-15 17:54:01.857 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] start: updating output delay 0
+06-15 17:54:01.857 21967 22087 I DMABUFHEAPS: Using DMA-BUF heap named: system
+06-15 17:54:01.858 21967 22086 I MediaCodec: (0xb4000070f2b96d50) kWhatStartCompleted
+06-15 17:54:01.861 21967 22086 I MediaCodec: [0xb4000070f2b96d50] enqueue first input frame, timeUs = 0
+06-15 17:54:01.861 21967 22086 I MediaCodec: [0xb4000070f2b96d50] enqueue first input frame, timeUs = 0
+06-15 17:54:01.861 21967 22079 I DMCodecAdapterFactory: Creating an asynchronous MediaCodec adapter for track type audio
+06-15 17:54:01.863 21967 22079 I MediaCodec: (0xb4000070f2b98920) init name(c2.android.aac.decoder)
+06-15 17:54:01.863 21967 22098 D CCodec  : allocate(c2.android.aac.decoder)
+06-15 17:54:01.864 21967 22091 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Ignoring stale input buffer done callback: last flush index = 0, frameIndex = 0
+06-15 17:54:01.870 21967 22098 I CCodec  : setting up 'default' as default (vendor) store
+06-15 17:54:01.881 21967 22098 I CCodec  : Created component [c2.android.aac.decoder]
+06-15 17:54:01.881 21967 22098 D CCodecConfig: read media type: audio/mp4a-latm
+06-15 17:54:01.883 21967 22098 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.max-count.values
+06-15 17:54:01.883 21967 22098 D ReflectedParamUpdater: extent() != 1 for single value type: output.subscribed-indices.values
+06-15 17:54:01.883 21967 22098 D ReflectedParamUpdater: extent() != 1 for single value type: input.buffers.allocator-ids.values
+06-15 17:54:01.883 21967 22098 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.allocator-ids.values
+06-15 17:54:01.883 21967 22098 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.allocator-ids.values
+06-15 17:54:01.883 21967 22098 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.pool-ids.values
+06-15 17:54:01.884 21967 22098 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.pool-ids.values
+06-15 17:54:01.886 21967 22098 I CCodecConfig: query failed after returning 21 values (BAD_INDEX)
+06-15 17:54:01.886 21967 22098 D CCodecConfig: c2 config diff is Dict {
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 coded.aac-packaging.value = 0
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 coded.bitrate.value = 64000
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 coded.pl.level = 0
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 coded.pl.profile = 8192
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::i32 coding.drc.album-mode.value = 0
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::float coding.drc.attenuation-factor.value = 1
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::float coding.drc.boost-factor.value = 1
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::i32 coding.drc.compression-mode.value = 3
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::i32 coding.drc.effect-type.value = 3
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::float coding.drc.encoded-level.value = 0.25
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::float coding.drc.reference-level.value = -16
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 input.buffers.max-size.value = 8192
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 input.delay.value = 0
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   string input.media-type.value = "audio/mp4a-latm"
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 output.delay.value = 2
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::float output.drc.output-loudness.value = 0.25
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 output.large-frame.max-size = 0
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 output.large-frame.threshold-size = 0
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   string output.media-type.value = "audio/raw"
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 raw.channel-count.value = 1
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 raw.channel-mask.value = 0
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 raw.max-channel-count.value = 8
+06-15 17:54:01.886 21967 22098 D CCodecConfig:   c2::u32 raw.sample-rate.value = 44100
+06-15 17:54:01.886 21967 22098 D CCodecConfig: }
+06-15 17:54:01.887 21967 22098 I MediaCodec: (0xb4000070f2b98920) Component Allocated (c2.android.aac.decoder)
+06-15 17:54:01.889 21967 22098 I MediaCodec: MediaCodec will operate in async mode
+06-15 17:54:01.889 21967 22079 I MediaCodec: (0xb4000070f2b98920) configure surface(0x0) crypto(0x0) flags(4)
+06-15 17:54:01.889 21967 22079 D MediaCodec: (0xb4000070f2b98920) configure format: AMessage(what = 0x00000000) = {
+06-15 17:54:01.889 21967 22079 D MediaCodec:       float operating-rate = 48000.000000
+06-15 17:54:01.889 21967 22079 D MediaCodec:       string log-session-id = "eGxiHPNmfkIXNmKO"
+06-15 17:54:01.889 21967 22079 D MediaCodec:       int32_t sample-rate = 48000
+06-15 17:54:01.889 21967 22079 D MediaCodec:       int32_t importance = 1000
+06-15 17:54:01.889 21967 22079 D MediaCodec:       string mime = "audio/mp4a-latm"
+06-15 17:54:01.889 21967 22079 D MediaCodec:       int32_t channel-count = 2
+06-15 17:54:01.889 21967 22079 D MediaCodec:       int32_t priority = 0
+06-15 17:54:01.889 21967 22079 D MediaCodec:       int32_t max-output-channel-count = 99
+06-15 17:54:01.889 21967 22079 D MediaCodec:       int32_t max-input-size = 809
+06-15 17:54:01.889 21967 22079 D MediaCodec:       Buffer csd-0 = {
+06-15 17:54:01.889 21967 22079 D MediaCodec:         00000000:  11 90                                             ..
+06-15 17:54:01.889 21967 22079 D MediaCodec:       }
+06-15 17:54:01.889 21967 22079 D MediaCodec:     }
+06-15 17:54:01.889 21967 22098 D CCodec  : [c2.android.aac.decoder] buffers are bound to CCodec for this session
+06-15 17:54:01.890 21967 22098 D CCodecConfig: no c2 equivalents for log-session-id
+06-15 17:54:01.890 21967 22098 D CCodecConfig: no c2 equivalents for importance
+06-15 17:54:01.890 21967 22098 D CCodecConfig: no c2 equivalents for flags
+06-15 17:54:01.890 21967 22098 D CCodecConfig: c2 config diff is   c2::u32 raw.channel-count.value = 2
+06-15 17:54:01.890 21967 22098 D CCodecConfig:   c2::u32 raw.sample-rate.value = 48000
+06-15 17:54:01.890 21967 22098 W Codec2Client: query -- param skipped: index = 1107298332.
+06-15 17:54:01.891 21967 22098 D CCodec  : client requested max input size 809, which is smaller than what component recommended (8192); overriding with component recommendation.
+06-15 17:54:01.891 21967 22098 W CCodec  : This behavior is subject to change. It is recommended that app developers double check whether the requested max input size is in reasonable range.
+06-15 17:54:01.891 21967 22098 D CCodec  : encoding statistics level = 0
+06-15 17:54:01.891 21967 22098 D CCodec  : setup formats input: AMessage(what = 0x00000000) = {
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-album-mode = 0
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-boost-level = 127
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-cut-level = 127
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-effect-type = 3
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-encoded-target-level = -1
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-max-output-channel_count = 8
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-target-ref-level = 64
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t bitrate = 64000
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t channel-count = 2
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t channel-mask = 0
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t level = 0
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t max-input-size = 8192
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t max-output-channel-count = 8
+06-15 17:54:01.891 21967 22098 D CCodec  :   string mime = "audio/mp4a-latm"
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t profile = 2
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t sample-rate = 48000
+06-15 17:54:01.891 21967 22098 D CCodec  : }
+06-15 17:54:01.891 21967 22098 D CCodec  : setup formats output: AMessage(what = 0x00000000) = {
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-album-mode = 0
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-boost-level = 127
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-cut-level = 127
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-effect-type = 3
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-drc-output-loudness = -1
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-encoded-target-level = -1
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-max-output-channel_count = 8
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t aac-target-ref-level = 64
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t buffer-batch-max-output-size = 0
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t buffer-batch-threshold-output-size = 0
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t channel-count = 2
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t channel-mask = 0
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t max-output-channel-count = 8
+06-15 17:54:01.891 21967 22098 D CCodec  :   string mime = "audio/raw"
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t sample-rate = 48000
+06-15 17:54:01.891 21967 22098 D CCodec  :   int32_t android._config-pcm-encoding = 2
+06-15 17:54:01.891 21967 22098 D CCodec  : }
+06-15 17:54:01.891 21967 22098 I CCodecConfig: query failed after returning 21 values (BAD_INDEX)
+06-15 17:54:01.891 21967 22079 I MediaCodec: (0xb4000070f2b98920) start
+06-15 17:54:01.891 21967 22079 D MediaCodec: keep callback message for reclaim
+06-15 17:54:01.892 21967 22098 W Codec2Client: query -- param skipped: index = 1342179345.
+06-15 17:54:01.892 21967 22098 W Codec2Client: query -- param skipped: index = 2415921170.
+06-15 17:54:01.892 21967 22098 W Codec2Client: query -- param skipped: index = 1610614798.
+06-15 17:54:01.893 21967 22098 D CCodecBufferChannel: [c2.android.aac.decoder#7] Created input block pool with allocatorID 16 => poolID 18 - OK (0)
+06-15 17:54:01.894 21967 22098 I CCodecBufferChannel: [c2.android.aac.decoder#7] Created output block pool with allocatorID 16 => poolID 1372 - OK
+06-15 17:54:01.894 21967 22098 D CCodecBufferChannel: [c2.android.aac.decoder#7] Configured output block pool ids 1372 => OK
+06-15 17:54:01.894 21967 22098 D CCodecBufferChannel: [c2.android.aac.decoder#7] start: updating output delay 2
+06-15 17:54:01.895 21967 22098 I MediaCodec: (0xb4000070f2b98920) kWhatStartCompleted
+06-15 17:54:01.905 21967 22087 D CCodecConfig: c2 config diff is   c2::u32 output.delay.value = 13
+06-15 17:54:01.905 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] onWorkDone: updating output delay 13
+06-15 17:54:01.905 21967 22087 I CCodecBufferChannel: [c2.qti.avc.decoder#726] onWorkDone: updating max output delay 20
+06-15 17:54:01.905 21967 22087 D Codec2-OutputBufferQueue: set max dequeue count 20 from update
+06-15 17:54:01.909 21967 22098 D CCodecConfig: c2 config diff is   c2::u32 raw.channel-mask.value = 12
+06-15 17:54:01.909 21967 22098 D CCodecBuffers: [c2.android.aac.decoder#7:Output[N]] popFromStashAndRegister: at 999999987666us, output format changed to AMessage(what = 0x00000000) = {
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t aac-drc-album-mode = 0
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t aac-drc-boost-level = 127
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t aac-drc-cut-level = 127
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t aac-drc-effect-type = 3
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t aac-drc-output-loudness = -1
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t aac-encoded-target-level = -1
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t aac-max-output-channel_count = 8
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t aac-target-ref-level = 64
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t buffer-batch-max-output-size = 0
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t buffer-batch-threshold-output-size = 0
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t channel-count = 2
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t channel-mask = 12
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t max-output-channel-count = 8
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   string mime = "audio/raw"
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t sample-rate = 48000
+06-15 17:54:01.909 21967 22098 D CCodecBuffers:   int32_t android._config-pcm-encoding = 2
+06-15 17:54:01.909 21967 22098 D CCodecBuffers: }
+06-15 17:54:01.911 21967 22087 D CCodecConfig: c2 config diff is   c2::u32 raw.color.matrix = 1
+06-15 17:54:01.911 21967 22087 D CCodecConfig:   c2::u32 raw.color.primaries = 1
+06-15 17:54:01.911 21967 22087 D CCodecConfig:   c2::u32 raw.color.range = 2
+06-15 17:54:01.911 21967 22087 D CCodecConfig:   c2::u32 raw.color.transfer = 3
+06-15 17:54:01.911 21967 22087 D CCodecConfig:   c2::u32 raw.crop.height = 480
+06-15 17:54:01.911 21967 22087 D CCodecConfig:   c2::u32 raw.crop.left = 0
+06-15 17:54:01.911 21967 22087 D CCodecConfig:   c2::u32 raw.crop.top = 0
+06-15 17:54:01.911 21967 22087 D CCodecConfig:   c2::u32 raw.crop.width = 852
+06-15 17:54:01.911 21967 22087 D CCodecConfig:   c2::u32 raw.size.width = 864
+06-15 17:54:01.913 21967 22087 D CCodecBuffers: [c2.qti.avc.decoder#726:2D-Output] popFromStashAndRegister: at 1000000000000us, output format changed to AMessage(what = 0x00000000) = {
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t android._color-format = 0
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t android._video-scaling = 1
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t android._dataspace = 260
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t color-standard = 1
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t color-range = 2
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t color-transfer = 3
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t sar-height = 1
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t rotation-degrees = 0
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   Buffer hdr-static-info = {
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:     00000000:  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:     00000010:  00 00 00 00 00 00 00 00  00                       .........
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   }
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t sar-width = 1
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   Rect crop(0, 0, 851, 479)
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t width = 864
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t feature-secure-playback = 0
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t frame-rate = 24
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t height = 480
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t max-height = 480
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t max-width = 852
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   string mime = "video/raw"
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t priority = 0
+06-15 17:54:01.913 21967 22087 D CCodecBuffers:   int32_t color-format = 2130708361
+06-15 17:54:01.913 21967 22087 D CCodecBuffers: }
+06-15 17:54:01.913 21967 22086 I MediaCodec: [0xb4000070f2b96d50] dequeue first output frame, timeUs = 1000000000000
+06-15 17:54:01.919 21967 22079 I MediaCodec: (0xb4000070f2b96d50) setParameters AMessage(what = 0x00000000) = {
+06-15 17:54:01.919 21967 22079 I MediaCodec:       int32_t android._video-scaling = 1
+06-15 17:54:01.919 21967 22079 I MediaCodec:     }
+06-15 17:54:01.924 21967 22079 D AudioTrack: The audio hal latency is 109
+06-15 17:54:01.926 21967 22080 W InteractionJankMonitor: Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=dev.sudoloser.sunset
+06-15 17:54:01.936 21967 22079 D AudioTrack: setVolume: mRelativePercentage:1.000000, left:1.000000, right:1.000000
+06-15 17:54:01.961 21967 21979 W AidlConversionCppNdk: aidl2legacy_AudioChannelLayout_audio_channel_mask_t: no legacy output audio_channel_mask_t found for AudioChannelLayout{layoutMask: 16}
+06-15 17:54:02.024 21967 22079 D AudioTrack: getTimestamp_l(892): device stall time corrected using current time 82211942256084
+06-15 17:54:02.034 21967 22079 W AudioTrack: getTimestamp_l(892): retrograde timestamp time corrected, 82211929311345 < 82211942256084
+06-15 17:54:02.072 21967 21967 D VRI[MainActivity]: visibilityChanged oldVisibility=true newVisibility=false
+06-15 17:54:02.092 21967 21989 D Surface : Surface::disconnect
+06-15 17:54:02.092 21967 21989 D BufferQueueProducer: [dev.sudoloser.sunset/dev.sudoloser.sunset.MainActivity#33029(BLAST Consumer)pid:21967](id:55cf00000000,api:1,p:21967,c:21967) disconnect: api 1
+06-15 17:54:02.092 21967 21989 D HWUI    : endAllActiveAnimators on 0xb4000071d2b27ce0 (ca3) with handle 0xb4000070e2b08aa0
+06-15 17:54:02.939 21967 22086 I MediaCodec: [0xb4000070f2b96d50] dequeue 39 output frames in last 1025 ms, latest timeUs 1000001584916, flags 128
+06-15 17:54:02.944 21967 22086 I MediaCodec: [0xb4000070f2b96d50] enqueue 47 input frames in last 1082 ms, latest timeUs 1000001876875
+06-15 17:54:04.045 21967 22086 I MediaCodec: [0xb4000070f2b96d50] dequeue 26 output frames in last 1106 ms, latest timeUs 1000002669333, flags 128
+06-15 17:54:04.049 21967 22086 I MediaCodec: [0xb4000070f2b96d50] enqueue 26 input frames in last 1105 ms, latest timeUs 1000002919583
+06-15 17:54:04.829 21967 21967 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+06-15 17:54:04.829 21967 21967 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+06-15 17:54:05.047 21967 22086 I MediaCodec: [0xb4000070f2b96d50] dequeue 25 output frames in last 1001 ms, latest timeUs 1000003712041, flags 128
+06-15 17:54:05.056 21967 22086 I MediaCodec: [0xb4000070f2b96d50] enqueue 26 input frames in last 1007 ms, latest timeUs 1000004004000
+06-15 17:54:05.263 21967 22142 D ProfileInstaller: Installing profile for dev.sudoloser.sunset
+06-15 17:54:05.374 21967 21967 D VRI[PlayerActivity]: visibilityChanged oldVisibility=true newVisibility=false
+06-15 17:54:05.382 21967 21989 D Surface : Surface::disconnect
+06-15 17:54:05.382 21967 21989 D BufferQueueProducer: [dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity#33044(BLAST Consumer)pid:21967](id:55cf00000001,api:1,p:21967,c:21967) disconnect: api 1
+06-15 17:54:05.382 21967 21989 D HWUI    : endAllActiveAnimators on 0xb4000071d2b648f0 (ca3) with handle 0xb4000070e2b40ae0
+06-15 17:54:05.443 21967 22086 D SurfaceUtils: connecting to surface 0xb400007212b28430, reason connectToSurface
+06-15 17:54:05.444 21967 22086 I MediaCodec: [c2.qti.avc.decoder] setting surface generation to 22494210
+06-15 17:54:05.444 21967 22086 D SurfaceUtils: disconnecting from surface 0xb400007212b28430, reason connectToSurface(reconnect)
+06-15 17:54:05.444 21967 22086 D Surface : Surface::disconnect
+06-15 17:54:05.444 21967 22086 D BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) disconnect: api 3
+06-15 17:54:05.444 21967 22086 D SurfaceUtils: connecting to surface 0xb400007212b28420, reason connectToSurface(reconnect-with-listener)
+06-15 17:54:05.445 21967 22086 D Codec2-OutputBufferQueue: remote graphic buffer migration 14/14
+06-15 17:54:05.445 21967 22086 D Codec2Client: setOutputSurface -- failed to set consumer usage (6/BAD_INDEX)
+06-15 17:54:05.445 21967 22086 D Codec2Client: setOutputSurface -- generation=22494210 consumer usage=0x900
+06-15 17:54:05.445 21967 22086 D qdgralloc: Falling back to default YUV format - no camera/video specific format defined, usage 0x100
+06-15 17:54:05.449 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 11 is not owned by the producer (state = ACQUIRED)
+06-15 17:54:05.449 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 12 is not owned by the producer (state = ACQUIRED)
+06-15 17:54:05.450 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 15 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 22 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 23 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 24 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 25 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 26 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 27 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 28 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 29 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 30 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 31 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 32 is not owned by the producer (state = FREE)
+06-15 17:54:05.451 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 33 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 34 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 35 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 36 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 37 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 38 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 39 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 40 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 41 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 42 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 43 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 44 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 45 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 46 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 47 is not owned by the producer (state = FREE)
+06-15 17:54:05.452 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 48 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 49 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 50 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 51 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 52 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 53 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 54 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 55 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 56 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 57 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 58 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 59 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 60 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 61 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 62 is not owned by the producer (state = FREE)
+06-15 17:54:05.453 21967 22086 W BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) detachBuffer: slot 63 is not owned by the producer (state = FREE)
+06-15 17:54:05.455 21967 22086 D Codec2Client: Surface configure completed
+06-15 17:54:05.455 21967 22086 D SurfaceUtils: disconnecting from surface 0xb400007212b2a640, reason disconnectFromSurface
+06-15 17:54:05.455 21967 22086 D Surface : Surface::disconnect
+06-15 17:54:05.455 21967 22086 D BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:3,p:21967,c:21967) disconnect: api 3
+06-15 17:54:05.456 21967 21967 D Surface : Surface::disconnect
+06-15 17:54:05.456 21967 21967 D BufferQueueProducer: [SurfaceView[dev.sudoloser.sunset/dev.sudoloser.sunset.player.PlayerActivity](BLAST)#33049(BLAST Consumer)pid:21967](id:55cf00000002,api:0,p:-1,c:21967) disconnect: api -1
+06-15 17:54:05.478 21967 21967 I ExoPlayerImpl: Release 45f9c40 [AndroidXMedia3/1.4.1] [boston, moto g stylus 5G - 2024, motorola, 35] [media3.common, media3.ui, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+06-15 17:54:05.478 21967 22079 I MediaCodec: (0xb4000070f2b96d50) flush
+06-15 17:54:05.482 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Discard frames from previous generation.
+06-15 17:54:05.482 21967 22079 I MediaCodec: (0xb4000070f2b96d50) start
+06-15 17:54:05.482 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Discard frames from previous generation.
+06-15 17:54:05.483 21967 22079 D MediaCodec: keep callback message for reclaim
+06-15 17:54:05.483 21967 22086 I CCodecConfig: query failed after returning 17 values (BAD_INDEX)
+06-15 17:54:05.483 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] flushed work; ignored.
+06-15 17:54:05.483 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Discard frames from previous generation.
+06-15 17:54:05.483 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] flushed work; ignored.
+06-15 17:54:05.483 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Discard frames from previous generation.
+06-15 17:54:05.483 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] flushed work; ignored.
+06-15 17:54:05.483 21967 22087 D CCodecBufferChannel: [c2.qti.avc.decoder#726] Discard frames from previous generation.
+06-15 17:54:05.484 21967 22086 W Codec2Client: query -- param skipped: index = 1342179345.
+06-15 17:54:05.484 21967 22086 W Codec2Client: query -- param skipped: index = 2415921170.
+06-15 17:54:05.484 21967 22086 W Codec2Client: query -- param skipped: index = 1610614798.
+06-15 17:54:05.484 21967 22086 D CCodecBufferChannel: [c2.qti.avc.decoder#726] start: updating output delay 13
+06-15 17:54:05.485 21967 22079 I MediaCodec: (0xb4000070f2b98920) flush
+06-15 17:54:05.486 21967 22098 D CCodecBuffers: [c2.android.aac.decoder#7:1D-Output.Impl[N]] Client returned a buffer it does not own according to our record: 0
+06-15 17:54:05.486 21967 22079 I MediaCodec: (0xb4000070f2b98920) start
+06-15 17:54:05.486 21967 22079 D MediaCodec: keep callback message for reclaim
+06-15 17:54:05.487 21967 22098 I CCodecConfig: query failed after returning 21 values (BAD_INDEX)
+06-15 17:54:05.487 21967 22098 W Codec2Client: query -- param skipped: index = 1342179345.
+06-15 17:54:05.487 21967 22098 W Codec2Client: query -- param skipped: index = 2415921170.
+06-15 17:54:05.487 21967 22098 W Codec2Client: query -- param skipped: index = 1610614798.
+06-15 17:54:05.487 21967 22098 D CCodecBufferChannel: [c2.android.aac.decoder#7] start: updating output delay 2
+06-15 17:54:05.488 21967 22079 I MediaCodec: (0xb4000070f2b96d50) releaseAsync
+06-15 17:54:05.488 21967 22086 D SurfaceUtils: connecting to surface 0xb400007212b2c850, reason connectToSurface
+06-15 17:54:05.488 21967 22086 I MediaCodec: [c2.qti.avc.decoder] setting surface generation to 22494211
+06-15 17:54:05.488 21967 22086 D SurfaceUtils: disconnecting from surface 0xb400007212b2c850, reason connectToSurface(reconnect)
+06-15 17:54:05.488 21967 22086 D Surface : Surface::disconnect
+06-15 17:54:05.488 21967 22086 D BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) disconnect: api 3
+06-15 17:54:05.488 21967 22086 D SurfaceUtils: connecting to surface 0xb400007212b2c840, reason connectToSurface(reconnect-with-listener)
+06-15 17:54:05.488 21967 22086 D Codec2-OutputBufferQueue: remote graphic buffer migration 0/0
+06-15 17:54:05.488 21967 22086 D Codec2Client: setOutputSurface -- failed to set consumer usage (6/BAD_INDEX)
+06-15 17:54:05.488 21967 22086 D Codec2Client: setOutputSurface -- generation=22494211 consumer usage=0x900
+06-15 17:54:05.489 21967 22086 D qdgralloc: Falling back to default YUV format - no camera/video specific format defined, usage 0x100
+06-15 17:54:05.489 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 0 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 1 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 2 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 3 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 4 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 5 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 6 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 7 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 8 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 9 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 10 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 11 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 12 is not owned by the producer (state = FREE)
+06-15 17:54:05.490 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 13 is not owned by the producer (state = FREE)
+06-15 17:54:05.491 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 19 is not owned by the producer (state = FREE)
+06-15 17:54:05.491 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 20 is not owned by the producer (state = FREE)
+06-15 17:54:05.491 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 21 is not owned by the producer (state = FREE)
+06-15 17:54:05.491 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 22 is not owned by the producer (state = FREE)
+06-15 17:54:05.491 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 23 is not owned by the producer (state = FREE)
+06-15 17:54:05.492 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 24 is not owned by the producer (state = FREE)
+06-15 17:54:05.492 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 25 is not owned by the producer (state = FREE)
+06-15 17:54:05.492 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 26 is not owned by the producer (state = FREE)
+06-15 17:54:05.492 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 27 is not owned by the producer (state = FREE)
+06-15 17:54:05.492 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 28 is not owned by the producer (state = FREE)
+06-15 17:54:05.492 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 29 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 30 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 31 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 32 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 33 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 34 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 35 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 36 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 37 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 38 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 39 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 40 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 41 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 42 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 43 is not owned by the producer (state = FREE)
+06-15 17:54:05.493 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 44 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 45 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 46 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 47 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 48 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 49 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 50 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 51 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 52 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 53 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 54 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 55 is not owned by the producer (state = FREE)
+06-15 17:54:05.494 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 56 is not owned by the producer (state = FREE)
+06-15 17:54:05.495 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 57 is not owned by the producer (state = FREE)
+06-15 17:54:05.495 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 58 is not owned by the producer (state = FREE)
+06-15 17:54:05.495 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 59 is not owned by the producer (state = FREE)
+06-15 17:54:05.495 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 60 is not owned by the producer (state = FREE)
+06-15 17:54:05.495 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 61 is not owned by the producer (state = FREE)
+06-15 17:54:05.495 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 62 is not owned by the producer (state = FREE)
+06-15 17:54:05.495 21967 22086 W BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) detachBuffer: slot 63 is not owned by the producer (state = FREE)
+06-15 17:54:05.496 21967 22086 D Codec2Client: Surface configure completed
+06-15 17:54:05.496 21967 22086 D SurfaceUtils: disconnecting from surface 0xb400007212b28430, reason disconnectFromSurface
+06-15 17:54:05.496 21967 22086 D Surface : Surface::disconnect
+06-15 17:54:05.496 21967 22086 D BufferQueueProducer: [SurfaceTexture-1-21967-0](id:55cf00000004,api:3,p:21967,c:21967) disconnect: api 3
+06-15 17:54:05.497 21967 22086 D CCodecBufferChannel: [c2.qti.avc.decoder#726] MediaCodec discarded an unknown buffer
+06-15 17:54:05.497 21967 22086 D CCodecBufferChannel: [c2.qti.avc.decoder#726] MediaCodec discarded an unknown buffer
+06-15 17:54:05.497 21967 22086 D CCodecBufferChannel: [c2.qti.avc.decoder#726] MediaCodec discarded an unknown buffer
+06-15 17:54:05.497 21967 22086 D CCodecBufferChannel: [c2.qti.avc.decoder#726] MediaCodec discarded an unknown buffer
+06-15 17:54:05.497 21967 22079 I MediaCodec: (0xb4000070f2b98920) releaseAsync
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 5 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 6 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 7 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 8 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 9 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 10 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 11 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22098 D CCodecBufferChannel: [c2.android.aac.decoder#7] MediaCodec discarded an unknown buffer
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 12 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22098 D CCodecBufferChannel: [c2.android.aac.decoder#7] MediaCodec discarded an unknown buffer
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 13 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22098 D CCodecBufferChannel: [c2.android.aac.decoder#7] MediaCodec discarded an unknown buffer
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 14 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22098 D CCodecBufferChannel: [c2.android.aac.decoder#7] MediaCodec discarded an unknown buffer
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 15 is not owned by the producer (state = FREE)
+06-15 17:54:05.498 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 16 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 17 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 18 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 19 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 20 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 21 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 22 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 23 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 24 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 25 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 26 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 27 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 28 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 29 is not owned by the producer (state = FREE)
+06-15 17:54:05.499 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 30 is not owned by the producer (state = FREE)
+06-15 17:54:05.500 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 31 is not owned by the producer (state = FREE)
+06-15 17:54:05.500 21967 22098 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+06-15 17:54:05.500 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 32 is not owned by the producer (state = FREE)
+06-15 17:54:05.500 21967 21967 I MediaSessionImpl: Release 837d6ca [AndroidXMedia3/1.4.1] [boston, moto g stylus 5G - 2024, motorola, 35] [media3.common, media3.ui, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 33 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 34 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 35 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 36 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 37 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 38 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 39 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 40 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 41 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 42 is not owned by the producer (state = FREE)
+06-15 17:54:05.501 21967 21967 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@8aba88f
+06-15 17:54:05.502 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 43 is not owned by the producer (state = FREE)
+06-15 17:54:05.502 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 44 is not owned by the producer (state = FREE)
+06-15 17:54:05.502 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 45 is not owned by the producer (state = FREE)
+06-15 17:54:05.502 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 46 is not owned by the producer (state = FREE)
+06-15 17:54:05.502 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 47 is not owned by the producer (state = FREE)
+06-15 17:54:05.502 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 48 is not owned by the producer (state = FREE)
+06-15 17:54:05.502 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 49 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 50 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 51 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 52 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 53 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 54 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 55 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 56 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 57 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 58 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 59 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 60 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 61 is not owned by the producer (state = FREE)
+06-15 17:54:05.503 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 62 is not owned by the producer (state = FREE)
+06-15 17:54:05.504 21967 22150 W BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) detachBuffer: slot 63 is not owned by the producer (state = FREE)
+06-15 17:54:05.512 21967 22091 E BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) cancelBuffer: slot 4 is not owned by the producer (state = FREE)
+06-15 17:54:05.513 21967 22091 E BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) cancelBuffer: slot 0 is not owned by the producer (state = FREE)
+06-15 17:54:05.513 21967 22091 E BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) cancelBuffer: slot 2 is not owned by the producer (state = FREE)
+06-15 17:54:05.514 21967 22091 E BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) cancelBuffer: slot 1 is not owned by the producer (state = FREE)
+06-15 17:54:05.514 21967 22091 E BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) cancelBuffer: slot 3 is not owned by the producer (state = FREE)
+06-15 17:54:05.515 21967 22150 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+06-15 17:54:05.515 21967 22086 D SurfaceUtils: disconnecting from surface 0xb400007212b2c850, reason disconnectFromSurface
+06-15 17:54:05.515 21967 22086 D Surface : Surface::disconnect
+06-15 17:54:05.516 21967 22086 D BufferQueueProducer: [MediaCodec.release](id:55cf00000005,api:3,p:21967,c:21967) disconnect: api 3
+06-15 17:54:05.837 21967 21967 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+06-15 17:54:05.837 21967 21967 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
