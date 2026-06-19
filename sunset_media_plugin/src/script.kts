@@ -5,11 +5,8 @@ import org.json.JSONObject
 val client = bindings["httpClient"] as OkHttpClient
 val serverIp = bindings["server_ip"] as String
 val serverPort = bindings["server_port"] as String
-val authToken = bindings["auth_token"] as String
-
 val request = Request.Builder()
     .url("http://$serverIp:$serverPort/api/v1/dashboard/status")
-    .header("Authorization", "Bearer $authToken")
     .build()
 
 val result = mutableMapOf<String, Any>()

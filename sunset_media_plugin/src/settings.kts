@@ -14,11 +14,5 @@ mapOf(
             "label" to "Server Port",
             "defaultValue" to "7867"
         ),
-        mapOf(
-            "key" to "auth_token",
-            "type" to "password",
-            "label" to "Authentication Token",
-            "defaultValue" to ""
-        )
     )
 )
