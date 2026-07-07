@@ -317,6 +317,7 @@ struct LoginResponse {
     is_admin: bool,
     discord_token: Option<String>,
     discord_status: Option<String>,
+    discord_cover_url: Option<String>,
     profile_picture: Option<String>,
 }
 
@@ -751,6 +752,7 @@ async fn main() {
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN discord_token TEXT").execute(&pool).await;
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN discord_status TEXT DEFAULT 'online'").execute(&pool).await;
     let _ = sqlx::query("ALTER TABLE users ADD COLUMN profile_picture TEXT").execute(&pool).await;
+    let _ = sqlx::query("ALTER TABLE users ADD COLUMN discord_cover_url TEXT").execute(&pool).await;
     // Migrations for media_items table
     let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN collection_name TEXT").execute(&pool).await;
     let _ = sqlx::query("ALTER TABLE media_items ADD COLUMN poster_path TEXT").execute(&pool).await;
@@ -1001,7 +1003,7 @@ async fn onboard(State(state): State<Arc<AppState>>, Json(payload): Json<Onboard
 }
 
 async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequest>) -> Json<Option<LoginResponse>> {
-    let row = sqlx::query("SELECT id, username, password_hash, is_admin, discord_token, discord_status, profile_picture FROM users WHERE username = ?")
+    let row = sqlx::query("SELECT id, username, password_hash, is_admin, discord_token, discord_status, discord_cover_url, profile_picture FROM users WHERE username = ?")
         .bind(&payload.username)
         .fetch_optional(&state.pool).await.unwrap();
 
@@ -1014,6 +1016,7 @@ async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequ
                 is_admin: user.get("is_admin"),
                 discord_token: user.get("discord_token"),
                 discord_status: user.get("discord_status"),
+                discord_cover_url: user.get("discord_cover_url"),
                 profile_picture: user.get("profile_picture"),
             }));
         }
@@ -1022,7 +1025,7 @@ async fn login(State(state): State<Arc<AppState>>, Json(payload): Json<LoginRequ
 }
 
 async fn get_user_profile(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<Option<LoginResponse>> {
-    let row = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status, profile_picture FROM users WHERE id = ?")
+    let row = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status, discord_cover_url, profile_picture FROM users WHERE id = ?")
         .bind(id)
         .fetch_optional(&state.pool).await.unwrap();
 
@@ -1033,6 +1036,7 @@ async fn get_user_profile(Path(id): Path<String>, State(state): State<Arc<AppSta
             is_admin: user.get("is_admin"),
             discord_token: user.get("discord_token"),
             discord_status: user.get("discord_status"),
+            discord_cover_url: user.get("discord_cover_url"),
             profile_picture: user.get("profile_picture"),
         }));
     }
@@ -1553,6 +1557,7 @@ struct InviteRequest {
 struct DiscordConfigPayload {
     token: String,
     status: String,
+    cover_url: Option<String>,
 }
 
 async fn update_discord_config(
@@ -1561,10 +1566,11 @@ async fn update_discord_config(
     Json(payload): Json<DiscordConfigPayload>,
 ) -> Json<bool> {
     let masked = payload.token.chars().map(|c| if c.len_utf8() == 1 && c.is_ascii_graphic() { '*' } else { c }).collect::<String>();
-    info!("Updating Discord config for user {} (token: {}, status: {})", id, masked, payload.status);
-    sqlx::query("UPDATE users SET discord_token = ?, discord_status = ? WHERE id = ?")
+    info!("Updating Discord config for user {} (token: {}, status: {}, cover_url: {:?})", id, masked, payload.status, payload.cover_url);
+    sqlx::query("UPDATE users SET discord_token = ?, discord_status = ?, discord_cover_url = ? WHERE id = ?")
         .bind(&payload.token)
         .bind(&payload.status)
+        .bind(&payload.cover_url)
         .bind(&id)
         .execute(&state.pool)
         .await
@@ -1589,7 +1595,7 @@ async fn stop_discord_rpc(Path(id): Path<String>, State(state): State<Arc<AppSta
 }
 
 async fn list_users(State(state): State<Arc<AppState>>) -> Json<Vec<LoginResponse>> {
-    let rows = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status, profile_picture FROM users ORDER BY username")
+    let rows = sqlx::query("SELECT id, username, is_admin, discord_token, discord_status, discord_cover_url, profile_picture FROM users ORDER BY username")
         .fetch_all(&state.pool).await.unwrap();
     Json(rows.iter().map(|r| LoginResponse {
         user_id: r.get("id"),
@@ -1597,6 +1603,7 @@ async fn list_users(State(state): State<Arc<AppState>>) -> Json<Vec<LoginRespons
         is_admin: r.get("is_admin"),
         discord_token: r.get("discord_token"),
         discord_status: r.get("discord_status"),
+        discord_cover_url: r.get("discord_cover_url"),
         profile_picture: r.get("profile_picture"),
     }).collect())
 }
@@ -1699,10 +1706,11 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
         .execute(&state.pool).await.unwrap();
 
     // Trigger Discord RPC update if user has a token
-    let user_row = sqlx::query("SELECT discord_token, discord_status FROM users WHERE id = ?").bind(&user_id).fetch_optional(&state.pool).await.unwrap();
+    let user_row = sqlx::query("SELECT discord_token, discord_status, discord_cover_url FROM users WHERE id = ?").bind(&user_id).fetch_optional(&state.pool).await.unwrap();
     if let Some(row) = user_row {
         if let Some(token) = row.get::<Option<String>, _>("discord_token").filter(|t| !t.is_empty()) {
             let status = row.get::<Option<String>, _>("discord_status").unwrap_or_else(|| "online".to_string());
+            let discord_cover_url: Option<String> = row.get("discord_cover_url");
             let mut manager = state.rpc_manager.lock().await;
             let session = if let Some(s) = manager.sessions.get(&user_id) {
                 s
@@ -1729,11 +1737,16 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
             }
 
             // Fetch item details for presence
-            if let Ok(item) = sqlx::query("SELECT title, show_title, media_type, poster_path, season, episode FROM media_items WHERE id = ?").bind(&payload.item_id).fetch_one(&state.pool).await {
+            if let Ok(item) = sqlx::query(
+                "SELECT mi.title, mi.show_title, mi.media_type, mi.poster_path, mi.season, mi.episode, mi.file_path, l.path as library_path \
+                 FROM media_items mi JOIN libraries l ON mi.library_id = l.id WHERE mi.id = ?"
+            ).bind(&payload.item_id).fetch_one(&state.pool).await {
                 let title: String = item.get("title");
                 let show_title: Option<String> = item.get("show_title");
                 let media_type: String = item.get("media_type");
                 let poster_path: Option<String> = item.get("poster_path");
+                let file_path: String = item.get("file_path");
+                let library_path: String = item.get("library_path");
 
                 let name = if media_type == "episode" {
                     show_title.unwrap_or(title.clone())
@@ -1747,10 +1760,24 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
 
                 debug!("Sending Discord presence: {} ({}%)", name, progress);
 
-                let image_url = if let Some(path) = poster_path {
-                    format!("https://image.tmdb.org/t/p/w500{}", path)
+                // Build image URL: custom cover URL > TMDB poster > no image
+                let image_url = if let Some(ref cover_base) = discord_cover_url {
+                    let cover_base = cover_base.trim_end_matches('/');
+                    let lib_folder = std::path::Path::new(&library_path)
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    let file_dir = std::path::Path::new(&file_path).parent();
+                    let relative = file_dir.and_then(|d| d.strip_prefix(&library_path).ok());
+                    if let Some(rel) = relative {
+                        Some(format!("{}/{}/{}/folder.jpg", cover_base, lib_folder, rel.display()))
+                    } else {
+                        Some(format!("{}/{}/folder.jpg", cover_base, lib_folder))
+                    }
+                } else if let Some(ref path) = poster_path {
+                    Some(format!("https://image.tmdb.org/t/p/w500{}", path))
                 } else {
-                    format!("https://sunset.sudoloser.com/api/media/{}/asset/folder.jpg", payload.item_id)
+                    None
                 };
 
                 let state_text = if media_type == "episode" {
@@ -1774,7 +1801,7 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                         details: Some(name),
                         state: Some(state_text),
                         assets: Some(DiscordAssets {
-                            large_image: Some(image_url),
+                            large_image: image_url,
                             large_text: Some(title),
                             small_image: None,
                             small_text: None,

@@ -25,6 +25,7 @@ export interface User {
   is_admin: boolean;
   discord_token?: string;
   discord_status?: string;
+  discord_cover_url?: string;
   profile_picture?: string;
 }
 

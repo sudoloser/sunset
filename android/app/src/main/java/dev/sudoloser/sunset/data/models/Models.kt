@@ -43,6 +43,7 @@ data class User(
     @SerialName("is_admin") val isAdmin: Boolean = false,
     @SerialName("discord_token") val discordToken: String? = null,
     @SerialName("discord_status") val discordStatus: String? = null,
+    @SerialName("discord_cover_url") val discordCoverUrl: String? = null,
     @SerialName("profile_picture") val profilePicture: String? = null
 )
 
@@ -113,5 +114,6 @@ data class CreateUserRequest(
 @Serializable
 data class DiscordConfig(
     val token: String,
-    val status: String
+    val status: String,
+    @SerialName("cover_url") val coverUrl: String? = null
 )

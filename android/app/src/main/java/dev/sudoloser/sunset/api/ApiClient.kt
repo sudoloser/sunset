@@ -100,8 +100,8 @@ class ApiClient(baseUrl: String) {
         val suffix = if (userId != null) "/playback/$itemId?user_id=$userId" else "/playback/$itemId"
         return get(suffix)
     }
-    suspend fun updateDiscordConfig(userId: String, token: String, status: String): Boolean =
-        put("/users/$userId/discord-config", DiscordConfig(token, status))
+    suspend fun updateDiscordConfig(userId: String, token: String, status: String, coverUrl: String? = null): Boolean =
+        put("/users/$userId/discord-config", DiscordConfig(token, status, coverUrl))
     suspend fun stopDiscordRpc(userId: String): Boolean = post("/users/$userId/discord-stop", Unit)
     suspend fun getStorage(): StorageInfo = get("/storage")
     suspend fun refreshMedia(id: String): Boolean = post("/media/$id/refresh", Unit)

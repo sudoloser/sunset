@@ -4,9 +4,14 @@ import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { api } from '../../api/client';
 
-export const DiscordSettings: React.FC = () => {
+interface DiscordSettingsProps {
+  sudoloserMode?: boolean;
+}
+
+export const DiscordSettings: React.FC<DiscordSettingsProps> = ({ sudoloserMode = false }) => {
   const [token, setToken] = useState('');
   const [status, setStatus] = useState('online');
+  const [coverUrl, setCoverUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const userId = localStorage.getItem('sunset_user_id');
@@ -16,6 +21,7 @@ export const DiscordSettings: React.FC = () => {
       api.getUserProfile(userId).then(profile => {
         if (profile?.discord_token) setToken(profile.discord_token);
         if (profile?.discord_status) setStatus(profile.discord_status);
+        if (profile?.discord_cover_url) setCoverUrl(profile.discord_cover_url);
       });
     }
   }, [userId]);
@@ -24,7 +30,7 @@ export const DiscordSettings: React.FC = () => {
     if (!userId) return;
     setLoading(true);
     try {
-      await api.updateDiscordConfig(userId, token, status);
+      await api.updateDiscordConfig(userId, token, status, coverUrl || undefined);
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (e) {
@@ -64,6 +70,15 @@ export const DiscordSettings: React.FC = () => {
             onChange={(e) => setToken(e.target.value)}
             placeholder="PASTE_TOKEN_HERE"
           />
+
+          {sudoloserMode && (
+            <Input
+              label="Cover Art Base URL"
+              value={coverUrl}
+              onChange={(e) => setCoverUrl(e.target.value)}
+              placeholder="https://cdn.qzz.io/public/media"
+            />
+          )}
 
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-xs)', fontWeight: 600 }}>

@@ -15,6 +15,7 @@ export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
   const [tab, setTab] = useState<SettingsTab>('media');
   const userId = localStorage.getItem('sunset_user_id') || '';
   const username = localStorage.getItem('sunset_username') || 'User';
+  const sudoloserMode = localStorage.getItem('sunset_sudoloser_mode') === 'true';
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'media', label: 'Media' },
@@ -56,7 +57,7 @@ export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
         )}
         {tab === 'account' && <AccountSettings userId={userId} currentUsername={username} isAdmin={isAdmin} />}
         {tab === 'appearance' && <AppearanceSettings />}
-        {tab === 'discord' && <DiscordSettings />}
+        {tab === 'discord' && <DiscordSettings sudoloserMode={sudoloserMode} />}
         {tab === 'admin' && <Admin />}
       </div>
     </div>

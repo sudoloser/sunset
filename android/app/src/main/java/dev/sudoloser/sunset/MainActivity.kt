@@ -124,6 +124,7 @@ fun AppContent(activity: ComponentActivity) {
     var themeMode by remember { mutableStateOf("system") }
     var useMaterial3 by remember { mutableStateOf(true) }
     var tvMode by remember { mutableStateOf(false) }
+    var sudoloserMode by remember { mutableStateOf(false) }
     var showServerSwitcher by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val resolvedDarkTheme = when (themeMode) {
@@ -147,6 +148,7 @@ fun AppContent(activity: ComponentActivity) {
         themeMode = activity.dataStore.data.first()[PrefKeys.THEME_MODE] ?: "system"
         useMaterial3 = activity.dataStore.data.first()[PrefKeys.USE_MATERIAL3] ?: true
         tvMode = activity.dataStore.data.first()[PrefKeys.TV_MODE] ?: false
+        sudoloserMode = activity.dataStore.data.first()[PrefKeys.SUDOLOSER_MODE] ?: false
         val url = activity.dataStore.data.first()[PrefKeys.SERVER_URL]
         if (url != null) {
             serverUrl = url
@@ -439,6 +441,7 @@ fun AppContent(activity: ComponentActivity) {
                                                                 activity.dataStore.edit { it[PrefKeys.TV_MODE] = newVal }
                                                             }
                                                         },
+                                                        sudoloserMode = sudoloserMode,
                                                         onLogout = {
                                                             scope.launch {
                                                                 activity.dataStore.edit {

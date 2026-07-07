@@ -174,7 +174,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
           <MediaRow title="Continue Watching" items={continueWatching} onPlay={onSelectItem} />
         )}
         {collections.length > 0 && (
-          <MediaRow title="Collections" items={collections} onPlay={(c: any) => onSelectItem(c.items[0])} />
+          <MediaRow title="Collections" items={collections} onPlay={(c: any) => onSelectItem(c)} />
         )}
         <MediaRow title="Recently Added" items={recent} onPlay={onSelectItem} />
 

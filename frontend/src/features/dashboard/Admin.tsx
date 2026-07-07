@@ -24,6 +24,7 @@ export const Admin: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [showNewUser, setShowNewUser] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', password_hash: '', is_admin: false });
+  const [sudoloserMode, setSudoloserMode] = useState(localStorage.getItem('sunset_sudoloser_mode') === 'true');
 
   const loadData = useCallback(async () => {
     const [libs, storageData] = await Promise.all([
@@ -183,6 +184,38 @@ export const Admin: React.FC = () => {
                 </Button>
               </div>
             )}
+          </Card>
+
+          <Card style={{ backgroundColor: 'var(--surface-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>Sudoloser Mode</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  Show cover art base URL input in Discord RPC settings
+                </p>
+              </div>
+              <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={sudoloserMode}
+                  onChange={e => {
+                    setSudoloserMode(e.target.checked);
+                    localStorage.setItem('sunset_sudoloser_mode', e.target.checked.toString());
+                  }}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: 'absolute', inset: 0, borderRadius: '24px', transition: '0.3s',
+                  backgroundColor: sudoloserMode ? 'var(--primary-color)' : 'rgba(255,255,255,0.15)',
+                }}>
+                  <span style={{
+                    position: 'absolute', left: sudoloserMode ? '22px' : '2px', top: '2px',
+                    width: '20px', height: '20px', borderRadius: '50%', background: 'white',
+                    transition: '0.3s',
+                  }} />
+                </span>
+              </label>
+            </div>
           </Card>
         </div>
       </div>

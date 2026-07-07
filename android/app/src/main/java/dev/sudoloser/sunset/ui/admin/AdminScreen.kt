@@ -18,9 +18,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sudoloser.sunset.api.ApiClient
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import dev.sudoloser.sunset.data.PrefKeys
+import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.data.models.*
 import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @Composable
@@ -45,6 +51,8 @@ fun AdminScreen(
     var newUserAdmin by remember { mutableStateOf(false) }
 
     var inviteCode by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    var sudoloserMode by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -53,6 +61,8 @@ fun AdminScreen(
             libraries = apiClient.getLibraries()
             storage = apiClient.getStorage()
             users = apiClient.getUsers()
+            val prefs = context.dataStore.data.first()
+            sudoloserMode = prefs[PrefKeys.SUDOLOSER_MODE] ?: false
             while(true) {
                 uptime = apiClient.getUptime()
                 delay(1000)
@@ -246,6 +256,31 @@ fun AdminScreen(
                         Text(inviteCode, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
                     }
                 }
+            }
+        }
+
+        // Sudoloser Mode
+        SunsetCard(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Sudoloser Mode", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("Show cover art base URL input in Discord RPC settings", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(
+                    checked = sudoloserMode,
+                    onCheckedChange = { enabled ->
+                        sudoloserMode = enabled
+                        scope.launch {
+                            context.dataStore.edit { prefs ->
+                                prefs[PrefKeys.SUDOLOSER_MODE] = enabled
+                            }
+                        }
+                    }
+                )
             }
         }
 

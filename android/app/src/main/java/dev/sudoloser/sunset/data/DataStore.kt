@@ -25,4 +25,5 @@ object PrefKeys {
     val DOWNLOAD_PATH = stringPreferencesKey("download_path")
     val TV_MODE = booleanPreferencesKey("tv_mode")
     val RECORD_RESOLUTION = intPreferencesKey("record_resolution")
+    val SUDOLOSER_MODE = booleanPreferencesKey("sudoloser_mode")
 }

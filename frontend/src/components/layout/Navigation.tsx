@@ -39,7 +39,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
           top: 0,
           left: 0,
           right: 0,
-          height: 'calc(var(--header-height) + var(--safe-area-top))',
+          height: 'var(--header-height)',
           boxSizing: 'border-box',
           padding: 'var(--safe-area-top) var(--spacing-xl) 0',
           backgroundColor: 'rgba(0, 0, 0, 0.5)',

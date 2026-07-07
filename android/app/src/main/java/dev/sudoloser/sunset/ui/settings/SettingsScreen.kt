@@ -56,7 +56,8 @@ fun SettingsScreen(
     onTvModeChange: (Boolean) -> Unit,
     onLogout: () -> Unit,
     onGoToAdmin: () -> Unit,
-    onChangeServer: () -> Unit
+    onChangeServer: () -> Unit,
+    sudoloserMode: Boolean = false
 ) {
     var tab by remember { mutableStateOf("account") }
     val tabs = buildList {
@@ -113,7 +114,7 @@ fun SettingsScreen(
                 "media" -> MediaSettings()
                 "appearance" -> AppearanceSettings(themeMode, onThemeModeChange, useMaterial3, onMaterial3Change, tvMode, onTvModeChange)
                 "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout, onChangeServer)
-                "discord" -> DiscordSettings(apiClient, userId)
+                "discord" -> DiscordSettings(apiClient, userId, sudoloserMode)
                 "admin" -> AdminScreen(apiClient, baseUrl, onBack = { tab = "account" })
             }
         }
@@ -520,10 +521,12 @@ fun DownloadSettingsContent() {
 @Composable
 fun DiscordSettings(
     apiClient: ApiClient,
-    userId: String?
+    userId: String?,
+    sudoloserMode: Boolean = false
 ) {
     var token by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("online") }
+    var coverUrl by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var saveStatus by remember { mutableStateOf<String?>(null) }
     var stopLoading by remember { mutableStateOf(false) }
@@ -536,6 +539,7 @@ fun DiscordSettings(
                 val profile = apiClient.getUserProfile(userId)
                 if (profile?.discordToken != null) token = profile.discordToken
                 if (profile?.discordStatus != null) status = profile.discordStatus
+                if (profile?.discordCoverUrl != null) coverUrl = profile.discordCoverUrl
             } catch (e: Exception) { Log.e("SunSet", "Failed to load Discord config", e) }
         }
     }
@@ -578,6 +582,15 @@ fun DiscordSettings(
                     }
                 }
 
+                if (sudoloserMode) {
+                    SunsetInput(
+                        value = coverUrl,
+                        onValueChange = { coverUrl = it },
+                        label = "Cover Art Base URL",
+                        placeholder = "https://cdn.qzz.io/public/media"
+                    )
+                }
+
                 SunsetButton(
                     text = if (loading) "Saving..." else if (saveStatus == "success") "✓ Saved" else "Sync Discord",
                     onClick = {
@@ -585,7 +598,7 @@ fun DiscordSettings(
                         loading = true; saveStatus = null
                         scope.launch {
                             try {
-                                apiClient.updateDiscordConfig(userId, token, status)
+                                apiClient.updateDiscordConfig(userId, token, status, coverUrl.ifBlank { null })
                                 saveStatus = "success"
                                 delay(3000); saveStatus = null
                             } catch (_: Exception) { saveStatus = "error" }
