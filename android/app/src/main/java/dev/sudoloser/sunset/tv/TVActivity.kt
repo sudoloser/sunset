@@ -11,6 +11,7 @@ import android.hardware.SensorManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
@@ -213,6 +214,14 @@ fun TVNavHost(baseUrl: String, userId: String?, onExitTvMode: () -> Unit = {}) {
     val context = LocalContext.current
     val apiClient = remember { ApiClient(baseUrl) }
 
+    BackHandler {
+        when {
+            selectedItem != null -> selectedItem = null
+            currentScreen != "home" -> currentScreen = "home"
+            else -> { /* let system handle - activity will finish */ }
+        }
+    }
+
     AnimatedContent(
         targetState = when {
             selectedItem != null -> "details"
@@ -280,6 +289,21 @@ fun TVNavHost(baseUrl: String, userId: String?, onExitTvMode: () -> Unit = {}) {
     }
 }
 
+fun groupEpisodes(items: List<MediaItem>): List<Pair<MediaItem, Int>> {
+    val grouped = mutableMapOf<String, MutableList<MediaItem>>()
+    items.forEach { item ->
+        if (item.mediaType == MediaType.EPISODE && item.showTitle != null) {
+            grouped.getOrPut(item.showTitle!!) { mutableListOf() }.add(item)
+        } else {
+            grouped[item.title] = mutableListOf(item)
+        }
+    }
+    return grouped.map { (key, eps) ->
+        val rep = eps.minByOrNull { it.season ?: 0 }?.copy(title = key) ?: eps.first().copy(title = key)
+        rep to eps.size
+    }.sortedByDescending { it.second }
+}
+
 @Composable
 fun TVHome(
     baseUrl: String,
@@ -290,12 +314,15 @@ fun TVHome(
     onSearch: () -> Unit = {}
 ) {
     var continueWatching by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var continueWatchingCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var recentlyAdded by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var allMovies by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var allShows by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var showCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
     var featuredIndex by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
         try {
@@ -304,21 +331,21 @@ fun TVHome(
             recentlyAdded = recent
 
             val movies = mutableListOf<MediaItem>()
-            val shows = mutableMapOf<String, MediaItem>()
             recent.forEach { item ->
                 when {
-                    item.mediaType == MediaType.EPISODE && item.showTitle != null -> {
-                        if (!shows.containsKey(item.showTitle)) {
-                            shows[item.showTitle] = item.copy(title = item.showTitle!!)
-                        }
-                    }
-                    item.mediaType.name.lowercase() == "movie" -> movies.add(item)
+                    item.mediaType == MediaType.EPISODE && item.showTitle != null -> {}
+                    item.mediaType == MediaType.MOVIE -> movies.add(item)
                     else -> movies.add(item)
                 }
             }
-            allMovies = movies
-            allShows = shows.values.toList()
-            continueWatching = cw.distinctBy { it.showTitle ?: it.title }
+            val grouped = groupEpisodes(recent)
+            allShows = grouped.filter { it.second > 1 }.map { it.first }
+            showCounts = grouped.filter { it.second > 1 }.associate { it.first.id to it.second }
+            allMovies = movies + grouped.filter { it.second <= 1 && it.first.mediaType != MediaType.EPISODE }.map { it.first }
+
+            val cwGrouped = groupEpisodes(cw)
+            continueWatching = cwGrouped.map { it.first }
+            continueWatchingCounts = cwGrouped.associate { it.first.id to it.second }
         } catch (e: Exception) { e.printStackTrace() }
         loading = false
     }
@@ -340,54 +367,54 @@ fun TVHome(
         return
     }
 
-    val featured = recentlyAdded.getOrNull(featuredIndex)
+    val heroItems = groupEpisodes(recentlyAdded).map { it.first }
+    val featured = heroItems.getOrNull(featuredIndex) ?: recentlyAdded.firstOrNull()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0a0a0a))
+            .verticalScroll(scrollState)
     ) {
-        // Featured Hero Banner
-        TVFeaturedHero(
-            item = featured,
-            baseUrl = baseUrl,
-            onPlay = { item ->
-                val intent = Intent(context, PlayerActivity::class.java).apply {
-                    putExtra("video_url", apiClient.getStreamUrl(item.id))
-                    putExtra("video_title", item.title)
-                    putExtra("item_id", item.id)
-                    putExtra("base_url", baseUrl)
-                    putExtra("user_id", userId)
-                    putExtra("show_title", item.showTitle)
-                    putExtra("media_type", item.mediaType.name)
+        // Featured Hero Banner (scrolls away naturally)
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    val heroPx = 420.dp.toPx()
+                    val progress = (scrollState.value.toFloat() / heroPx).coerceIn(0f, 1f)
+                    alpha = 1f - progress
+                    scaleX = 1f - progress * 0.15f
+                    scaleY = 1f - progress * 0.15f
                 }
-                context.startActivity(intent)
-            },
-            onMoreInfo = { onSelectItem(it) }
-        )
+        ) {
+            TVFeaturedHero(
+                item = featured,
+                baseUrl = baseUrl,
+                onPlay = { item ->
+                    val intent = Intent(context, PlayerActivity::class.java).apply {
+                        putExtra("video_url", apiClient.getStreamUrl(item.id))
+                        putExtra("video_title", item.title)
+                        putExtra("item_id", item.id)
+                        putExtra("base_url", baseUrl)
+                        putExtra("user_id", userId)
+                        putExtra("show_title", item.showTitle)
+                        putExtra("media_type", item.mediaType.name)
+                    }
+                    context.startActivity(intent)
+                },
+                onMoreInfo = { onSelectItem(it) }
+            )
+        }
 
         // Content Rows
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(top = 16.dp)
-        ) {
+        Column(modifier = Modifier.padding(top = 8.dp)) {
             if (continueWatching.isNotEmpty()) {
                 TVContentRow(
                     title = "Continue Watching",
                     items = continueWatching,
                     baseUrl = baseUrl,
-                    onSelect = onSelectItem
-                )
-            }
-
-            if (recentlyAdded.isNotEmpty()) {
-                TVContentRow(
-                    title = "Recently Added",
-                    items = recentlyAdded,
-                    baseUrl = baseUrl,
-                    onSelect = onSelectItem
+                    onSelect = onSelectItem,
+                    episodeCounts = continueWatchingCounts
                 )
             }
 
@@ -396,7 +423,8 @@ fun TVHome(
                     title = "TV Shows",
                     items = allShows,
                     baseUrl = baseUrl,
-                    onSelect = onSelectItem
+                    onSelect = onSelectItem,
+                    episodeCounts = showCounts
                 )
             }
 
@@ -660,7 +688,8 @@ fun TVContentRow(
     title: String,
     items: List<MediaItem>,
     baseUrl: String,
-    onSelect: (MediaItem) -> Unit
+    onSelect: (MediaItem) -> Unit,
+    episodeCounts: Map<String, Int> = emptyMap()
 ) {
     Column(modifier = Modifier.padding(bottom = 32.dp)) {
         Text(
@@ -668,7 +697,9 @@ fun TVContentRow(
             color = Color.White,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 64.dp, bottom = 16.dp)
+            modifier = Modifier
+                .padding(start = 64.dp, bottom = 16.dp)
+                .focusable()
         )
 
         LazyRow(
@@ -676,10 +707,12 @@ fun TVContentRow(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(items, key = { it.id }) { item ->
+                val count = episodeCounts[item.id] ?: 0
                 TVCard(
                     item = item,
                     baseUrl = baseUrl,
-                    onClick = { onSelect(item) }
+                    onClick = { onSelect(item) },
+                    episodeCount = count
                 )
             }
         }
@@ -690,7 +723,8 @@ fun TVContentRow(
 fun TVCard(
     item: MediaItem,
     baseUrl: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    episodeCount: Int = 0
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -730,6 +764,24 @@ fun TVCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+
+            // Episode count badge
+            if (episodeCount > 1) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(Color(0xFFE50914), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "$episodeCount episodes",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             // Focus overlay with gradient
             if (isFocused) {
@@ -833,6 +885,8 @@ fun TVMediaDetails(
     var episodes by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     val context = LocalContext.current
+
+    BackHandler { onBack() }
 
     LaunchedEffect(item) {
         try {
@@ -1114,10 +1168,15 @@ fun TVSearch(
     var results by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var hasSearched by remember { mutableStateOf(false) }
+    var groupedResults by remember { mutableStateOf<List<Pair<MediaItem, Int>>>(emptyList()) }
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+    }
+
+    BackHandler {
+        onBack()
     }
 
     // Debounced search
@@ -1127,13 +1186,18 @@ fun TVSearch(
             hasSearched = true
             delay(300)
             try {
-                results = apiClient.search(query, userId)
+                val raw = apiClient.search(query, userId)
+                val grouped = groupEpisodes(raw)
+                groupedResults = grouped
+                results = grouped.map { it.first }
             } catch (_: Exception) {
                 results = emptyList()
+                groupedResults = emptyList()
             }
             loading = false
         } else if (query.isEmpty()) {
             results = emptyList()
+            groupedResults = emptyList()
             hasSearched = false
         }
     }
@@ -1229,11 +1293,13 @@ fun TVSearch(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 64.dp)
                 ) {
-                    items(results, key = { it.id }) { item ->
+                    itemsIndexed(results, key = { _, item -> item.id }) { index, item ->
+                        val count = groupedResults.getOrNull(index)?.second ?: 0
                         TVCard(
                             item = item,
                             baseUrl = baseUrl,
-                            onClick = { onSelectItem(item) }
+                            onClick = { onSelectItem(item) },
+                            episodeCount = count
                         )
                     }
                 }
@@ -1252,6 +1318,8 @@ fun TVSettings(
 ) {
     var libraries by remember { mutableStateOf<List<Library>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+
+    BackHandler { onBack() }
 
     LaunchedEffect(Unit) {
         try { libraries = apiClient.getLibraries() } catch (e: Exception) { e.printStackTrace() }
