@@ -1293,12 +1293,13 @@ fun TVSearch(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 64.dp)
                 ) {
-                    itemsIndexed(results, key = { _, item -> item.id }) { index, item ->
+                    items(results.size) { index ->
+                        val resultItem = results[index]
                         val count = groupedResults.getOrNull(index)?.second ?: 0
                         TVCard(
-                            item = item,
+                            item = resultItem,
                             baseUrl = baseUrl,
-                            onClick = { onSelectItem(item) },
+                            onClick = { onSelectItem(resultItem) },
                             episodeCount = count
                         )
                     }
