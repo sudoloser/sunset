@@ -4,7 +4,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.Shapes
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 
 private val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFE0E0E0),
@@ -75,6 +76,7 @@ object SunsetTheme {
 fun SunsetTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     useMaterial3: Boolean = true,
+    uiScale: Float = 1f,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -84,9 +86,16 @@ fun SunsetTheme(
         else -> ClassicLightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = SunsetTypography,
-        content = content
-    )
+    val density = LocalDensity.current
+    val scaledDensity = remember(density, uiScale) {
+        Density(density = density.density * uiScale, fontScale = density.fontScale)
+    }
+
+    CompositionLocalProvider(LocalDensity provides scaledDensity) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = SunsetTypography,
+            content = content
+        )
+    }
 }

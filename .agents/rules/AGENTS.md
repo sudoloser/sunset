@@ -1,3 +1,7 @@
+If you got tagged in this, this is context. never modify the .agent directory without explicit directions or asking.
+
+check all rules in .agents
+
 # SunSet Media server
 
 This server is a media server built in Rust & Typescript.

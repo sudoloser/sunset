@@ -39,7 +39,7 @@ fun NavigationSuite(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             ) {
-                Spacer(Modifier.height(48.dp))
+                Spacer(Modifier.weight(1f))
                 tabs.forEach { (label, icon) ->
                     NavigationRailItem(
                         selected = activeTab == label,
@@ -58,6 +58,7 @@ fun NavigationSuite(
                         )
                     )
                 }
+                Spacer(Modifier.weight(1f))
             }
             Scaffold(
                 modifier = Modifier.fillMaxSize(),

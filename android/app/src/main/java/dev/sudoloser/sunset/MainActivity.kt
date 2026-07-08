@@ -125,6 +125,7 @@ fun AppContent(activity: ComponentActivity) {
     var useMaterial3 by remember { mutableStateOf(true) }
     var tvMode by remember { mutableStateOf(false) }
     var sudoloserMode by remember { mutableStateOf(false) }
+    var uiScale by remember { mutableFloatStateOf(1f) }
     var showServerSwitcher by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val resolvedDarkTheme = when (themeMode) {
@@ -149,6 +150,7 @@ fun AppContent(activity: ComponentActivity) {
         useMaterial3 = activity.dataStore.data.first()[PrefKeys.USE_MATERIAL3] ?: true
         tvMode = activity.dataStore.data.first()[PrefKeys.TV_MODE] ?: false
         sudoloserMode = activity.dataStore.data.first()[PrefKeys.SUDOLOSER_MODE] ?: false
+        uiScale = activity.dataStore.data.first()[PrefKeys.UI_SCALE] ?: 1f
         val url = activity.dataStore.data.first()[PrefKeys.SERVER_URL]
         if (url != null) {
             serverUrl = url
@@ -182,7 +184,7 @@ fun AppContent(activity: ComponentActivity) {
 
         when (step) {
         "loading" -> {
-            SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
+            SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3, uiScale = uiScale) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = NetflixRed)
                 }
@@ -193,7 +195,7 @@ fun AppContent(activity: ComponentActivity) {
             var errorMessage by remember { mutableStateOf<String?>(null) }
             var connecting by remember { mutableStateOf(false) }
 
-            SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
+            SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3, uiScale = uiScale) {
                 AnimatedContent(
                     targetState = step,
                     transitionSpec = {
@@ -243,7 +245,7 @@ fun AppContent(activity: ComponentActivity) {
 
         "onboarding" -> {
             apiClient?.let { client ->
-                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
+                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3, uiScale = uiScale) {
                     OnboardingScreen(
                         apiClient = client,
                         onComplete = { u ->
@@ -264,7 +266,7 @@ fun AppContent(activity: ComponentActivity) {
 
         "login" -> {
             apiClient?.let { client ->
-                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
+                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3, uiScale = uiScale) {
                     LoginScreen(
                         apiClient = client,
                         onLogin = { u ->
@@ -288,7 +290,7 @@ fun AppContent(activity: ComponentActivity) {
                 val baseUrl = serverUrl ?: ""
                 val userId = user?.userId
 
-                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3) {
+                SunsetTheme(darkTheme = resolvedDarkTheme, useMaterial3 = useMaterial3, uiScale = uiScale) {
                     if (showServerSwitcher) {
                         var swError by remember { mutableStateOf<String?>(null) }
                         var swLoading by remember { mutableStateOf(false) }
@@ -439,6 +441,13 @@ fun AppContent(activity: ComponentActivity) {
                                                             tvMode = newVal
                                                             scope.launch {
                                                                 activity.dataStore.edit { it[PrefKeys.TV_MODE] = newVal }
+                                                            }
+                                                        },
+                                                        uiScale = uiScale,
+                                                        onUiScaleChange = { newVal ->
+                                                            uiScale = newVal
+                                                            scope.launch {
+                                                                activity.dataStore.edit { it[PrefKeys.UI_SCALE] = newVal }
                                                             }
                                                         },
                                                         sudoloserMode = sudoloserMode,

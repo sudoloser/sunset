@@ -54,6 +54,8 @@ fun SettingsScreen(
     onMaterial3Change: (Boolean) -> Unit,
     tvMode: Boolean,
     onTvModeChange: (Boolean) -> Unit,
+    uiScale: Float = 1f,
+    onUiScaleChange: (Float) -> Unit = {},
     onLogout: () -> Unit,
     onGoToAdmin: () -> Unit,
     onChangeServer: () -> Unit,
@@ -112,7 +114,7 @@ fun SettingsScreen(
         Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             when (tab) {
                 "media" -> MediaSettings()
-                "appearance" -> AppearanceSettings(themeMode, onThemeModeChange, useMaterial3, onMaterial3Change, tvMode, onTvModeChange)
+                "appearance" -> AppearanceSettings(themeMode, onThemeModeChange, useMaterial3, onMaterial3Change, tvMode, onTvModeChange, uiScale, onUiScaleChange)
                 "account" -> AccountSettings(apiClient, baseUrl, userId, currentUsername, onLogout, onChangeServer)
                 "discord" -> DiscordSettings(apiClient, userId, sudoloserMode)
                 "admin" -> AdminScreen(apiClient, baseUrl, onBack = { tab = "account" })
@@ -128,7 +130,9 @@ fun AppearanceSettings(
     useMaterial3: Boolean,
     onMaterial3Change: (Boolean) -> Unit,
     tvMode: Boolean,
-    onTvModeChange: (Boolean) -> Unit
+    onTvModeChange: (Boolean) -> Unit,
+    uiScale: Float = 1f,
+    onUiScaleChange: (Float) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -194,6 +198,35 @@ fun AppearanceSettings(
                         checked = tvMode,
                         onCheckedChange = onTvModeChange,
                         colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                Column {
+                    Text(
+                        "UI Scale: ${(uiScale * 100).toInt()}%",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        "Adjust the size of the interface for larger screens.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Slider(
+                        value = uiScale,
+                        onValueChange = onUiScaleChange,
+                        valueRange = 0.5f..1.5f,
+                        steps = 19,
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
