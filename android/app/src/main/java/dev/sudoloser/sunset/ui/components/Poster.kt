@@ -29,7 +29,8 @@ fun Poster(
     showBadge: Boolean = false,
     progress: Float? = null
 ) {
-    val imageUrl = "$baseUrl/api/media/${item.id}/asset/folder.jpg"
+    val imageId = item.id.removePrefix("collection_")
+    val imageUrl = "$baseUrl/api/media/$imageId/asset/folder.jpg"
     val posterWidth = 140.dp
     val posterHeight = 210.dp
     val displayTitle = if (item.mediaType.name == "EPISODE" && item.showTitle != null) item.showTitle else item.title

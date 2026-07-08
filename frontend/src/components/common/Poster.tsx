@@ -10,7 +10,8 @@ interface PosterProps {
 }
 
 export const Poster: React.FC<PosterProps> = ({ itemId, title, subtitle, item, onClick }) => {
-  const posterUrl = itemId ? `/api/media/${itemId}/asset/folder.jpg` : null;
+  const imageId = itemId?.replace(/^collection_/, '');
+  const posterUrl = imageId ? `/api/media/${imageId}/asset/folder.jpg` : null;
 
   return (
     <div 

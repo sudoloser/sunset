@@ -162,7 +162,8 @@ fun DashboardScreen(
                         title = name,
                         items = items,
                         baseUrl = baseUrl,
-                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
+                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) },
+                        showBadge = true
                     )
                 }
             }

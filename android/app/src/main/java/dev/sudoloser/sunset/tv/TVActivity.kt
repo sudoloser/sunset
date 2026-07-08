@@ -210,12 +210,14 @@ fun EmergencyMenu(
 fun TVNavHost(baseUrl: String, userId: String?, onExitTvMode: () -> Unit = {}) {
     var currentScreen by remember { mutableStateOf("home") }
     var selectedItem by remember { mutableStateOf<MediaItem?>(null) }
+    var selectedCollection by remember { mutableStateOf<Pair<String, List<MediaItem>>?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val apiClient = remember { ApiClient(baseUrl) }
 
     BackHandler {
         when {
+            selectedCollection != null -> selectedCollection = null
             selectedItem != null -> selectedItem = null
             currentScreen != "home" -> currentScreen = "home"
             else -> { /* let system handle - activity will finish */ }
@@ -224,6 +226,7 @@ fun TVNavHost(baseUrl: String, userId: String?, onExitTvMode: () -> Unit = {}) {
 
     AnimatedContent(
         targetState = when {
+            selectedCollection != null -> "collection"
             selectedItem != null -> "details"
             else -> currentScreen
         },
@@ -236,6 +239,15 @@ fun TVNavHost(baseUrl: String, userId: String?, onExitTvMode: () -> Unit = {}) {
         label = "nav"
     ) { screen ->
         when {
+            selectedCollection != null -> {
+                TVCollectionView(
+                    name = selectedCollection!!.first,
+                    items = selectedCollection!!.second,
+                    baseUrl = baseUrl,
+                    onBack = { selectedCollection = null },
+                    onSelectItem = { selectedItem = it }
+                )
+            }
             selectedItem != null -> {
                 TVMediaDetails(
                     item = selectedItem!!,
@@ -282,7 +294,8 @@ fun TVNavHost(baseUrl: String, userId: String?, onExitTvMode: () -> Unit = {}) {
                     apiClient = apiClient,
                     onSelectItem = { selectedItem = it },
                     onSettings = { currentScreen = "settings" },
-                    onSearch = { currentScreen = "search" }
+                    onSearch = { currentScreen = "search" },
+                    onSelectCollection = { name, items -> selectedCollection = name to items }
                 )
             }
         }
@@ -311,7 +324,8 @@ fun TVHome(
     apiClient: ApiClient,
     onSelectItem: (MediaItem) -> Unit,
     onSettings: () -> Unit,
-    onSearch: () -> Unit = {}
+    onSearch: () -> Unit = {},
+    onSelectCollection: ((name: String, items: List<MediaItem>) -> Unit)? = null
 ) {
     var continueWatching by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var continueWatchingCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -319,6 +333,8 @@ fun TVHome(
     var allMovies by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var allShows by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var showCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var collections by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var collectionItems by remember { mutableStateOf<Map<String, List<MediaItem>>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
     var featuredIndex by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
@@ -339,13 +355,31 @@ fun TVHome(
                 }
             }
             val grouped = groupEpisodes(recent)
-            allShows = grouped.filter { it.second > 1 }.map { it.first }
+            allShows = grouped.filter { it.second > 1 }.map { it.first }.distinctBy { it.id }
             showCounts = grouped.filter { it.second > 1 }.associate { it.first.id to it.second }
-            allMovies = movies + grouped.filter { it.second <= 1 && it.first.mediaType != MediaType.EPISODE }.map { it.first }
+            allMovies = (movies + grouped.filter { it.second <= 1 && it.first.mediaType != MediaType.EPISODE }.map { it.first }).distinctBy { it.id }
 
             val cwGrouped = groupEpisodes(cw)
-            continueWatching = cwGrouped.map { it.first }
+            continueWatching = cwGrouped.map { it.first }.distinctBy { it.id }
             continueWatchingCounts = cwGrouped.associate { it.first.id to it.second }
+
+            // Build collections from recently added items
+            val collectionGroups = recent
+                .filter { it.collectionName != null }
+                .groupBy { it.collectionName!! }
+                .filter { it.value.size > 1 }
+            val collectionList = mutableListOf<MediaItem>()
+            val collectionMap = mutableMapOf<String, List<MediaItem>>()
+            collectionGroups.forEach { (name, items) ->
+                val rep = items.first().copy(
+                    id = "collection_${items.first().id}",
+                    title = name
+                )
+                collectionList.add(rep)
+                collectionMap[rep.id] = items
+            }
+            collections = collectionList
+            collectionItems = collectionMap
         } catch (e: Exception) { e.printStackTrace() }
         loading = false
     }
@@ -415,6 +449,22 @@ fun TVHome(
                     baseUrl = baseUrl,
                     onSelect = onSelectItem,
                     episodeCounts = continueWatchingCounts
+                )
+            }
+
+            if (collections.isNotEmpty()) {
+                TVContentRow(
+                    title = "Collections",
+                    items = collections,
+                    baseUrl = baseUrl,
+                    onSelect = { item ->
+                        val collItems = collectionItems[item.id]
+                        if (collItems != null && onSelectCollection != null) {
+                            onSelectCollection(item.title, collItems)
+                        } else {
+                            onSelectItem(item)
+                        }
+                    }
                 )
             }
 
@@ -738,6 +788,8 @@ fun TVCard(
         label = "card_elevation"
     )
 
+    val imageId = item.id.removePrefix("collection_")
+
     Column(
         modifier = Modifier
             .width(160.dp)
@@ -759,7 +811,7 @@ fun TVCard(
                 .background(Color(0xFF1a1a1a))
         ) {
             AsyncImage(
-                model = "$baseUrl/api/media/${item.id}/asset/folder.jpg",
+                model = "$baseUrl/api/media/$imageId/asset/folder.jpg",
                 contentDescription = item.title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -1150,6 +1202,56 @@ fun TVEpisodeCard(
                     color = Color(0xFFE50914),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TVCollectionView(
+    name: String,
+    items: List<MediaItem>,
+    baseUrl: String,
+    onBack: () -> Unit,
+    onSelectItem: (MediaItem) -> Unit
+) {
+    BackHandler { onBack() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0a0a0a))
+            .verticalScroll(rememberScrollState())
+    ) {
+        TVBackButton(onClick = onBack, modifier = Modifier.padding(32.dp))
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = name,
+            color = Color.White,
+            fontSize = 36.sp,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(horizontal = 64.dp)
+        )
+
+        Spacer(Modifier.height(32.dp))
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(5),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 64.dp, bottom = 80.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(items.size) { index ->
+                val item = items[index]
+                val imageId = item.id.removePrefix("collection_")
+                TVCard(
+                    item = item.copy(id = imageId),
+                    baseUrl = baseUrl,
+                    onClick = { onSelectItem(item) }
                 )
             }
         }

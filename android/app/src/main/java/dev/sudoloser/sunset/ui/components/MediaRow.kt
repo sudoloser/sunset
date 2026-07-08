@@ -20,7 +20,8 @@ fun MediaRow(
     onClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
     getProgress: ((MediaItem) -> Float)? = null,
-    getSubtitle: ((MediaItem) -> String?)? = null
+    getSubtitle: ((MediaItem) -> String?)? = null,
+    showBadge: Boolean = false
 ) {
     if (items.isEmpty()) return
 
@@ -45,7 +46,8 @@ fun MediaRow(
                     baseUrl = baseUrl,
                     onClick = { onClick(item) },
                     progress = getProgress?.invoke(item),
-                    subtitle = getSubtitle?.invoke(item)
+                    subtitle = getSubtitle?.invoke(item),
+                    showBadge = showBadge
                 )
             }
         }
