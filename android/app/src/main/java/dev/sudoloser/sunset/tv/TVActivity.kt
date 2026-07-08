@@ -1242,7 +1242,7 @@ fun TVCollectionView(
             columns = GridCells.Fixed(5),
             verticalArrangement = Arrangement.spacedBy(24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(horizontal = 64.dp, bottom = 80.dp),
+            contentPadding = PaddingValues(start = 64.dp, end = 64.dp, bottom = 80.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             items(items.size) { index ->
