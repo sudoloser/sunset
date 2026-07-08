@@ -1473,8 +1473,25 @@ fun TVSettings(
 
             // Server Info
             TVSettingsCard(title = "Server") {
+                if (userId != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        AsyncImage(
+                            model = "$baseUrl/api/users/$userId/profile-picture",
+                            contentDescription = "Profile",
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.1f))
+                        )
+                        Column {
+                            Text("User: $userId", color = Color.White.copy(alpha = 0.6f))
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                } else {
+                    Text("User: Not logged in", color = Color.White.copy(alpha = 0.6f))
+                }
                 Text("URL: $baseUrl", color = Color.White.copy(alpha = 0.6f))
-                Text("User: ${userId ?: "Not logged in"}", color = Color.White.copy(alpha = 0.6f))
             }
 
             Spacer(Modifier.height(32.dp))

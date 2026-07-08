@@ -189,6 +189,16 @@ object SunsetIcons {
         }
     }.build()
 
+    val Close: ImageVector = ImageVector.Builder("Close", 24.dp, 24.dp, 24f, 24f).apply {
+        path(
+            stroke = SolidColor(Color.White),
+            strokeLineWidth = 2.5f,
+            strokeLineCap = StrokeCap.Round
+        ) {
+            moveTo(18f, 6f); lineTo(6f, 18f); moveTo(6f, 6f); lineTo(18f, 18f)
+        }
+    }.build()
+
     val PiP: ImageVector = ImageVector.Builder("PiP", 24.dp, 24.dp, 24f, 24f).apply {
         path(fill = SolidColor(Color.White)) {
             moveTo(19f, 7f); horizontalLineToRelative(-8f); verticalLineToRelative(6f); horizontalLineToRelative(8f); verticalLineToRelative(-6f); close()

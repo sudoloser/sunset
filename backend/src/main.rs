@@ -796,6 +796,7 @@ async fn main() {
         .route("/api/media/:id/asset/:name", get(get_media_asset))
         .route("/api/media/:id/subtitles", get(get_media_subtitles))
         .route("/api/media/:id/subtitle/:name", get(get_media_subtitle_file))
+        .route("/api/media/:id/subtitle", post(upload_subtitle))
         .route("/api/media/:id", put(update_media_item))
         .route("/api/media/:id/refresh", post(refresh_media_item))
         .route("/api/playback", post(save_playback))
@@ -1306,6 +1307,41 @@ async fn get_media_subtitle_file(
         }
     }
     StatusCode::NOT_FOUND.into_response()
+}
+
+#[derive(Deserialize)]
+struct UploadSubtitleRequest {
+    name: String,
+    content: String,
+}
+
+async fn upload_subtitle(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<UploadSubtitleRequest>,
+) -> impl IntoResponse {
+    let row = sqlx::query("SELECT file_path FROM media_items WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap();
+    if let Some(r) = row {
+        let path: String = r.get("file_path");
+        let folder = std::path::Path::new(&path).parent().unwrap();
+        let sub_path = folder.join(&payload.name);
+
+        use base64::Engine;
+        let bytes = base64::engine::general_purpose::STANDARD.decode(&payload.content).unwrap_or_default();
+        if bytes.is_empty() {
+            return (StatusCode::BAD_REQUEST, "Empty content").into_response();
+        }
+        match tokio::fs::write(&sub_path, &bytes).await {
+            Ok(_) => Json(true).into_response(),
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Write error: {}", e)).into_response(),
+        }
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
 }
 
 async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>, req: axum::http::Request<Body>) -> Response {

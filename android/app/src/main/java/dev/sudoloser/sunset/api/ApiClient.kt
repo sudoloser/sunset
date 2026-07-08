@@ -133,4 +133,7 @@ class ApiClient(baseUrl: String) {
 
     fun getSubtitleUrl(itemId: String, name: String): String =
         "$baseUrl/api/media/$itemId/subtitle/$name"
+
+    suspend fun uploadSubtitle(itemId: String, name: String, content: String): Boolean =
+        post("/media/$itemId/subtitle", mapOf("name" to name, "content" to content))
 }

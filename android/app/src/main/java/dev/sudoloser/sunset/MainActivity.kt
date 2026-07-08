@@ -33,6 +33,7 @@ import dev.sudoloser.sunset.ui.admin.AdminScreen
 import dev.sudoloser.sunset.ui.dashboard.DashboardScreen
 import dev.sudoloser.sunset.ui.library.LibrariesScreen
 import dev.sudoloser.sunset.ui.login.LoginScreen
+import dev.sudoloser.sunset.ui.downloads.DownloadsScreen
 import dev.sudoloser.sunset.ui.mediadetails.MediaDetailsScreen
 import dev.sudoloser.sunset.ui.onboarding.OnboardingScreen
 import dev.sudoloser.sunset.ui.settings.SettingsScreen
@@ -127,6 +128,7 @@ fun AppContent(activity: ComponentActivity) {
     var sudoloserMode by remember { mutableStateOf(false) }
     var uiScale by remember { mutableFloatStateOf(1f) }
     var showServerSwitcher by remember { mutableStateOf(false) }
+    var showDownloads by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val resolvedDarkTheme = when (themeMode) {
         "dark" -> true
@@ -139,6 +141,7 @@ fun AppContent(activity: ComponentActivity) {
         when {
             selectedItem != null -> selectedItem = null
             showAdmin -> showAdmin = false
+            showDownloads -> showDownloads = false
             activeTab != "home" -> activeTab = "home"
             else -> activity.finish()
         }
@@ -322,6 +325,7 @@ fun AppContent(activity: ComponentActivity) {
                         targetState = when {
                             selectedItem != null -> "details"
                             showAdmin -> "admin"
+                            showDownloads -> "downloads"
                             else -> "tabs"
                         },
                         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
@@ -355,6 +359,11 @@ fun AppContent(activity: ComponentActivity) {
                                 apiClient = client,
                                 baseUrl = baseUrl,
                                 onBack = { showAdmin = false }
+                            )
+                            "downloads" -> DownloadsScreen(
+                                apiClient = client,
+                                baseUrl = baseUrl,
+                                onClose = { showDownloads = false }
                             )
                             else -> {
                                 if (tvMode) {
@@ -414,7 +423,8 @@ fun AppContent(activity: ComponentActivity) {
                                                             startPlayer(activity, client, item, baseUrl, userId)
                                                         },
                                                         onSelectItem = { selectedItem = it },
-                                                        onGoToSettings = { activeTab = "settings" }
+                                                        onGoToSettings = { activeTab = "settings" },
+                                                        onDownloads = { showDownloads = true }
                                                     )
                                                     "settings" -> SettingsScreen(
                                                         apiClient = client,

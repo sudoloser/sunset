@@ -39,6 +39,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.provider.OpenableColumns
+import android.util.Base64
+import androidx.datastore.preferences.core.edit
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +63,38 @@ fun MediaDetailsScreen(
     var downloadPath by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
+
+    val subtitleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    var fileName = "subtitle.srt"
+                    ctx.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                            if (idx >= 0) fileName = cursor.getString(idx)
+                        }
+                    }
+                    val inputStream = ctx.contentResolver.openInputStream(uri)
+                    val bytes = inputStream?.readBytes()
+                    inputStream?.close()
+                    if (bytes != null) {
+                        val base64 = Base64.encodeToString(bytes, Base64.DEFAULT)
+                        apiClient.uploadSubtitle(item.id, fileName, base64)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(ctx, "Subtitle uploaded: $fileName", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(ctx, "Upload failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         downloadPath = ctx.dataStore.data.first()[PrefKeys.DOWNLOAD_PATH] ?: ""
@@ -81,7 +118,12 @@ fun MediaDetailsScreen(
                         request.setDestinationUri(Uri.fromFile(java.io.File(dir, "$title.mp4")))
                     }
                 }
-                downloadManager.enqueue(request)
+                val downloadId = downloadManager.enqueue(request)
+                ctx.dataStore.edit { prefs ->
+                    val set = prefs[PrefKeys.DOWNLOAD_RECORDS]?.toMutableSet() ?: mutableSetOf()
+                    set.add("$downloadId|$title|$itemId")
+                    prefs[PrefKeys.DOWNLOAD_RECORDS] = set
+                }
                 withContext(Dispatchers.Main) {
                     Toast.makeText(ctx, "Downloading $title", Toast.LENGTH_SHORT).show()
                 }
@@ -380,18 +422,31 @@ fun MediaDetailsScreen(
                                         }
                                     }
 
-                                    // Play button
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
+                                    // Play + Download buttons
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    SunsetIcons.Play,
+                                                    contentDescription = "Play",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                        IconButton(
+                                            onClick = { downloadItem(ep.id, ep.title) },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
                                             Icon(
-                                                SunsetIcons.Play,
-                                                contentDescription = "Play",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(20.dp)
+                                                SunsetIcons.Download,
+                                                contentDescription = "Download",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
                                             )
                                         }
                                     }
@@ -399,6 +454,22 @@ fun MediaDetailsScreen(
                             }
                         }
                     }
+                }
+
+                // Subtitles Section
+                Spacer(Modifier.height(32.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Subtitles", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(Modifier.width(8.dp))
+                    SunsetButton(
+                        text = "Upload",
+                        onClick = { subtitleLauncher.launch("*/*") },
+                        variant = ButtonVariant.Secondary,
+                        modifier = Modifier.height(36.dp)
+                    )
                 }
 
                 // Cast Section

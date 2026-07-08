@@ -23,10 +23,13 @@ import dev.sudoloser.sunset.api.ApiClient
 import android.util.Log
 import dev.sudoloser.sunset.data.models.Library
 import dev.sudoloser.sunset.data.models.LibraryType
+import dev.sudoloser.sunset.data.dataStore
+import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.data.models.MediaType
 import dev.sudoloser.sunset.data.models.PlaybackState
 import dev.sudoloser.sunset.ui.components.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -40,8 +43,8 @@ fun LibrariesScreen(
     isAdmin: Boolean,
     onPlayItem: (MediaItem) -> Unit,
     onSelectItem: (MediaItem) -> Unit,
-    onGoToSettings: () -> Unit
-) {
+    onGoToSettings: () -> Unit,
+    onDownloads: () -> Unit = {} {
     var libraries by remember { mutableStateOf<List<Library>>(emptyList()) }
     var continueWatching by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var myListItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
@@ -171,12 +174,20 @@ fun LibrariesScreen(
         ) {
             Spacer(Modifier.height(16.dp))
 
-            Text(
-                text = "My Library",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "My Library",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                IconButton(onClick = onDownloads) {
+                    Icon(SunsetIcons.Download, contentDescription = "Downloads", tint = MaterialTheme.colorScheme.onSurface)
+                }
+            }
 
             Spacer(Modifier.height(12.dp))
 
