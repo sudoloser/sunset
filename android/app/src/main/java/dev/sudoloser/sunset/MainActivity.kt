@@ -1,13 +1,19 @@
 package dev.sudoloser.sunset
 
+import android.content.Context
 import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
@@ -15,44 +21,41 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.lifecycleScope
+import androidx.datastore.preferences.core.edit
 import dev.sudoloser.sunset.api.ApiClient
+import dev.sudoloser.sunset.data.PrefKeys
+import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.data.models.MediaItem
 import dev.sudoloser.sunset.data.models.SetupStatus
 import dev.sudoloser.sunset.data.models.User
 import dev.sudoloser.sunset.player.PlayerActivity
+import dev.sudoloser.sunset.tv.EmergencyMenu
+import dev.sudoloser.sunset.tv.copyLogcat
 import dev.sudoloser.sunset.ui.admin.AdminScreen
+import dev.sudoloser.sunset.ui.components.*
 import dev.sudoloser.sunset.ui.dashboard.DashboardScreen
+import dev.sudoloser.sunset.ui.downloads.DownloadsScreen
 import dev.sudoloser.sunset.ui.library.LibrariesScreen
 import dev.sudoloser.sunset.ui.login.LoginScreen
-import dev.sudoloser.sunset.ui.downloads.DownloadsScreen
 import dev.sudoloser.sunset.ui.mediadetails.MediaDetailsScreen
 import dev.sudoloser.sunset.ui.onboarding.OnboardingScreen
 import dev.sudoloser.sunset.ui.settings.SettingsScreen
 import dev.sudoloser.sunset.ui.theme.NetflixRed
 import dev.sudoloser.sunset.ui.theme.SunsetTheme
-import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import androidx.datastore.preferences.core.edit
-import android.content.Context
-
-import androidx.activity.compose.BackHandler
-import dev.sudoloser.sunset.data.PrefKeys
-import dev.sudoloser.sunset.data.dataStore
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import dev.sudoloser.sunset.tv.EmergencyMenu
-import dev.sudoloser.sunset.tv.copyLogcat
+import kotlinx.coroutines.withTimeout
 import kotlin.math.sqrt
 
 class MainActivity : ComponentActivity(), SensorEventListener {
@@ -113,6 +116,29 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 }
 
 @Composable
+fun rememberIsOnline(): Boolean {
+    val cm = LocalContext.current.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val active = cm.activeNetwork
+    val caps = active?.let { cm.getNetworkCapabilities(it) }
+    var isOnline by remember { mutableStateOf(caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true) }
+    DisposableEffect(Unit) {
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { isOnline = true }
+            override fun onLost(network: Network) { isOnline = false }
+            override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+                isOnline = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            }
+        }
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        cm.registerNetworkCallback(request, callback)
+        onDispose { cm.unregisterNetworkCallback(callback) }
+    }
+    return isOnline
+}
+
+@Composable
 fun AppContent(activity: ComponentActivity) {
     var serverUrl by remember { mutableStateOf<String?>(null) }
     var step by remember { mutableStateOf("loading") }
@@ -129,6 +155,7 @@ fun AppContent(activity: ComponentActivity) {
     var uiScale by remember { mutableFloatStateOf(1f) }
     var showServerSwitcher by remember { mutableStateOf(false) }
     var showDownloads by remember { mutableStateOf(false) }
+    val isOnline = rememberIsOnline()
     val scope = rememberCoroutineScope()
     val resolvedDarkTheme = when (themeMode) {
         "dark" -> true
@@ -147,6 +174,16 @@ fun AppContent(activity: ComponentActivity) {
         }
     }
 
+    // Watch for connectivity loss while on main screen
+    LaunchedEffect(isOnline, step) {
+        if (step == "main" && !isOnline) {
+            val records = activity.dataStore.data.first()[PrefKeys.DOWNLOAD_RECORDS]
+            if (records != null && records.isNotEmpty()) {
+                showDownloads = true
+            }
+        }
+    }
+
     // Load saved state
     LaunchedEffect(Unit) {
         themeMode = activity.dataStore.data.first()[PrefKeys.THEME_MODE] ?: "system"
@@ -158,14 +195,22 @@ fun AppContent(activity: ComponentActivity) {
         if (url != null) {
             serverUrl = url
             apiClient = ApiClient(url)
+            if (!isOnline) {
+                val records = activity.dataStore.data.first()[PrefKeys.DOWNLOAD_RECORDS]
+                if (records != null && records.isNotEmpty()) {
+                    step = "main"
+                    showDownloads = true
+                    return@LaunchedEffect
+                }
+            }
             try {
-                val s = apiClient!!.getStatus()
+                val s = withTimeout(5000) { apiClient!!.getStatus() }
                 status = s
                 if (s.setupComplete) {
                     val uid = activity.dataStore.data.first()[PrefKeys.USER_ID]
                     if (uid != null) {
                         try {
-                            val u = apiClient!!.getUserProfile(uid)
+                            val u = withTimeout(5000) { apiClient!!.getUserProfile(uid) }
                             if (u != null) {
                                 user = u
                                 step = "main"
