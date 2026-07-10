@@ -44,7 +44,8 @@ fun LibrariesScreen(
     onPlayItem: (MediaItem) -> Unit,
     onSelectItem: (MediaItem) -> Unit,
     onGoToSettings: () -> Unit,
-    onDownloads: () -> Unit = {} {
+    onDownloads: () -> Unit = {},
+) {
     var libraries by remember { mutableStateOf<List<Library>>(emptyList()) }
     var continueWatching by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var myListItems by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
