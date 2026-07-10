@@ -15,9 +15,9 @@ class ApiClient(baseUrl: String) {
     private val baseUrl = baseUrl.trimEnd('/')
     private val json = Json { ignoreUnknownKeys = true }
     private val client = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(3, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(10, TimeUnit.SECONDS)
         .build()
 
     private val mediaType = "application/json".toMediaType()

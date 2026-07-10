@@ -24,6 +24,7 @@ import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.ui.components.SunsetIcons
 import dev.sudoloser.sunset.ui.components.SunsetIconButton
+import dev.sudoloser.sunset.ui.components.SunsetInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -121,23 +122,11 @@ fun DownloadsScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            OutlinedTextField(
+            SunsetInput(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search downloads...") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                ),
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(SunsetIcons.Close, contentDescription = "Clear")
-                        }
-                    }
-                }
+                placeholder = "Search downloads...",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
             Spacer(Modifier.height(4.dp))
@@ -252,8 +241,9 @@ private fun DownloadItem(
                 Text(
                     displayTitle,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    lineHeight = 20.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(4.dp))

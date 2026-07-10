@@ -50,7 +50,6 @@ import dev.sudoloser.sunset.ui.theme.NetflixRed
 import dev.sudoloser.sunset.ui.theme.SunsetTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 import kotlin.math.sqrt
 
 class MainActivity : ComponentActivity(), SensorEventListener {
@@ -157,13 +156,13 @@ fun AppContent(activity: ComponentActivity) {
             serverUrl = url
             apiClient = ApiClient(url)
             try {
-                val s = withTimeout(4000) { apiClient!!.getStatus() }
+                val s = apiClient!!.getStatus()
                 status = s
                 if (s.setupComplete) {
                     val uid = activity.dataStore.data.first()[PrefKeys.USER_ID]
                     if (uid != null) {
                         try {
-                            val u = withTimeout(4000) { apiClient!!.getUserProfile(uid) }
+                            val u = apiClient!!.getUserProfile(uid)
                             if (u != null) {
                                 user = u
                                 step = "main"
