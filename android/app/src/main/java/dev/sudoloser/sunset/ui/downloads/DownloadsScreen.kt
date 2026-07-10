@@ -81,11 +81,18 @@ fun DownloadsScreen(
                         val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                         val progress = if (total > 0) downloaded.toFloat() / total else 0f
                         var localUri: String? = null
-                        val uriIdx = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                        if (uriIdx >= 0) {
-                            val raw = cursor.getString(uriIdx)
-                            if (!raw.isNullOrBlank()) {
-                                localUri = if (raw.startsWith("/")) Uri.fromFile(java.io.File(raw)).toString() else raw
+                        // Try COLUMN_MEDIAPROVIDER_URI first (API 31+)
+                        val mpIdx = cursor.getColumnIndex("mediaprovider_uri")
+                        if (mpIdx >= 0) {
+                            localUri = cursor.getString(mpIdx)
+                        }
+                        if (localUri.isNullOrBlank()) {
+                            val uriIdx = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                            if (uriIdx >= 0) {
+                                val raw = cursor.getString(uriIdx)
+                                if (!raw.isNullOrBlank()) {
+                                    localUri = if (raw.startsWith("/")) Uri.fromFile(java.io.File(raw)).toString() else raw
+                                }
                             }
                         }
                         if (localUri.isNullOrBlank() && status == DownloadManager.STATUS_SUCCESSFUL) {

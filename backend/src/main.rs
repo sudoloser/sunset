@@ -1143,6 +1143,19 @@ async fn fetch_metadata(state: &AppState, title: &str, year: Option<i32>, media_
     (overview, cast, genres, rating, tmdb_id, collection_name, poster_path_out, backdrop_path_out)
 }
 
+async fn fetch_episode_title(client: &reqwest::Client, tmdb_id: &str, season: i32, episode: i32) -> Option<String> {
+    let url = format!(
+        "https://api.themoviedb.org/3/tv/{}/season/{}/episode/{}?api_key={}",
+        tmdb_id, season, episode, TMDB_API_KEY
+    );
+    if let Ok(resp) = client.get(&url).send().await {
+        if let Ok(json) = resp.json::<serde_json::Value>().await {
+            return json["name"].as_str().map(|s| s.to_string());
+        }
+    }
+    None
+}
+
 async fn manual_scan(State(state): State<Arc<AppState>>) -> Json<bool> {
     let state_clone = state.clone();
     tokio::spawn(async move { scan_all_libraries(state_clone).await; });
@@ -1759,16 +1772,10 @@ async fn save_playback(State(state): State<Arc<AppState>>, Json(payload): Json<P
                 manager.sessions.get(&user_id).unwrap()
             };
 
-            // When paused, clear the activity instead of killing the session
+            // When paused, remove the session entirely so nothing shows on Discord
             if payload.is_playing == Some(false) {
-                let clear_presence = DiscordPresence {
-                    status: status,
-                    since: None,
-                    activities: vec![],
-                    afk: false,
-                };
-                let _ = session.presence_tx.send(clear_presence);
-                debug!("Cleared Discord presence for user {} (playback stopped)", user_id);
+                manager.sessions.remove(&user_id);
+                debug!("Stopped Discord RPC session for user {} (playback stopped)", user_id);
                 return Json(true);
             }
 
@@ -2105,7 +2112,10 @@ async fn scan_library(state: Arc<AppState>, lib: Library) {
                 // Fetch metadata and assets for the show if not already done
                 let (overview, cast, genres, rating, tmdb_id, _, poster, backdrop) = fetch_metadata(&state, &show_title, None, "tv", folder_path).await;
 
-                let display_title = format!("Episode {}", episode);
+                let display_title = match &tmdb_id {
+                    Some(t) => fetch_episode_title(&state.client, t, season, episode).await.unwrap_or_else(|| format!("Episode {}", episode)),
+                    None => format!("Episode {}", episode),
+                };
 
                 if let Ok(_) = sqlx::query("INSERT OR IGNORE INTO media_items (id, library_id, title, show_title, collection_name, file_path, media_type, season, episode, description, \"cast\", genres, rating, tmdb_id, poster_path, backdrop_path, version_tag) VALUES (?, ?, ?, ?, NULL, ?, 'episode', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
                     .bind(uuid::Uuid::new_v4().to_string()).bind(&lib.id).bind(display_title).bind(&show_title).bind(&file_path).bind(season).bind(episode).bind(overview).bind(cast).bind(genres).bind(rating).bind(tmdb_id).bind(poster).bind(backdrop).bind(version_tag).execute(&state.pool).await {

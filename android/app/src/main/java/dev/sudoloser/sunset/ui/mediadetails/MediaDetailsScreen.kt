@@ -81,12 +81,7 @@ fun MediaDetailsScreen(
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                     .setAllowedOverMetered(true)
                     .setAllowedOverRoaming(true)
-                if (downloadPath.isNotBlank()) {
-                    val dir = java.io.File(downloadPath)
-                    if (dir.exists() || dir.mkdirs()) {
-                        request.setDestinationUri(Uri.fromFile(java.io.File(dir, "$downloadTitle.mp4")))
-                    }
-                }
+                    .setRequiresCharging(false)
                 val downloadId = downloadManager.enqueue(request)
                 ctx.dataStore.edit { prefs ->
                     val set = prefs[PrefKeys.DOWNLOAD_RECORDS]?.toMutableSet() ?: mutableSetOf()

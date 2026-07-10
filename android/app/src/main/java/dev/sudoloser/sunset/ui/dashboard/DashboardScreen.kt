@@ -136,7 +136,12 @@ fun DashboardScreen(
                         title = "Continue Watching",
                         items = continueWatching,
                         baseUrl = baseUrl,
-                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) }
+                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) },
+                        getSubtitle = { item ->
+                            if (item.season != null && item.episode != null) {
+                                "S%02d E%02d".format(item.season, item.episode)
+                            } else null
+                        }
                     )
                 }
             }
