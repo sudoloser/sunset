@@ -30,7 +30,6 @@ fun DashboardScreen(
     onSelectItem: ((MediaItem) -> Unit)? = null
 ) {
     var recentlyAdded by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-    var continueWatching by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var libraries by remember { mutableStateOf<List<Library>>(emptyList()) }
     var libraryItems by remember { mutableStateOf<Map<String, List<MediaItem>>>(emptyMap()) }
     var genres by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -46,7 +45,6 @@ fun DashboardScreen(
         try {
             val recentData = apiClient.getRecentlyAdded(userId)
             val libs = apiClient.getLibraries()
-            val continueData = if (userId != null) apiClient.getContinueWatching(userId) else emptyList()
             
             fun dedupe(items: List<MediaItem>): List<MediaItem> {
                 val seen = mutableSetOf<String>()
@@ -63,7 +61,6 @@ fun DashboardScreen(
             }
 
             val dedupedRecent = dedupe(recentData)
-            val dedupedCW = dedupe(continueData)
 
             val itemsMap = mutableMapOf<String, List<MediaItem>>()
             libs.forEach { lib ->
@@ -83,7 +80,6 @@ fun DashboardScreen(
             }
 
             recentlyAdded = dedupedRecent
-            continueWatching = dedupedCW
             libraries = libs
             libraryItems = itemsMap
             genres = gens.take(5)
@@ -128,22 +124,6 @@ fun DashboardScreen(
 
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            if (continueWatching.isNotEmpty()) {
-                item {
-                    MediaRow(
-                        title = "Continue Watching",
-                        items = continueWatching,
-                        baseUrl = baseUrl,
-                        onClick = { item -> onSelectItem?.invoke(item) ?: onPlayItem(item) },
-                        getSubtitle = { item ->
-                            if (item.season != null && item.episode != null) {
-                                "S%02d E%02d".format(item.season, item.episode)
-                            } else null
-                        }
-                    )
-                }
             }
 
             item {

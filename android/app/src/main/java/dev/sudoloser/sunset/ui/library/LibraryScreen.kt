@@ -310,7 +310,12 @@ fun LibrariesScreen(
                         items = continueWatching,
                         baseUrl = baseUrl,
                         onClick = { item -> onSelectItem(item) },
-                        getProgress = { playbackProgress[it.id] ?: 0f }
+                        getProgress = { playbackProgress[it.id] ?: 0f },
+                        getSubtitle = { item ->
+                            if (item.season != null && item.episode != null) {
+                                "S%02d E%02d".format(item.season, item.episode)
+                            } else null
+                        }
                     )
                 }
 
