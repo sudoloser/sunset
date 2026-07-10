@@ -178,7 +178,13 @@ fun AppContent(activity: ComponentActivity) {
                     step = "onboarding"
                 }
             } catch (_: Exception) {
-                step = "server_selection"
+                val records = activity.dataStore.data.first()[PrefKeys.DOWNLOAD_RECORDS]
+                if (records != null && records.isNotEmpty()) {
+                    step = "main"
+                    showDownloads = true
+                } else {
+                    step = "server_selection"
+                }
             }
         } else {
             step = "server_selection"
@@ -363,7 +369,17 @@ fun AppContent(activity: ComponentActivity) {
                             "downloads" -> DownloadsScreen(
                                 apiClient = client,
                                 baseUrl = baseUrl,
-                                onClose = { showDownloads = false }
+                                onClose = { showDownloads = false },
+                                onPlayLocal = { localUri, title, itemId ->
+                                    val intent = Intent(activity, PlayerActivity::class.java).apply {
+                                        putExtra("video_url", localUri)
+                                        putExtra("video_title", title)
+                                        putExtra("item_id", itemId)
+                                        putExtra("base_url", baseUrl)
+                                        putExtra("user_id", userId)
+                                    }
+                                    activity.startActivity(intent)
+                                }
                             )
                             else -> {
                                 if (tvMode) {

@@ -34,15 +34,13 @@ import android.util.Log
 import dev.sudoloser.sunset.data.PrefKeys
 import dev.sudoloser.sunset.data.dataStore
 import dev.sudoloser.sunset.data.models.MediaItem
+import dev.sudoloser.sunset.data.models.MediaType
 import dev.sudoloser.sunset.ui.components.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.provider.OpenableColumns
-import android.util.Base64
+
 import androidx.datastore.preferences.core.edit
 
 @Composable
@@ -64,68 +62,39 @@ fun MediaDetailsScreen(
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
 
-    val subtitleLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) {
-            scope.launch {
-                try {
-                    var fileName = "subtitle.srt"
-                    ctx.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) {
-                            val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                            if (idx >= 0) fileName = cursor.getString(idx)
-                        }
-                    }
-                    val inputStream = ctx.contentResolver.openInputStream(uri)
-                    val bytes = inputStream?.readBytes()
-                    inputStream?.close()
-                    if (bytes != null) {
-                        val base64 = Base64.encodeToString(bytes, Base64.DEFAULT)
-                        apiClient.uploadSubtitle(item.id, fileName, base64)
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(ctx, "Subtitle uploaded: $fileName", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(ctx, "Upload failed: ${e.message}", Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
-        }
-    }
-
     LaunchedEffect(Unit) {
         downloadPath = ctx.dataStore.data.first()[PrefKeys.DOWNLOAD_PATH] ?: ""
     }
 
-    fun downloadItem(itemId: String, title: String) {
+    fun downloadItem(item: MediaItem) {
         scope.launch(Dispatchers.IO) {
             try {
-                val token = apiClient.generateMediaToken(itemId)
-                val url = apiClient.getDownloadUrl(itemId, token)
+                val downloadTitle = if (item.mediaType == MediaType.EPISODE && item.showTitle != null) {
+                    "${item.showTitle} - S%02dE%02d".format(item.season ?: 1, item.episode ?: 0)
+                } else item.title
+                val token = apiClient.generateMediaToken(item.id)
+                val url = apiClient.getDownloadUrl(item.id, token)
                 val downloadManager = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                 val request = DownloadManager.Request(Uri.parse(url))
-                    .setTitle(title)
-                    .setDescription("Downloading $title")
+                    .setTitle(downloadTitle)
+                    .setDescription("Downloading $downloadTitle")
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                     .setAllowedOverMetered(true)
                     .setAllowedOverRoaming(true)
                 if (downloadPath.isNotBlank()) {
                     val dir = java.io.File(downloadPath)
                     if (dir.exists() || dir.mkdirs()) {
-                        request.setDestinationUri(Uri.fromFile(java.io.File(dir, "$title.mp4")))
+                        request.setDestinationUri(Uri.fromFile(java.io.File(dir, "$downloadTitle.mp4")))
                     }
                 }
                 val downloadId = downloadManager.enqueue(request)
                 ctx.dataStore.edit { prefs ->
                     val set = prefs[PrefKeys.DOWNLOAD_RECORDS]?.toMutableSet() ?: mutableSetOf()
-                    set.add("$downloadId|$title|$itemId")
+                    set.add("$downloadId|${item.id}|${item.showTitle ?: ""}|${item.season ?: 0}|${item.episode ?: 0}|${item.title}")
                     prefs[PrefKeys.DOWNLOAD_RECORDS] = set
                 }
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(ctx, "Downloading $title", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Downloading $downloadTitle", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -258,7 +227,7 @@ fun MediaDetailsScreen(
                         if (item.mediaType.name == "MOVIE") {
                             SunsetIconButton(
                                 icon = SunsetIcons.Download,
-                                onClick = { downloadItem(item.id, item.title) },
+                                onClick = { downloadItem(item) },
                                 backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             )
                         }
@@ -439,7 +408,7 @@ fun MediaDetailsScreen(
                                             }
                                         }
                                         IconButton(
-                                            onClick = { downloadItem(ep.id, ep.title) },
+                                            onClick = { downloadItem(ep) },
                                             modifier = Modifier.size(36.dp)
                                         ) {
                                             Icon(
@@ -454,22 +423,6 @@ fun MediaDetailsScreen(
                             }
                         }
                     }
-                }
-
-                // Subtitles Section
-                Spacer(Modifier.height(32.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("Subtitles", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(Modifier.width(8.dp))
-                    SunsetButton(
-                        text = "Upload",
-                        onClick = { subtitleLauncher.launch("*/*") },
-                        variant = ButtonVariant.Secondary,
-                        modifier = Modifier.height(36.dp)
-                    )
                 }
 
                 // Cast Section
