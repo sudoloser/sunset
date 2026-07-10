@@ -80,8 +80,26 @@ fun DownloadsScreen(
                         val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
                         val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                         val progress = if (total > 0) downloaded.toFloat() / total else 0f
-                        val uriIdx = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
-                        val localUri = if (uriIdx >= 0) cursor.getString(uriIdx) else null
+                        var localUri: String? = null
+                        val fnIdx = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_FILENAME)
+                        if (fnIdx >= 0) {
+                            val raw = cursor.getString(fnIdx)
+                            if (!raw.isNullOrBlank()) {
+                                localUri = if (raw.startsWith("/")) Uri.fromFile(java.io.File(raw)).toString() else raw
+                            }
+                        }
+                        if (localUri.isNullOrBlank()) {
+                            val uriIdx = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                            if (uriIdx >= 0) {
+                                val raw = cursor.getString(uriIdx)
+                                if (!raw.isNullOrBlank()) {
+                                    localUri = if (raw.startsWith("/")) Uri.fromFile(java.io.File(raw)).toString() else raw
+                                }
+                            }
+                        }
+                        if (localUri.isNullOrBlank() && status == DownloadManager.STATUS_SUCCESSFUL) {
+                            localUri = "content://downloads/my_downloads/$id"
+                        }
 
                         if (parts.size >= 6) {
                             info = DownloadInfo(id, parts[1], parts[2], parts[3].toIntOrNull() ?: 0, parts[4].toIntOrNull() ?: 0, parts[5], status, progress, localUri)
@@ -194,9 +212,12 @@ fun DownloadsScreen(
                                     }
                                 },
                                 onPlay = {
-                                    dl.localUri?.let { uri ->
-                                        val displayTitle = if (dl.showTitle.isNotBlank()) "${dl.showTitle} - S%02dE%02d".format(dl.seasonNum, dl.episodeNum) else dl.title
+                                    val displayTitle = if (dl.showTitle.isNotBlank()) "${dl.showTitle} - S%02dE%02d".format(dl.seasonNum, dl.episodeNum) else dl.title
+                                    val uri = dl.localUri
+                                    if (uri != null) {
                                         onPlayLocal(uri, displayTitle, dl.itemId)
+                                    } else {
+                                        Toast.makeText(ctx, "File not found", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             )

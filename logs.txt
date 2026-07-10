@@ -1,0 +1,99 @@
+
+sudoloser
+sunset
+Repository navigation
+Code
+Issues
+Pull requests
+Agents
+Beta Build (Android)
+add: download manager + per episode downloads #66
+Annotations
+1 error and 1 warning
+build
+failed 2 days ago in 1m 17s
+5s
+1s
+13s
+21s
+4s
+0s
+29s
+Run cd android
+
+Welcome to Gradle 9.5.1!
+
+Here are the highlights of this release:
+ - Task provenance in reports and failure messages
+ - Type-safe accessors for precompiled Kotlin Settings plugins
+
+For more details see https://docs.gradle.org/9.5.1/release-notes.html
+
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+> Task :app:generateReleaseResources
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:packageReleaseResources
+> Task :app:processReleaseNavigationResources
+> Task :app:stripReleaseDebugSymbols
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:javaPreCompileRelease
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:mergeReleaseArtProfile
+> Task :app:parseReleaseLocalResources
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseRFile
+> Task :app:compileReleaseNavigationResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:extractProguardFiles
+> Task :app:mergeReleaseStartupProfile
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:processReleaseManifestForPackage
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:mergeReleaseResources
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:processReleaseResources
+
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:39:1 Function 'LibrariesScreen' must have a body.
+> Task :app:compileReleaseKotlin FAILED
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:47:31 Initializer type mismatch: expected 'Function0<Unit>', actual 'Unit'.
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:47:34 Too many arguments for 'fun invoke(): Unit'.
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:48:22 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:49:29 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:50:24 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:51:29 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:52:28 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:53:20 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:54:25 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:55:17 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:56:24 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:59:24 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:60:26 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:61:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:62:27 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:63:22 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:64:23 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:65:24 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:66:19 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:114:5 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:140:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:143:9 'return' is prohibited here.
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:147:9 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:155:9 'return' is prohibited here.
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:158:5 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:187:38 Parameter 'onDownloads' is uninitialized here.
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:387:2 Syntax error: Expecting comma or ')'.
+e: file:///home/runner/work/sunset/sunset/android/app/src/main/java/dev/***/sunset/ui/library/LibraryScreen.kt:387:2 Syntax error: Expecting ')'.
+
