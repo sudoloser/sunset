@@ -481,7 +481,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                   {filteredEpisodes.map(ep => (
                     <div 
                       key={ep.id}
@@ -577,7 +577,7 @@ export const MediaDetails: React.FC<MediaDetailsProps> = ({ item, onClose, onPla
             <div style={{ marginBottom: '2rem' }}>
               <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'block', marginBottom: '0.75rem' }}>Cast:</span>
               {castList.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                   {castList.map((name, i) => (
                     <CastAvatar key={i} name={name} />
                   ))}

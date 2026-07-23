@@ -6,9 +6,11 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LibrariesPage } from './pages/LibrariesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CollectionPage } from './pages/CollectionPage';
+import { ServerSetupPage } from './pages/ServerSetup';
 import { OnboardingWizard } from './features/onboarding/OnboardingWizard';
 import { LoginForm } from './features/auth/LoginForm';
-import { api } from './api/client';
+import { api, getCurrentServerUrl } from './api/client';
+import { isDesktop } from './desktop';
 
 function FullPageFallback({ children }: { children: React.ReactNode }) {
   return (
@@ -76,17 +78,30 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Routes>
+        <Route path="/server-setup" element={<ServerSetupPage />} />
         <Route path="/onboarding" element={<OnboardingRoute />} />
         <Route path="/login" element={<LoginRoute />} />
         <Route element={<AppLayout />}>
-          <Route index element={<Navigate to="/home" replace />} />
+          <Route index element={<IndexRedirect />} />
           <Route path="home" element={<DashboardPage />} />
           <Route path="libraries" element={<LibrariesPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="collection/:name" element={<CollectionPage />} />
         </Route>
-        <Route path="*" element={<Navigate to="/home" replace />} />
+        <Route path="*" element={<IndexRedirect />} />
       </Routes>
     </ErrorBoundary>
   );
+}
+
+function IndexRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (isDesktop() && !getCurrentServerUrl()) {
+      navigate('/server-setup', { replace: true });
+    } else {
+      navigate('/home', { replace: true });
+    }
+  }, [navigate]);
+  return null;
 }
