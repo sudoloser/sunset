@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Navigation } from '../components/layout/Navigation';
 import { MediaDetails } from '../features/library/MediaDetails';
 import { SearchOverlay } from '../features/search/SearchOverlay';
@@ -20,14 +20,13 @@ export function AppLayout() {
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   const [playingMedia, setPlayingMedia] = useState<MediaItem | null>(null);
   const [showSearch, setShowSearch] = useState(false);
-  const [ready, setReady] = useState(false);
+
+  const uid = localStorage.getItem('sunset_user_id');
+  if (!uid) {
+    return <Navigate to="/login" replace />;
+  }
 
   useEffect(() => {
-    const uid = localStorage.getItem('sunset_user_id');
-    if (!uid) {
-      navigate('/login', { replace: true });
-      return;
-    }
     api.getUserProfile(uid).then(profile => {
       if (!profile) {
         localStorage.clear();
@@ -38,11 +37,10 @@ export function AppLayout() {
       setIsAdmin(profile.is_admin);
       localStorage.setItem('sunset_is_admin', profile.is_admin ? 'true' : 'false');
       localStorage.setItem('sunset_username', profile.username);
-      setReady(true);
     }).catch(() => {
       navigate('/login', { replace: true });
     });
-  }, [navigate]);
+  }, []);
 
   // Apply saved theme
   useEffect(() => {
@@ -86,17 +84,6 @@ export function AppLayout() {
       setSelectedItem(item);
     }
   }, [navigate]);
-
-  if (!ready) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg-color)' }}>
-        <div style={{
-          width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.15)',
-          borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.8s linear infinite'
-        }} />
-      </div>
-    );
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
