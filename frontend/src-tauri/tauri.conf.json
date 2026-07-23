@@ -10,7 +10,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "title": "SunSet",
     "windows": [
       {
         "title": "SunSet",
