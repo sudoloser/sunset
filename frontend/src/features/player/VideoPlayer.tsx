@@ -417,7 +417,6 @@ const handleActivity = () => {
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         autoPlay
         playsInline
-        crossOrigin="anonymous"
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
