@@ -38,9 +38,15 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Install Tauri CLI native binding
+      - name: Install Tauri CLI native binding (Linux)
+        if: runner.os == 'Linux'
         working-directory: frontend
-        run: npm install @tauri-apps/cli-linux-x64-gnu @tauri-apps/cli-win32-x64-msvc --no-save
+        run: npm install @tauri-apps/cli-linux-x64-gnu --no-save
+
+      - name: Install Tauri CLI native binding (Windows)
+        if: runner.os == 'Windows'
+        working-directory: frontend
+        run: npm install @tauri-apps/cli-win32-x64-msvc --no-save
 
       - name: Build Tauri app
         working-directory: frontend
