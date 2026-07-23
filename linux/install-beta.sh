@@ -21,22 +21,24 @@ echo "SunSet Beta Installer — $ASSET"
 echo ""
 
 echo "[1/3] Fetching beta release..."
-# Check dependencies
 for cmd in curl; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "  Error: '$cmd' is not installed."
+    echo "  Error: '$cmd' is not installed." >&2
     exit 1
   fi
 done
 
-JSON=$(curl -fsL "https://api.github.com/repos/$REPO/releases/tags/beta")
+JSON=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/tags/beta") || {
+  echo "Failed to fetch beta release info." >&2
+  exit 1
+}
 TAG=$(echo "$JSON" | grep '"tag_name"' | cut -d'"' -f4)
 echo "  Version: $TAG (beta)"
 
 DL_URL=$(echo "$JSON" | grep '"browser_download_url"' | grep "$ASSET" | cut -d'"' -f4 | head -1 || true)
 if [ -z "$DL_URL" ]; then
-  echo "Failed to find download asset for $ASSET"
-  echo "Beta release may not be available yet. Run the workflow first."
+  echo "Failed to find download asset for $ASSET" >&2
+  echo "Beta release may not be available yet. Run the workflow first." >&2
   exit 1
 fi
 
@@ -44,7 +46,10 @@ mkdir -p "$INSTALL_DIR"
 
 echo "[2/3] Downloading..."
 INSTALL_PATH="$INSTALL_DIR/sunset-server"
-curl -fsL "$DL_URL" -o "$INSTALL_PATH"
+curl -fsSL "$DL_URL" -o "$INSTALL_PATH" || {
+  echo "Download failed." >&2
+  exit 1
+}
 chmod +x "$INSTALL_PATH"
 
 echo "[3/3] Adding to PATH..."

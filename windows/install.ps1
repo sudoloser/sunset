@@ -1,3 +1,5 @@
+$ErrorActionPreference = 'Stop'
+
 $Repo = "sudoloser/sunset"
 $InstallDir = "$env:USERPROFILE\.sunset\bin"
 $TmpDir = "$env:USERPROFILE\.sunset\tmp"
@@ -19,10 +21,16 @@ Write-Host ""
 Write-Host "SunSet Installer — $Asset" -ForegroundColor White
 Write-Host ""
 
-Write-Host "[1/4] Fetching latest release..." -ForegroundColor Yellow
-$Json = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest"
-$Tag = $Json.tag_name
-Write-Host "  Version: $Tag" -ForegroundColor Green
+try {
+  Write-Host "[1/4] Fetching latest release..." -ForegroundColor Yellow
+  $Json = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest"
+  $Tag = $Json.tag_name
+  Write-Host "  Version: $Tag" -ForegroundColor Green
+} catch {
+  Write-Host "Failed to fetch latest release info." -ForegroundColor Red
+  Write-Host "  $_" -ForegroundColor Red
+  exit 1
+}
 
 $AssetObj = $Json.assets | Where-Object { $_.name -like "*$Asset*" } | Select-Object -First 1
 if (-not $AssetObj) {
@@ -31,15 +39,27 @@ if (-not $AssetObj) {
 }
 $DlUrl = $AssetObj.browser_download_url
 
-New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-New-Item -ItemType Directory -Force -Path $TmpDir | Out-Null
+try {
+  New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+  New-Item -ItemType Directory -Force -Path $TmpDir | Out-Null
 
-Write-Host "[2/4] Downloading..." -ForegroundColor Yellow
-$ZipPath = "$TmpDir\update.zip"
-Invoke-WebRequest -Uri $DlUrl -OutFile $ZipPath
+  Write-Host "[2/4] Downloading..." -ForegroundColor Yellow
+  $ZipPath = "$TmpDir\update.zip"
+  Invoke-WebRequest -Uri $DlUrl -OutFile $ZipPath
+} catch {
+  Write-Host "Download failed." -ForegroundColor Red
+  Write-Host "  $_" -ForegroundColor Red
+  exit 1
+}
 
-Write-Host "[3/4] Extracting..." -ForegroundColor Yellow
-Expand-Archive -Path $ZipPath -DestinationPath "$TmpDir\extracted" -Force
+try {
+  Write-Host "[3/4] Extracting..." -ForegroundColor Yellow
+  Expand-Archive -Path $ZipPath -DestinationPath "$TmpDir\extracted" -Force
+} catch {
+  Write-Host "Extraction failed." -ForegroundColor Red
+  Write-Host "  $_" -ForegroundColor Red
+  exit 1
+}
 
 $BinaryPath = Get-ChildItem -Path "$TmpDir\extracted" -Recurse -Filter "$Asset.exe" | Select-Object -First 1
 if (-not $BinaryPath) {
@@ -47,8 +67,14 @@ if (-not $BinaryPath) {
   exit 1
 }
 
-$InstallPath = "$InstallDir\$Asset.exe"
-Copy-Item -Path $BinaryPath.FullName -Destination $InstallPath -Force
+try {
+  $InstallPath = "$InstallDir\$Asset.exe"
+  Copy-Item -Path $BinaryPath.FullName -Destination $InstallPath -Force
+} catch {
+  Write-Host "Failed to copy binary to install directory." -ForegroundColor Red
+  Write-Host "  $_" -ForegroundColor Red
+  exit 1
+}
 
 Write-Host "[4/4] Cleaning up..." -ForegroundColor Yellow
 Remove-Item -Path $TmpDir -Recurse -Force -ErrorAction SilentlyContinue

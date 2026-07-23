@@ -22,13 +22,16 @@ echo "SunSet Installer — $ASSET"
 echo ""
 
 echo "[1/4] Fetching latest release..."
-JSON=$(curl -sL "https://api.github.com/repos/$REPO/releases/latest")
+JSON=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest") || {
+  echo "Failed to fetch latest release info." >&2
+  exit 1
+}
 TAG=$(echo "$JSON" | grep '"tag_name"' | cut -d'"' -f4)
 echo "  Version: $TAG"
 
 DL_URL=$(echo "$JSON" | grep '"browser_download_url"' | grep "$ASSET" | cut -d'"' -f4 | head -1 || true)
 if [ -z "$DL_URL" ]; then
-  echo "Failed to find download asset for $ASSET"
+  echo "Failed to find download asset for $ASSET" >&2
   exit 1
 fi
 
@@ -36,22 +39,31 @@ mkdir -p "$INSTALL_DIR" "$TMP_DIR"
 
 echo "[2/4] Downloading..."
 ZIP_PATH="$TMP_DIR/update.zip"
-curl -sL "$DL_URL" -o "$ZIP_PATH"
+curl -fsSL "$DL_URL" -o "$ZIP_PATH" || {
+  echo "Download failed." >&2
+  exit 1
+}
 
 echo "[3/4] Extracting..."
-unzip -o "$ZIP_PATH" -d "$TMP_DIR/extracted" >/dev/null 2>&1
+unzip -o "$ZIP_PATH" -d "$TMP_DIR/extracted" >/dev/null 2>&1 || {
+  echo "Extraction failed." >&2
+  exit 1
+}
 
 BINARY=$(find "$TMP_DIR/extracted" -type f \( -name "sunset-server*" -o -executable \) 2>/dev/null | head -1)
 
 if [ -z "$BINARY" ]; then
-  echo "Binary not found in archive."
-  echo "Contents of extracted folder:"
-  find "$TMP_DIR/extracted" -type f
+  echo "Binary not found in archive." >&2
+  echo "Contents of extracted folder:" >&2
+  find "$TMP_DIR/extracted" -type f >&2
   exit 1
 fi
 
 INSTALL_PATH="$INSTALL_DIR/sunset-server"
-cp "$BINARY" "$INSTALL_PATH"
+cp "$BINARY" "$INSTALL_PATH" || {
+  echo "Failed to copy binary to install directory." >&2
+  exit 1
+}
 chmod +x "$INSTALL_PATH"
 
 echo "[4/4] Adding to PATH..."
