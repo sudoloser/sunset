@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { setServerUrl, getCurrentServerUrl } from '../api/client';
 
 export function ServerSetupPage() {
+  const navigate = useNavigate();
   const [url, setUrl] = useState(getCurrentServerUrl());
   const [error, setError] = useState('');
   const [testing, setTesting] = useState(false);
@@ -24,7 +26,7 @@ export function ServerSetupPage() {
       const res = await fetch(testUrl);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       setServerUrl(trimmed);
-      window.location.href = '/';
+      navigate('/', { replace: true });
     } catch (e) {
       setError('Could not connect to server. Check the URL and ensure the server is running.');
     } finally {
