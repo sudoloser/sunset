@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { HomeIcon, LibraryIcon, SettingsIcon } from '../common/Icons';
 import { api } from '../../api/client';
 import { isDesktop } from '../../desktop';
+import styles from './Navigation.module.css';
 
 interface NavigationProps {
   activeTab: string;
@@ -42,15 +43,15 @@ function useWindowControls() {
   return { maximized, minimize, toggleMaximize, close };
 }
 
-const WindowControls: React.FC = () => {
+function WindowControls() {
   const { maximized, minimize, toggleMaximize, close } = useWindowControls();
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'var(--spacing-md)' }}>
-      <button onClick={minimize} title="Minimize" style={controlBtnStyle}>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
+      <button onClick={minimize} title="Minimize" className={styles.controlBtn}>
         <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="5.5" width="10" height="1" fill="currentColor"/></svg>
       </button>
-      <button onClick={toggleMaximize} title={maximized ? 'Restore' : 'Maximize'} style={controlBtnStyle}>
+      <button onClick={toggleMaximize} title={maximized ? 'Restore' : 'Maximize'} className={styles.controlBtn}>
         {maximized ? (
           <svg width="12" height="12" viewBox="0 0 12 12">
             <rect x="2.5" y="0.5" width="9" height="9" rx="1" fill="none" stroke="currentColor" strokeWidth="1"/>
@@ -60,7 +61,7 @@ const WindowControls: React.FC = () => {
           <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.2"/></svg>
         )}
       </button>
-      <button onClick={close} title="Close" style={{ ...controlBtnStyle, marginRight: 0 }}>
+      <button onClick={close} title="Close" className={styles.controlBtn}>
         <svg width="12" height="12" viewBox="0 0 12 12">
           <line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
           <line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -68,21 +69,7 @@ const WindowControls: React.FC = () => {
       </button>
     </div>
   );
-};
-
-const controlBtnStyle: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--text-secondary)',
-  cursor: 'pointer',
-  width: '36px',
-  height: '36px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: '6px',
-  transition: 'background 0.15s',
-};
+}
 
 export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -109,44 +96,15 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
 
   return (
     <>
-      {/* Desktop Top Navigation */}
-      <nav
-        data-tauri-drag-region
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 'var(--header-height)',
-          boxSizing: 'border-box',
-          padding: 'var(--safe-area-top) var(--spacing-xl) 0',
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          WebkitBackdropFilter: 'blur(16px)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-          zIndex: 1000,
-          transition: 'var(--transition-standard)'
-        }}
-        className="desktop-nav"
-      >
-        <div style={{ display: 'flex', alignItems: 'center' }} data-tauri-drag-region>
-          <div style={{ color: 'var(--primary-color)', fontSize: '1.8rem', fontWeight: 800, marginRight: 'var(--spacing-xxl)', letterSpacing: '-0.05em', fontFamily: 'var(--font-display)' }}>
-            SUNSET
-          </div>
+      <nav data-tauri-drag-region className={styles.nav}>
+        <div className={styles.left} data-tauri-drag-region>
+          <span className={styles.brand}>SUNSET</span>
           <div style={{ display: 'flex', gap: 'var(--spacing-lg)' }}>
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: activeTab === item.id ? 'white' : 'var(--text-secondary)',
-                  fontSize: '0.95rem',
-                  fontWeight: activeTab === item.id ? 700 : 500,
-                  cursor: 'pointer',
-                  transition: 'var(--transition-standard)'
-                }}
+                className={activeTab === item.id ? styles.navLinkActive : styles.navLinkInactive}
               >
                 {item.label}
               </button>
@@ -154,54 +112,34 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+        <div className={styles.right}>
           {isDesktop() && <WindowControls />}
           <div style={{ position: 'relative' }} ref={menuRef}>
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              style={{
-                background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
-                display: 'flex', alignItems: 'center', gap: '0.5rem'
-              }}
-            >
+            <button className={styles.profileBtn} onClick={() => setMenuOpen(!menuOpen)}>
               <img
                 src={api.getProfilePictureUrl(userId)}
                 alt="profile"
-                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', background: 'var(--surface-variant)' }}
+                className={styles.avatar}
                 onError={e => {
                   const el = e.target as HTMLImageElement;
                   el.style.display = 'none';
                   (el.nextElementSibling as HTMLElement)?.style.removeProperty('display');
                 }}
               />
-              <span style={{
-                width: '36px', height: '36px', borderRadius: '50%', display: 'none',
-                background: 'var(--primary-color)', color: 'white',
-                alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.85rem', fontWeight: 700
-              }}>
+              <span className={styles.avatarFallback}>
                 {localStorage.getItem('sunset_username')?.[0]?.toUpperCase() || 'U'}
               </span>
             </button>
 
             {menuOpen && (
-              <div style={{
-                position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 100,
-                background: 'var(--surface-color)', border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                minWidth: '180px', overflow: 'hidden'
-              }}>
-                <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-color)' }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{localStorage.getItem('sunset_username') || 'User'}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{localStorage.getItem('sunset_is_admin') === 'true' ? 'Admin' : 'User'}</div>
+              <div className={styles.menu}>
+                <div className={styles.menuHeader}>
+                  <div className={styles.menuUserName}>{localStorage.getItem('sunset_username') || 'User'}</div>
+                  <div className={styles.menuUserRole}>{localStorage.getItem('sunset_is_admin') === 'true' ? 'Admin' : 'User'}</div>
                 </div>
                 <div
+                  className={styles.menuItem}
                   onClick={() => { onTabChange('settings'); setMenuOpen(false); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                    padding: '0.75rem 1rem', cursor: 'pointer', fontSize: '0.9rem',
-                    transition: 'background 0.15s'
-                  }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
@@ -209,12 +147,8 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
                   <span>Settings</span>
                 </div>
                 <div
+                  className={styles.menuItemDanger}
                   onClick={handleLogout}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                    padding: '0.75rem 1rem', cursor: 'pointer', fontSize: '0.9rem', color: '#ef4444',
-                    transition: 'background 0.15s'
-                  }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-variant)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
@@ -229,54 +163,21 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation */}
-      <nav 
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 'calc(var(--bottom-nav-height) + var(--safe-area-bottom))',
-          boxSizing: 'border-box',
-          paddingBottom: 'var(--safe-area-bottom)',
-          backgroundColor: 'rgba(18, 18, 18, 0.9)',
-          WebkitBackdropFilter: 'blur(12px)',
-          backdropFilter: 'blur(12px)',
-          borderTop: '1px solid var(--border-color)',
-          display: 'none',
-          alignItems: 'center',
-          justifyContent: 'space-around',
-          zIndex: 1000
-        }}
-        className="mobile-nav"
-      >
+      <nav className={styles.mobileNav}>
         {[...navItems, { id: 'settings', label: 'Settings', icon: SettingsIcon }].map((item) => (
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-              color: activeTab === item.id ? 'white' : 'var(--text-secondary)',
-              cursor: 'pointer'
-            }}
+            className={styles.mobileNavBtn}
+            style={{ color: activeTab === item.id ? 'white' : 'var(--text-secondary)' }}
           >
             <item.icon size={22} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-            <span style={{ fontSize: '0.7rem', fontWeight: 600 }}>{item.label}</span>
+            <span className={styles.mobileNavLabel} style={{ color: activeTab === item.id ? 'white' : 'var(--text-secondary)' }}>
+              {item.label}
+            </span>
           </button>
         ))}
       </nav>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .mobile-nav { display: flex !important; }
-        }
-      `}</style>
     </>
   );
 };

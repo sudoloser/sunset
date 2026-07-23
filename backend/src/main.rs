@@ -2165,3 +2165,66 @@ async fn start_watchers(state: Arc<AppState>) {
         while let Some(_) = rx.recv().await { scan_all_libraries(state_clone.clone()).await; }
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_storage_info_defaults() {
+        let info = StorageInfo {
+            total_size: 0,
+            item_count: 0,
+            library_count: 0,
+            user_count: 0,
+        };
+        assert_eq!(info.total_size, 0);
+        assert_eq!(info.item_count, 0);
+        assert_eq!(info.library_count, 0);
+        assert_eq!(info.user_count, 0);
+    }
+
+    #[test]
+    fn test_media_type_serde() {
+        let item = MediaItem {
+            id: "test".into(),
+            title: "Test Movie".into(),
+            show_title: None,
+            collection_name: None,
+            media_type: "movie".into(),
+            year: Some(2024),
+            season: None,
+            episode: None,
+            added_at: None,
+            file_path: "/movies/test.mp4".into(),
+            description: None,
+            cast: None,
+            genres: None,
+            rating: None,
+            tmdb_id: None,
+            poster_path: None,
+            backdrop_path: None,
+            progress: None,
+            version_tag: None,
+        };
+        let json = serde_json::to_string(&item).unwrap();
+        assert!(json.contains("Test Movie"));
+        assert!(json.contains("movie"));
+
+        let deserialized: MediaItem = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.title, "Test Movie");
+        assert_eq!(deserialized.media_type, "movie");
+    }
+
+    #[test]
+    fn test_library_default() {
+        let lib = Library {
+            id: "lib1".into(),
+            name: "Movies".into(),
+            path: "/media/movies".into(),
+            lib_type: "movies".into(),
+        };
+        assert_eq!(lib.lib_type, "movies");
+        assert_eq!(lib.name, "Movies");
+    }
+}
