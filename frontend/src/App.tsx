@@ -75,6 +75,14 @@ function LoginRoute() {
 }
 
 export default function App() {
+  if (isDesktop() && !getCurrentServerUrl()) {
+    return (
+      <ErrorBoundary>
+        <ServerSetupPage />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <Routes>
@@ -82,26 +90,14 @@ export default function App() {
         <Route path="/onboarding" element={<OnboardingRoute />} />
         <Route path="/login" element={<LoginRoute />} />
         <Route element={<AppLayout />}>
-          <Route index element={<IndexRedirect />} />
+          <Route index element={<Navigate to="/home" replace />} />
           <Route path="home" element={<DashboardPage />} />
           <Route path="libraries" element={<LibrariesPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="collection/:name" element={<CollectionPage />} />
         </Route>
-        <Route path="*" element={<IndexRedirect />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </ErrorBoundary>
   );
-}
-
-function IndexRedirect() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    if (isDesktop() && !getCurrentServerUrl()) {
-      navigate('/server-setup', { replace: true });
-    } else {
-      navigate('/home', { replace: true });
-    }
-  }, [navigate]);
-  return null;
 }
