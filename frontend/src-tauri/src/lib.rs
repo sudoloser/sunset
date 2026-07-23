@@ -19,7 +19,7 @@ struct DiscordPresence {
 }
 
 #[tauri::command]
-fn start_discord_rpc(client_id: &str, state: &mut State<Mutex<DiscordState>>) -> Result<String, String> {
+fn start_discord_rpc(client_id: &str, state: State<'_, Mutex<DiscordState>>) -> Result<String, String> {
     let mut discord = state.lock().map_err(|e| e.to_string())?;
 
     if discord.client.is_some() {
@@ -34,7 +34,7 @@ fn start_discord_rpc(client_id: &str, state: &mut State<Mutex<DiscordState>>) ->
 }
 
 #[tauri::command]
-fn stop_discord_rpc(state: &State<Mutex<DiscordState>>) -> Result<String, String> {
+fn stop_discord_rpc(state: State<'_, Mutex<DiscordState>>) -> Result<String, String> {
     let mut discord = state.lock().map_err(|e| e.to_string())?;
 
     if let Some(client) = &mut discord.client {
@@ -48,7 +48,7 @@ fn stop_discord_rpc(state: &State<Mutex<DiscordState>>) -> Result<String, String
 #[tauri::command]
 fn update_discord_presence(
     presence: DiscordPresence,
-    state: &State<Mutex<DiscordState>>,
+    state: State<'_, Mutex<DiscordState>>,
 ) -> Result<String, String> {
     let mut discord = state.lock().map_err(|e| e.to_string())?;
 
@@ -59,11 +59,7 @@ fn update_discord_presence(
         .details(&presence.details);
 
     if let Some(ts) = presence.start_timestamp {
-        use std::time::{SystemTime, UNIX_EPOCH};
-        let start = UNIX_EPOCH
-            .checked_add(std::time::Duration::from_secs(ts as u64))
-            .unwrap_or(SystemTime::now());
-        builder = builder.timestamps(activity::Timestamps::new().start(start));
+        builder = builder.timestamps(activity::Timestamps::new().start(ts));
     }
 
     if let Some(img) = &presence.large_image {
@@ -80,7 +76,7 @@ fn update_discord_presence(
 }
 
 #[tauri::command]
-fn is_discord_running(state: &State<Mutex<DiscordState>>) -> Result<bool, String> {
+fn is_discord_running(state: State<'_, Mutex<DiscordState>>) -> Result<bool, String> {
     let discord = state.lock().map_err(|e| e.to_string())?;
     Ok(discord.client.is_some())
 }

@@ -63,7 +63,10 @@ export const Hero: React.FC<HeroProps> = ({ item, onPlay, onMoreInfo }) => {
       <div 
         style={{
           position: 'absolute',
-          inset: '-10%',
+          top: 'calc(-1 * var(--header-height))',
+          right: '-10%',
+          bottom: '-10%',
+          left: '-10%',
           backgroundColor: '#1a1a1a',
           backgroundImage: `url(${backdropUrl})`,
           backgroundSize: 'cover',

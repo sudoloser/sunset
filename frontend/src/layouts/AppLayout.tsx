@@ -104,7 +104,7 @@ export function AppLayout() {
 
       <main style={{
         flex: 1,
-        paddingTop: activeTab === 'home' ? 'var(--safe-area-top)' : 'calc(var(--header-height) + var(--safe-area-top))',
+        paddingTop: 'calc(var(--header-height) + var(--safe-area-top))',
         paddingBottom: 'calc(var(--bottom-nav-height) + var(--safe-area-bottom))',
         maxWidth: '100vw',
         overflowX: 'hidden',
