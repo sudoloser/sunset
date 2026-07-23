@@ -36,7 +36,11 @@ jobs:
 
       - name: Install frontend deps
         working-directory: frontend
-        run: npm ci --include=optional
+        run: npm ci
+
+      - name: Install Tauri CLI native binding
+        working-directory: frontend
+        run: npm install @tauri-apps/cli-linux-x64-gnu @tauri-apps/cli-win32-x64-msvc --no-save
 
       - name: Build Tauri app
         working-directory: frontend
