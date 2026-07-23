@@ -8,7 +8,6 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-is-maximized",
-    "shell:allow-open",
-    "http:default"
+    "shell:allow-open"
   ]
 }
