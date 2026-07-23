@@ -13,7 +13,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
       - name: Collect MSI installers
         shell: bash
         run: |
-          find artifacts -name '*.msi' -o -name '*.dmg' -o -name '*.AppImage' -o -name '*.deb' | tee bundle-files.txt
+          find artifacts -name '*.msi' -o -name '*.AppImage' -o -name '*.deb' | tee bundle-files.txt
 
       - name: Create Desktop Beta Release
         uses: softprops/action-gh-release@v2
@@ -89,7 +89,7 @@ jobs:
             Automated Tauri build from `${{ github.ref_name }}`.
 
             - Commit: ${{ github.sha }}
-            - Platforms: Windows (.msi), macOS (.dmg), Linux (.AppImage/.deb)
+            - Platforms: Windows (.msi), Linux (.AppImage/.deb)
 
             **Note:** Beta builds may be unstable.
           prerelease: true
