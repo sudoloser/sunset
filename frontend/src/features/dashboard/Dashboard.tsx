@@ -40,10 +40,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
           return true;
         }
         return true;
-      }).map(r => ({
-        ...r,
-        title: (r.media_type === 'episode' && r.show_title) ? r.show_title : r.title
-      }));
+      }).map(r => {
+        if (r.media_type === 'episode' && r.show_title) {
+          const { season, episode, ...rest } = r;
+          return { ...rest, title: r.show_title } as MediaItem;
+        }
+        return { ...r, title: r.title };
+      });
     };
 
     setRecent(dedupe(recentData));
@@ -86,15 +89,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectItem, onPlayItem, 
         try {
           const genreData = await api.getGenreItems(g, userId);
           const gSeen = new Set();
-          itemsMap[g] = genreData.filter((r: MediaItem) => {
+          itemsMap[g] = genreData.reduce((acc: MediaItem[], r: MediaItem) => {
             if (r.media_type === 'episode' && r.show_title) {
-              if (gSeen.has(r.show_title)) return false;
+              if (gSeen.has(r.show_title)) return acc;
               gSeen.add(r.show_title);
-              r.title = r.show_title;
-              return true;
+              const { season, episode, ...rest } = r;
+              acc.push({ ...rest, title: r.show_title } as MediaItem);
+            } else {
+              acc.push(r);
             }
-            return true;
-          });
+            return acc;
+          }, []);
         } catch {}
       }));
       setGenreItems(itemsMap);
@@ -196,15 +201,17 @@ const LibraryRow: React.FC<{ lib: Library, onPlay: (item: MediaItem) => void }> 
     api.getLibraryItems(lib.id, userId).then(data => {
       if (lib.lib_type === 'shows') {
         const seen = new Set<string>();
-        const grouped = data.filter(item => {
+        const grouped = data.reduce((acc: MediaItem[], item) => {
           if (item.show_title) {
-            if (seen.has(item.show_title)) return false;
+            if (seen.has(item.show_title)) return acc;
             seen.add(item.show_title);
-            item.title = item.show_title;
-            return true;
+            const { season, episode, ...rest } = item;
+            acc.push({ ...rest, title: item.show_title } as MediaItem);
+          } else {
+            acc.push(item);
           }
-          return true;
-        });
+          return acc;
+        }, []);
         setItems(grouped.slice(0, 15));
       } else {
         setItems(data.slice(0, 15));

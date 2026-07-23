@@ -11,6 +11,21 @@ interface LibrariesTabProps {
   userId?: string;
 }
 
+function groupContinueWatching(items: MediaItem[]): MediaItem[] {
+  const groups = new Map<string, MediaItem>();
+  for (const item of items) {
+    if (item.media_type === 'episode' && item.show_title) {
+      const existing = groups.get(item.show_title);
+      if (!existing || (item.progress || 0) > (existing.progress || 0)) {
+        groups.set(item.show_title, { ...item, title: item.show_title });
+      }
+    } else {
+      groups.set(item.id, item);
+    }
+  }
+  return Array.from(groups.values());
+}
+
 export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmin, onGoToSettings, userId }) => {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +45,7 @@ export const LibrariesTab: React.FC<LibrariesTabProps> = ({ onSelectItem, isAdmi
             api.getContinueWatching(userId),
             api.getUserItems(userId),
           ]);
-          setContinueWatching(cw);
+          setContinueWatching(groupContinueWatching(cw));
           setMyListItems(myList);
         } catch {}
       }

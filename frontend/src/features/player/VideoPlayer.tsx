@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { api } from '../../api/client';
 import type { MediaItem } from '../../types';
+import { isDesktop, updatePresence } from '../../desktop';
+import { getCoverUrl } from '../../coverArt';
 import { 
   PlayIcon, PauseIcon, VolumeHighIcon, VolumeMutedIcon, 
   MaximizeIcon, SkipBackIcon, SkipForwardIcon, BackIcon,
@@ -51,6 +53,43 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelec
     setShowSpeedPicker(false);
     setShowControls(true);
   }, [item.id]);
+
+  // Discord Rich Presence (desktop native RPC only)
+  useEffect(() => {
+    if (!isDesktop()) return;
+    let cancelled = false;
+    (async () => {
+      const coverUrl = await getCoverUrl(item.id);
+      if (cancelled) return;
+      if (isPlaying) {
+        await updatePresence({
+          state: item.show_title
+            ? `S${String(item.season).padStart(2, '0')} E${String(item.episode).padStart(2, '0')}`
+            : 'Watching',
+          details: item.title,
+          large_image: coverUrl || undefined,
+          large_text: item.title,
+          start_timestamp: Math.floor(Date.now() / 1000),
+        });
+      } else {
+        await updatePresence({
+          state: 'Paused',
+          details: item.title,
+          large_image: coverUrl || undefined,
+          large_text: item.title,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+      updatePresence({
+        state: 'Idle',
+        details: 'SunSet',
+        large_image: 'sunset_logo',
+        large_text: 'SunSet',
+      });
+    };
+  }, [isPlaying, item]);
 
   // Init video volume/muted from state
   useEffect(() => {

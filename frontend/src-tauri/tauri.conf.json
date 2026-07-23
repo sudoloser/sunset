@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicovrc/tauri-v2-schema/main/tauri.conf.json",
+  "productName": "SunSet",
+  "version": "0.2.0",
+  "identifier": "dev.sudoloser.sunset",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "title": "SunSet",
+    "windows": [
+      {
+        "title": "SunSet",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
