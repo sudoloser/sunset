@@ -27,6 +27,7 @@ use tokio::io::AsyncReadExt;
 use rust_embed::RustEmbed;
 use std::fs::File as StdFile;
 use std::io::Write;
+use tokio::process::Command as TokioCommand;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct DiscordActivity {
@@ -1357,6 +1358,41 @@ async fn upload_subtitle(
     }
 }
 
+async fn remux_to_mp4(path: &StdPath) -> Response {
+    use tokio_util::io::ReaderStream;
+
+    let path_str = path.to_string_lossy().to_string();
+
+    let mut child = match TokioCommand::new("ffmpeg")
+        .arg("-i")
+        .arg(&path_str)
+        .arg("-c")
+        .arg("copy")
+        .arg("-movflags")
+        .arg("+frag_keyframe+empty_moov")
+        .arg("-f")
+        .arg("mp4")
+        .arg("pipe:1")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(_) => {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let stdout = child.stdout.take().unwrap();
+    let stream = ReaderStream::new(stdout);
+
+    Response::builder()
+        .header(header::CONTENT_TYPE, "video/mp4")
+        .header(header::ACCEPT_RANGES, "bytes")
+        .body(Body::from_stream(stream))
+        .unwrap()
+}
+
 async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>, req: axum::http::Request<Body>) -> Response {
     let token = req.uri().query().and_then(|q| {
         q.split('&').find_map(|pair| {
@@ -1383,6 +1419,14 @@ async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>
         let path: String = r.get("file_path");
         let path = std::path::Path::new(&path);
         if path.exists() {
+            // On-the-fly re-mux for containers browsers can't play natively
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+            if ext == "mkv" || ext == "avi" || ext == "mov" || ext == "wmv" || ext == "flv" {
+                if ext != "mp4" {
+                    return remux_to_mp4(path).await;
+                }
+            }
+
             let file = tokio::fs::File::open(path).await.unwrap();
             let metadata = file.metadata().await.unwrap();
             let size = metadata.len();

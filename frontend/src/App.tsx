@@ -12,6 +12,26 @@ import { LoginForm } from './features/auth/LoginForm';
 import { api, getCurrentServerUrl } from './api/client';
 import { isDesktop } from './desktop';
 
+const loadingStyle = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  minHeight: '100vh', background: '#000',
+} as const;
+
+function LoadingScreen() {
+  return (
+    <div style={loadingStyle}>
+      <div style={{
+        width: 32, height: 32,
+        border: '3px solid rgba(255,255,255,0.15)',
+        borderTopColor: '#e50914',
+        borderRadius: '50%',
+        animation: 'spin 0.7s linear infinite',
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
 function FullPageFallback({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-color)' }}>
@@ -34,7 +54,7 @@ function OnboardingRoute() {
     }).catch(() => setReady(true));
   }, []);
 
-  if (!ready) return null;
+  if (!ready) return <LoadingScreen />;
   if (!needsSetup) return <Navigate to="/login" replace />;
   return (
     <FullPageFallback>
@@ -59,7 +79,7 @@ function LoginRoute() {
     setReady(true);
   }, [navigate]);
 
-  if (!ready) return null;
+  if (!ready) return <LoadingScreen />;
   return (
     <FullPageFallback>
       <LoginForm
@@ -75,29 +95,27 @@ function LoginRoute() {
 }
 
 export default function App() {
-  if (isDesktop() && !getCurrentServerUrl()) {
-    return (
-      <ErrorBoundary>
-        <ServerSetupPage />
-      </ErrorBoundary>
-    );
-  }
+  const needsServerUrl = isDesktop() && !getCurrentServerUrl();
 
   return (
     <ErrorBoundary>
-      <Routes>
-        <Route path="/server-setup" element={<ServerSetupPage />} />
-        <Route path="/onboarding" element={<OnboardingRoute />} />
-        <Route path="/login" element={<LoginRoute />} />
-        <Route element={<AppLayout />}>
-          <Route index element={<Navigate to="/home" replace />} />
-          <Route path="home" element={<DashboardPage />} />
-          <Route path="libraries" element={<LibrariesPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="collection/:name" element={<CollectionPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/home" replace />} />
-      </Routes>
+      {needsServerUrl ? (
+        <ServerSetupPage />
+      ) : (
+        <Routes>
+          <Route path="/server-setup" element={<ServerSetupPage />} />
+          <Route path="/onboarding" element={<OnboardingRoute />} />
+          <Route path="/login" element={<LoginRoute />} />
+          <Route element={<AppLayout />}>
+            <Route index element={<Navigate to="/home" replace />} />
+            <Route path="home" element={<DashboardPage />} />
+            <Route path="libraries" element={<LibrariesPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="collection/:name" element={<CollectionPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/home" replace />} />
+        </Routes>
+      )}
     </ErrorBoundary>
   );
 }
