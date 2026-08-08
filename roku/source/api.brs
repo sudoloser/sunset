@@ -201,6 +201,16 @@ function ApiStreamUrl(itemId as String) as String
     return ApiEndpoint("/stream/" + itemId)
 end function
 
+' Server-side H.264 transcode of any file (HEVC/H.265 or legacy audio fallback).
+' `start` (seconds) makes the transcode pipe begin at a resume/seek offset.
+function ApiTranscodeUrl(itemId as String, start as Integer) as String
+    url = ApiEndpoint("/stream/" + itemId + "/transcode")
+    if start > 0
+        url = url + "?start=" + start.ToStr()
+    end if
+    return url
+end function
+
 function ApiSubtitleUrl(itemId as String, name as String) as String
     return ApiEndpoint("/media/" + itemId + "/subtitle/" + ApiEscape(name))
 end function

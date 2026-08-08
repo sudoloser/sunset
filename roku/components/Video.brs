@@ -14,12 +14,15 @@ sub init()
     m.video.observeField("errorCode", "onVideoError")
 
     m.savedOnce = false
+    m.triedTranscode = false
     m.top.observeField("item", "onItemChanged")
 end sub
 
 sub onItemChanged()
     item = m.top.item
     if item = invalid then return
+
+    m.triedTranscode = false
 
     content = CreateObject("roSGNode", "ContentNode")
     content.url = ApiStreamUrl(item.id)
@@ -60,12 +63,39 @@ sub onVideoState()
         SavePlayback()
         m.top.result = { action: "back" }
     else if state = "error"
+        if not m.triedTranscode
+            m.triedTranscode = true
+            RetryWithTranscode()
+            return
+        end if
         code = m.video.errorCode
         if code = invalid then code = 0
         m.errorLabel.text = "Playback failed (" + code.ToStr() + "). Press BACK to go back."
         m.errorLabel.visible = true
         m.video.setFocus(true)
     end if
+end sub
+
+' Some Roku models lack H.265/HEVC decode (or the file has DTS/AC3 audio).
+' Retry once through the server's H.264 transcode, starting near the current position.
+sub RetryWithTranscode()
+    item = m.top.item
+    if item = invalid or item.id = invalid then return
+
+    start = 0
+    if m.video.position <> invalid and m.video.position > 0
+        start = Int(m.video.position)
+    end if
+
+    content = CreateObject("roSGNode", "ContentNode")
+    content.url = ApiTranscodeUrl(item.id, start)
+    content.streamFormat = "mp4"
+    content.title = ItemTitleForVideo(item)
+    if item.description <> invalid then content.description = item.description
+
+    m.video.content = content
+    m.video.setFocus(true)
+    m.video.control = "play"
 end sub
 
 sub onPosition()

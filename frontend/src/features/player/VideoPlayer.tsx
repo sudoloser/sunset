@@ -20,6 +20,31 @@ interface VideoPlayerProps {
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+const H265_MP4_CODECS = ['hev1.1.6.L93.B0', 'hvc1.1.6.L93.B0', 'hev1.1.6.L120.90'];
+
+function supportsH265(): boolean {
+  if (typeof document === 'undefined') return false;
+  const v = document.createElement('video');
+  return H265_MP4_CODECS.some(c => v.canPlayType(`video/mp4; codecs="${c}"`) !== '');
+}
+
+function canPlayAudio(codec: string): boolean {
+  if (typeof document === 'undefined') return true;
+  const v = document.createElement('video');
+  return v.canPlayType(`audio/mp4; codecs="${codec}"`) !== '' ||
+    v.canPlayType(`audio/webm; codecs="${codec}"`) !== '';
+}
+
+const TRANSCODE_AUDIO_CODECS = ['ac3', 'eac3', 'dts', 'dts-hd', 'dtshd', 'truehd', 'mlp'];
+
+function needsTranscode(videoCodec: string | null, audioCodec: string | null): boolean {
+  const vc = (videoCodec || '').toLowerCase();
+  const ac = (audioCodec || '').toLowerCase();
+  if (vc === 'hevc' || vc === 'h265') return !supportsH265();
+  if (TRANSCODE_AUDIO_CODECS.includes(ac) && !canPlayAudio(ac)) return true;
+  return false;
+}
+
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelectItem, userId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,6 +66,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelec
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSpeedPicker, setShowSpeedPicker] = useState(false);
   const [showPip, setShowPip] = useState(false);
+  const [useTranscode, setUseTranscode] = useState(false);
+  const [resumeSeconds, setResumeSeconds] = useState(0);
+  const [src, setSrc] = useState<string>(() => api.getStreamUrl(item.id));
 
   const isShow = item.media_type === 'episode' || !!item.show_title;
   const showTitle = item.show_title || item.title;
@@ -122,14 +150,36 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelec
     }
   }, [item, onClose]);
 
-  // Cloud sync: load remote playback state
+  // Cloud sync + codec probe: decide direct vs transcode source
   useEffect(() => {
-    api.getPlayback(item.id).then(state => {
-      if (state && videoRef.current) {
-        videoRef.current.currentTime = state.timestamp;
+    let cancelled = false;
+    (async () => {
+      const resume = await api.getPlayback(item.id).catch(() => null);
+      if (cancelled) return;
+      if (resume && typeof resume.timestamp === 'number') {
+        setResumeSeconds(Math.max(0, resume.timestamp));
       }
-    }).catch(() => {});
+      const codec = await api.getMediaCodec(item.id).catch(() => null);
+      if (cancelled) return;
+      setUseTranscode(needsTranscode(codec?.video_codec ?? null, codec?.audio_codec ?? null));
+    })();
+    return () => { cancelled = true; };
   }, [item.id]);
+
+  // Build the source URL (a transcode pipe carries the resume offset as ?start=)
+  useEffect(() => {
+    setSrc(useTranscode
+      ? api.getTranscodeUrl(item.id, Math.floor(resumeSeconds))
+      : api.getStreamUrl(item.id));
+  }, [useTranscode, resumeSeconds, item.id]);
+
+  // Apply resume if it resolves after the direct stream already loaded metadata
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!useTranscode && resumeSeconds > 0 && v && v.readyState >= 1) {
+      v.currentTime = resumeSeconds;
+    }
+  }, [useTranscode, resumeSeconds]);
 
   // Persistence loop: local + cloud sync
   useEffect(() => {
@@ -413,14 +463,22 @@ const handleActivity = () => {
 
       <video
         ref={videoRef}
-        src={api.getStreamUrl(item.id)}
+        src={src}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         autoPlay
         playsInline
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-        onLoadedMetadata={(e) => { setDuration(e.currentTarget.duration); }}
+        onLoadedMetadata={(e) => {
+          setDuration(e.currentTarget.duration);
+          if (!useTranscode && resumeSeconds > 0) {
+            e.currentTarget.currentTime = resumeSeconds;
+          }
+        }}
+        onError={() => {
+          if (!useTranscode) setUseTranscode(true);
+        }}
         onClick={(e) => { 
           e.stopPropagation(); 
           handleTap(e);

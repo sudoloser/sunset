@@ -72,6 +72,9 @@ export const api = {
   search: (query: string, userId?: string) => request<MediaItem[]>(`/search?q=${encodeURIComponent(query)}${userId ? `&user_id=${userId}` : ''}`),
   triggerScan: () => request<boolean>('/scan', { method: 'POST' }),
   getStreamUrl: (id: string) => `${baseUrl}/stream/${id}`,
+  getTranscodeUrl: (id: string, start = 0) =>
+    `${baseUrl}/stream/${id}/transcode${start > 0 ? `?start=${Math.floor(start)}` : ''}`,
+  getMediaCodec: (id: string) => request<{ video_codec: string | null; audio_codec: string | null }>(`/media/${id}/codec`),
   getSubtitles: (id: string) => request<string[]>(`/media/${id}/subtitles`),
   getSubtitleUrl: (id: string, name: string) => `${baseUrl}/media/${id}/subtitle/${encodeURIComponent(name)}`,
   savePlayback: (data: any) => request<boolean>('/playback', { method: 'POST', body: JSON.stringify(data) }),

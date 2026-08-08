@@ -794,8 +794,10 @@ async fn main() {
         .route("/api/search", get(search_media))
         .route("/api/scan", post(manual_scan))
         .route("/api/stream/:id", get(stream_media))
+        .route("/api/stream/:id/transcode", get(transcode_media))
         .route("/api/media/:id/asset/:name", get(get_media_asset))
         .route("/api/media/:id/subtitles", get(get_media_subtitles))
+        .route("/api/media/:id/codec", get(get_media_codec))
         .route("/api/media/:id/subtitle/:name", get(get_media_subtitle_file))
         .route("/api/media/:id/subtitle", post(upload_subtitle))
         .route("/api/media/:id", put(update_media_item))
@@ -1401,7 +1403,7 @@ async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
     path.hash(&mut hasher);
     if let Ok(meta) = path.metadata() {
         if let Ok(modified) = meta.modified() {
-            if let Ok(dur) = modified.duration() {
+            if let Ok(dur) = modified.duration_since(std::time::UNIX_EPOCH) {
                 dur.hash(&mut hasher);
             }
         }
@@ -1446,7 +1448,7 @@ async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
 }
 
 /// Streams a seekable file (or a remuxed cache file) with full byte-range support.
-async fn serve_file_with_range(path: &StdPath, req: &axum::http::Request<Body>) -> Response {
+async fn serve_file_with_range(path: &StdPath, range_header: Option<&str>) -> Response {
     let file = match tokio::fs::File::open(path).await {
         Ok(f) => f,
         Err(_) => return StatusCode::NOT_FOUND.into_response(),
@@ -1459,8 +1461,7 @@ async fn serve_file_with_range(path: &StdPath, req: &axum::http::Request<Body>) 
 
     use tokio_util::io::ReaderStream;
 
-    let range = req.headers().get(header::RANGE).and_then(|h| h.to_str().ok());
-    if let Some(range) = range {
+    if let Some(range) = range_header {
         if let Some(cap) = Regex::new(r"bytes=(\d+)-(\d+)?").unwrap().captures(range) {
             let start = cap[1].parse::<u64>().unwrap_or(0);
             let end = cap.get(2)
@@ -1541,13 +1542,13 @@ async fn remux_to_mp4(path: &StdPath) -> Response {
         .unwrap()
 }
 
-async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>, req: axum::http::Request<Body>) -> Response {
-    let token = req.uri().query().and_then(|q| {
-        q.split('&').find_map(|pair| {
-            let mut parts = pair.splitn(2, '=');
-            if parts.next()? == "token" { parts.next() } else { None }
-        })
-    });
+async fn stream_media(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<HashMap<String, String>>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    let token = params.get("token").map(|s| s.as_str());
 
     if let Some(token) = token {
         let valid = sqlx::query_scalar::<_, i64>(
@@ -1567,6 +1568,7 @@ async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>
         let path: String = r.get("file_path");
         let path = std::path::Path::new(&path);
         if path.exists() {
+            let range_header = headers.get(header::RANGE).and_then(|h| h.to_str().ok());
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
 
             // Containers no browser can demux natively (avisynth-era formats):
@@ -1575,7 +1577,7 @@ async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>
             if ext == "avi" || ext == "wmv" || ext == "flv" || ext == "divx" {
                 let remuxed = ensure_remuxed(path).await;
                 if remuxed != path {
-                    return serve_file_with_range(&remuxed, &req).await;
+                    return serve_file_with_range(&remuxed, range_header).await;
                 }
                 return remux_to_mp4(path).await;
             }
@@ -1583,7 +1585,164 @@ async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>
             // Everything else (mp4, mkv, webm, mov, ts, audio, ...) is served
             // directly with the correct content type and full byte-range support.
             // Browsers such as Chrome/Edge/Firefox play H.264/AAC MKV natively.
-            return serve_file_with_range(path, &req).await;
+            return serve_file_with_range(path, range_header).await;
+        }
+    }
+    StatusCode::NOT_FOUND.into_response()
+}
+
+/// Probes the first video and audio codecs with ffprobe.
+async fn probe_codecs(path: &StdPath) -> Option<(String, String)> {
+    let path_str = path.to_string_lossy().to_string();
+    let out = TokioCommand::new("ffprobe")
+        .arg("-v")
+        .arg("error")
+        .arg("-show_entries")
+        .arg("stream=codec_type,codec_name")
+        .arg("-of")
+        .arg("json")
+        .arg(&path_str)
+        .output()
+        .await
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+
+    let mut video = String::new();
+    let mut audio = String::new();
+    if let Some(streams) = value.get("streams").and_then(|s| s.as_array()) {
+        for stream in streams {
+            let kind = stream.get("codec_type").and_then(|c| c.as_str()).unwrap_or("");
+            let name = stream.get("codec_name").and_then(|c| c.as_str()).unwrap_or("");
+            if kind == "video" && video.is_empty() {
+                video = name.to_string();
+            } else if kind == "audio" && audio.is_empty() {
+                audio = name.to_string();
+            }
+        }
+    }
+    if video.is_empty() {
+        return None;
+    }
+    Some((video, audio))
+}
+
+/// Reports the codecs of a media file so clients can decide whether to
+/// transcode (HEVC/H.265 or AC3/DTS audio is not playable everywhere).
+async fn get_media_codec(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Json<serde_json::Value> {
+    let row = sqlx::query("SELECT file_path FROM media_items WHERE id = ?")
+        .bind(id)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap();
+    let mut result = serde_json::json!({ "video_codec": null, "audio_codec": null });
+    if let Some(r) = row {
+        let path: String = r.get("file_path");
+        let path = std::path::Path::new(&path);
+        if path.exists() {
+            if let Some((video, audio)) = probe_codecs(path).await {
+                result = serde_json::json!({ "video_codec": video, "audio_codec": audio });
+            }
+        }
+    }
+    Json(result)
+}
+
+/// Transcodes the file to H.264/AAC in a fragmented MP4 streamed from ffmpeg.
+///
+/// Used as a fallback for HEVC/H.265 (and other codecs) that browsers without
+/// native HEVC support or older Roku devices cannot decode. Because output is a
+/// live pipe, seeking is done by restarting ffmpeg with `-ss <start>`.
+async fn transcode_to_h264(path: &StdPath, start_secs: u64) -> Response {
+    use tokio_util::io::ReaderStream;
+
+    let path_str = path.to_string_lossy().to_string();
+
+    let mut cmd = TokioCommand::new("ffmpeg");
+    cmd.arg("-hide_banner")
+        .arg("-loglevel")
+        .arg("error");
+    if start_secs > 0 {
+        cmd.arg("-ss").arg(start_secs.to_string());
+    }
+    cmd.arg("-i")
+        .arg(&path_str)
+        .arg("-map")
+        .arg("0:v:0")
+        .arg("-map")
+        .arg("0:a:0")
+        .arg("-c:v")
+        .arg("libx264")
+        .arg("-preset")
+        .arg("veryfast")
+        .arg("-crf")
+        .arg("23")
+        .arg("-pix_fmt")
+        .arg("yuv420p")
+        .arg("-c:a")
+        .arg("aac")
+        .arg("-b:a")
+        .arg("160k")
+        .arg("-movflags")
+        .arg("frag_keyframe+empty_moov+default_base_moof")
+        .arg("-f")
+        .arg("mp4")
+        .arg("pipe:1")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null());
+
+    let mut child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "ffmpeg is required for transcoding but was not found on the server",
+            ).into_response();
+        }
+    };
+
+    let stdout = child.stdout.take().unwrap();
+    let stream = ReaderStream::new(stdout);
+
+    Response::builder()
+        .header(header::CONTENT_TYPE, "video/mp4")
+        .body(Body::from_stream(stream))
+        .unwrap()
+}
+
+/// Transcode endpoint: streams H.264 output for any file, with optional
+/// `?start=<seconds>` for seek/resume and the same temp-token auth as /stream.
+async fn transcode_media(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Response {
+    if let Some(token) = params.get("token").map(|s| s.as_str()) {
+        let valid = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM temp_tokens WHERE id = ? AND media_id = ? AND expires_at > datetime('now')"
+        )
+        .bind(token)
+        .bind(&id)
+        .fetch_one(&state.pool)
+        .await.unwrap_or(0);
+        if valid == 0 {
+            return StatusCode::UNAUTHORIZED.into_response();
+        }
+    }
+
+    let row = sqlx::query("SELECT file_path FROM media_items WHERE id = ?").bind(id).fetch_optional(&state.pool).await.unwrap();
+    if let Some(r) = row {
+        let path: String = r.get("file_path");
+        let path = std::path::Path::new(&path);
+        if path.exists() {
+            let start = params.get("start").and_then(|s| s.parse::<u64>().ok()).unwrap_or(0);
+            return transcode_to_h264(path, start).await;
         }
     }
     StatusCode::NOT_FOUND.into_response()
