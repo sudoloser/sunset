@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="Details" extends="Group">
+  <interface>
+    <field id="item" type="assocarray" />
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/Details.brs" />
+  <children>
+    <Poster id="backdrop" loadDisplayMode="scaleToFill" />
+    <Rectangle id="scrim" color="0xCC000000" />
+    <Label id="title" text="" />
+    <Label id="meta" text="" />
+    <Label id="genres" text="" />
+    <Label id="description" text="" wrap="true" />
+    <Label id="cast" text="" wrap="true" />
+    <Button id="playBtn" text="Play" />
+  </children>
+</component>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="VideoScene" extends="Group">
+  <interface>
+    <field id="item" type="assocarray" />
+    <field id="resume" type="integer" value="0" />
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/Video.brs" />
+  <children>
+    <Video
+      id="video"
+      width="1920"
+      height="1080"
+      translation="[0,0]"
+      enableTrickPlay="true"
+      enableUI="true" />
+    <Label id="errorLabel" text="" wrap="true" />
+  </children>
+</component>

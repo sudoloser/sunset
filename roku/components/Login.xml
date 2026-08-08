@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="Login" extends="Group">
+  <interface>
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/Login.brs" />
+  <children>
+    <Label id="title" text="Sign in" />
+    <Label id="serverLabel" text="" />
+    <Label id="userLabel" text="Username" />
+    <TextEditBox id="userBox" />
+    <Label id="passLabel" text="Password" />
+    <TextEditBox id="passBox" obscuredInput="true" />
+    <Button id="signInBtn" text="Sign In" />
+    <Button id="changeServerBtn" text="Change Server" />
+    <Label id="error" text="" />
+  </children>
+</component>

@@ -23,7 +23,10 @@ try {
   // not in Tauri
 }
 
-export const isDesktop = () => typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
+export const isDesktop = () =>
+  typeof window !== 'undefined' &&
+  (typeof (window as any).__TAURI_INTERNALS__ !== 'undefined' ||
+    typeof (window as any).__TAURI__ !== 'undefined');
 
 export const desktopApi = {
   startDiscordRpc: async (clientId: string): Promise<void> => {

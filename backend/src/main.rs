@@ -1358,6 +1358,151 @@ async fn upload_subtitle(
     }
 }
 
+fn content_type_for(path: &StdPath) -> &'static str {
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    match ext.as_str() {
+        // Containers/schemes browsers can demux natively
+        "mkv" | "mk3d" => "video/x-matroska",
+        "webm" => "video/webm",
+        "mp4" | "m4v" | "mov" | "qt" | "3gp" | "3g2" => "video/mp4",
+        "ogv" => "video/ogg",
+        "ts" | "m2ts" | "mts" => "video/mp2t",
+        "m4a" => "audio/mp4",
+        "mp3" => "audio/mpeg",
+        "ogg" | "oga" => "audio/ogg",
+        "opus" => "audio/opus",
+        "flac" => "audio/flac",
+        "aac" => "audio/aac",
+        "wav" => "audio/wav",
+        "ac3" => "audio/ac3",
+        "eac3" => "audio/eac3",
+        "mpd" => "application/dash+xml",
+        "m3u8" => "application/vnd.apple.mpegurl",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Returns the path to a remuxed copy of the media in a browser-friendly container.
+///
+/// The remux is `-c copy` (no re-encode) and writes to a cache file in
+/// `~/.sunset/tmp/remux/` so the result is seekable (byte-range requests work).
+/// The cache is keyed on the source path + modified time. If ffmpeg is not
+/// installed the original path is returned so callers can fall back to serving
+/// the raw file.
+async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/"));
+    let remux_dir = home_dir.join(".sunset").join("tmp").join("remux");
+    std::fs::create_dir_all(&remux_dir).ok();
+
+    let mut hasher = DefaultHasher::new();
+    path.hash(&mut hasher);
+    if let Ok(meta) = path.metadata() {
+        if let Ok(modified) = meta.modified() {
+            if let Ok(dur) = modified.duration() {
+                dur.hash(&mut hasher);
+            }
+        }
+    }
+    let cache_path = remux_dir.join(format!("{:016x}.mp4", hasher.finish()));
+
+    // Cache hit
+    if cache_path.exists() {
+        return cache_path;
+    }
+
+    // Remux (stream copy) into a fragmented MP4 so it's seekable while streaming
+    let path_str = path.to_string_lossy().to_string();
+    let out_str = cache_path.to_string_lossy().to_string();
+
+    let status = TokioCommand::new("ffmpeg")
+        .arg("-y")
+        .arg("-i")
+        .arg(&path_str)
+        .arg("-map")
+        .arg("0")
+        .arg("-c")
+        .arg("copy")
+        .arg("-movflags")
+        .arg("+faststart+frag_keyframe+empty_moov")
+        .arg("-f")
+        .arg("mp4")
+        .arg(&out_str)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .await;
+
+    match status {
+        Ok(s) if s.success() => cache_path,
+        _ => {
+            // ffmpeg missing or failed: clean up and fall back to the original file
+            let _ = std::fs::remove_file(&cache_path);
+            path.to_path_buf()
+        }
+    }
+}
+
+/// Streams a seekable file (or a remuxed cache file) with full byte-range support.
+async fn serve_file_with_range(path: &StdPath, req: &axum::http::Request<Body>) -> Response {
+    let file = match tokio::fs::File::open(path).await {
+        Ok(f) => f,
+        Err(_) => return StatusCode::NOT_FOUND.into_response(),
+    };
+    let size = match file.metadata().await {
+        Ok(m) => m.len(),
+        Err(_) => return StatusCode::NOT_FOUND.into_response(),
+    };
+    let mime = content_type_for(path);
+
+    use tokio_util::io::ReaderStream;
+
+    let range = req.headers().get(header::RANGE).and_then(|h| h.to_str().ok());
+    if let Some(range) = range {
+        if let Some(cap) = Regex::new(r"bytes=(\d+)-(\d+)?").unwrap().captures(range) {
+            let start = cap[1].parse::<u64>().unwrap_or(0);
+            let end = cap.get(2)
+                .and_then(|m| m.as_str().parse::<u64>().ok())
+                .unwrap_or(size.saturating_sub(1))
+                .min(size.saturating_sub(1));
+
+            // Unsatisfiable range
+            if start >= size {
+                return Response::builder()
+                    .status(StatusCode::RANGE_NOT_SATISFIABLE)
+                    .header(header::CONTENT_RANGE, format!("bytes */{}", size))
+                    .body(Body::empty())
+                    .unwrap();
+            }
+
+            let chunk_size = end - start + 1;
+            use tokio::io::AsyncSeekExt;
+            let mut file = file;
+            file.seek(std::io::SeekFrom::Start(start)).await.unwrap();
+            let stream = ReaderStream::with_capacity(file.take(chunk_size), 64 * 1024);
+
+            return Response::builder()
+                .status(StatusCode::PARTIAL_CONTENT)
+                .header(header::CONTENT_TYPE, mime)
+                .header(header::CONTENT_RANGE, format!("bytes {}-{}/{}", start, end, size))
+                .header(header::ACCEPT_RANGES, "bytes")
+                .header(header::CONTENT_LENGTH, chunk_size)
+                .body(Body::from_stream(stream))
+                .unwrap();
+        }
+    }
+
+    let stream = ReaderStream::new(file);
+    Response::builder()
+        .header(header::CONTENT_TYPE, mime)
+        .header(header::CONTENT_LENGTH, size)
+        .header(header::ACCEPT_RANGES, "bytes")
+        .body(Body::from_stream(stream))
+        .unwrap()
+}
+
 async fn remux_to_mp4(path: &StdPath) -> Response {
     use tokio_util::io::ReaderStream;
 
@@ -1379,7 +1524,10 @@ async fn remux_to_mp4(path: &StdPath) -> Response {
     {
         Ok(c) => c,
         Err(_) => {
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "ffmpeg is required to play this file format but was not found on the server",
+            ).into_response();
         }
     };
 
@@ -1419,51 +1567,23 @@ async fn stream_media(Path(id): Path<String>, State(state): State<Arc<AppState>>
         let path: String = r.get("file_path");
         let path = std::path::Path::new(&path);
         if path.exists() {
-            // On-the-fly re-mux for containers browsers can't play natively
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
-            if ext == "mkv" || ext == "avi" || ext == "mov" || ext == "wmv" || ext == "flv" {
-                if ext != "mp4" {
-                    return remux_to_mp4(path).await;
+
+            // Containers no browser can demux natively (avisynth-era formats):
+            // remux to fragmented MP4 on-the-fly. Falls back to direct serving if
+            // ffmpeg is unavailable.
+            if ext == "avi" || ext == "wmv" || ext == "flv" || ext == "divx" {
+                let remuxed = ensure_remuxed(path).await;
+                if remuxed != path {
+                    return serve_file_with_range(&remuxed, &req).await;
                 }
+                return remux_to_mp4(path).await;
             }
 
-            let file = tokio::fs::File::open(path).await.unwrap();
-            let metadata = file.metadata().await.unwrap();
-            let size = metadata.len();
-            
-            // Basic range support
-            let range = req.headers().get(header::RANGE).and_then(|h| h.to_str().ok());
-            if let Some(range) = range {
-                if let Some(cap) = Regex::new(r"bytes=(\d+)-(\d+)?").unwrap().captures(range) {
-                    let start = cap[1].parse::<u64>().unwrap();
-                    let end = cap.get(2).map(|m| m.as_str().parse::<u64>().unwrap()).unwrap_or(size - 1);
-                    let chunk_size = end - start + 1;
-                    
-                    use tokio::io::AsyncSeekExt;
-                    use tokio_util::io::ReaderStream;
-                    let mut file = file;
-                    file.seek(std::io::SeekFrom::Start(start)).await.unwrap();
-                    let stream = ReaderStream::with_capacity(file.take(chunk_size), 64 * 1024);
-                    
-                    return Response::builder()
-                        .status(StatusCode::PARTIAL_CONTENT)
-                        .header(header::CONTENT_TYPE, "video/mp4")
-                        .header(header::CONTENT_RANGE, format!("bytes {}-{}/{}", start, end, size))
-                        .header(header::ACCEPT_RANGES, "bytes")
-                        .header(header::CONTENT_LENGTH, chunk_size)
-                        .body(Body::from_stream(stream))
-                        .unwrap();
-                }
-            }
-            
-            use tokio_util::io::ReaderStream;
-            let stream = ReaderStream::new(file);
-            return Response::builder()
-                .header(header::CONTENT_TYPE, "video/mp4")
-                .header(header::CONTENT_LENGTH, size)
-                .header(header::ACCEPT_RANGES, "bytes")
-                .body(Body::from_stream(stream))
-                .unwrap();
+            // Everything else (mp4, mkv, webm, mov, ts, audio, ...) is served
+            // directly with the correct content type and full byte-range support.
+            // Browsers such as Chrome/Edge/Firefox play H.264/AAC MKV natively.
+            return serve_file_with_range(path, &req).await;
         }
     }
     StatusCode::NOT_FOUND.into_response()

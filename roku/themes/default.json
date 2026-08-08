@@ -1,0 +1,44 @@
+{
+  "name": "Netflix Dark",
+  "version": 1,
+  "colors": {
+    "background": "#000000",
+    "surface": "#141414",
+    "surfaceVariant": "#222222",
+    "primary": "#E50914",
+    "onPrimary": "#FFFFFF",
+    "textPrimary": "#FFFFFF",
+    "textSecondary": "#B3B3B3",
+    "border": "#333333",
+    "focusBorder": "#E50914",
+    "overlay": "#80000000",
+    "error": "#FF5252"
+  },
+  "fonts": {
+    "header": "LargeBoldSystemFont",
+    "subheader": "MediumBoldSystemFont",
+    "body": "MediumSystemFont",
+    "small": "SmallSystemFont"
+  },
+  "layout": {
+    "padding": 60,
+    "topOffset": 150,
+    "posterWidth": 240,
+    "posterHeight": 360,
+    "itemSpacing": 20,
+    "rowSpacing": 30,
+    "posterTitleHeight": 40,
+    "posterTitleFontSize": 24,
+    "titleFontSize": 56,
+    "subtitleFontSize": 30,
+    "bodyFontSize": 26,
+    "overhangHeight": 120,
+    "buttonWidth": 320,
+    "buttonHeight": 72
+  },
+  "images": {
+    "logo": "",
+    "posterPlaceholder": "pkg:/images/poster-placeholder.png",
+    "splash": "pkg:/images/splash-screen_fhd.png"
+  }
+}

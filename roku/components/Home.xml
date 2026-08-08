@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="Home" extends="Group">
+  <interface>
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/Home.brs" />
+  <children>
+    <Label id="brand" text="SunSet" />
+    <Label id="welcome" text="" />
+    <Button id="searchBtn" text="Search" />
+    <Button id="logoutBtn" text="Log Out" />
+    <Label id="loading" text="Loading..." />
+    <Label id="errorLabel" text="" />
+    <RowList id="homeList" />
+  </children>
+</component>

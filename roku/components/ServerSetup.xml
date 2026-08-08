@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ServerSetup" extends="Group">
+  <interface>
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/ServerSetup.brs" />
+  <children>
+    <Label id="title" text="SunSet" />
+    <Label id="subtitle" text="Connect to your media server" />
+    <Label id="urlLabel" text="Server URL" />
+    <TextEditBox id="urlBox" />
+    <Button id="connectBtn" text="Connect" />
+    <Label id="status" text="" />
+  </children>
+</component>

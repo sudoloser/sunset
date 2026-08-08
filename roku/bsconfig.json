@@ -1,0 +1,9 @@
+{
+  "rootDir": ".",
+  "files": [
+    "**/*"
+  ],
+  "stagingDir": "staging",
+  "sourceMap": false,
+  "diagnosticFilters": []
+}

@@ -1,0 +1,20 @@
+# SunSet Roku Channel
+title=SunSet
+subtitle=Your media, everywhere
+major_version=1
+minor_version=0
+build_version=1
+
+# Channel artwork
+mm_icon_focus_fhd=pkg:/images/channel-poster_fhd.png
+
+# Splash screen
+splash_screen_fhd=pkg:/images/splash-screen_fhd.png
+splash_color=#000000
+splash_min_time=1000
+
+# Resolution
+ui_resolutions=fhd
+
+# Deep linking
+supports_input_launch=1

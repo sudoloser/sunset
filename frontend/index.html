@@ -20,5 +20,41 @@
   <body style="background: #000;">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Boot diagnostics: if the app fails to start, show a visible error
+      // instead of a blank white screen.
+      (function () {
+        function paintError(message, detail) {
+          var root = document.getElementById('root');
+          if (!root) return;
+          root.innerHTML =
+            '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#000;color:#fff;padding:2rem;text-align:center;gap:1rem;font-family:system-ui,sans-serif;box-sizing:border-box">' +
+            '<h2 style="margin:0">SunSet failed to start</h2>' +
+            '<p style="color:#b3b3b3;font-size:0.9rem;max-width:440px;margin:0;word-break:break-word">' +
+            (message || 'Unknown error') + (detail ? '<br><br><code style="color:#ff6b6b;font-size:0.8rem">' + detail + '</code>' : '') +
+            '</p>' +
+            '<button onclick="location.reload()" style="background:#e50914;color:white;border:none;padding:0.75rem 1.5rem;border-radius:8px;font-weight:700;cursor:pointer">Reload</button>' +
+            '</div>';
+        }
+        window.addEventListener('error', function (e) {
+          paintError('A runtime error occurred.', (e && e.message) || (e && e.filename));
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          paintError('A promise rejected without being handled.', (e && e.reason && (e.reason.message || String(e.reason))) || '');
+        });
+        // If React hasn't rendered into #root within 15s, something is stuck.
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (root && root.children.length === 0) {
+            paintError('The app did not finish loading. Check that the backend server is reachable, then reload.');
+          }
+        }, 15000);
+      })();
+    </script>
+    <noscript>
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#000;color:#fff;font-family:sans-serif">
+        SunSet requires JavaScript to run.
+      </div>
+    </noscript>
   </body>
 </html>

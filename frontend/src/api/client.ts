@@ -4,6 +4,12 @@ import type {
 } from '../types';
 
 function getDefaultBaseUrl(): string {
+  // Desktop builds: the backend normally runs on the same machine.
+  if (typeof window !== 'undefined' &&
+    (typeof (window as any).__TAURI_INTERNALS__ !== 'undefined' ||
+      typeof (window as any).__TAURI__ !== 'undefined')) {
+    return 'http://localhost:7867/api';
+  }
   return import.meta.env.DEV
     ? 'http://localhost:7867/api'
     : '/api';
@@ -27,6 +33,10 @@ export function setServerUrl(url: string) {
 export function getCurrentServerUrl(): string {
   const stored = localStorage.getItem('sunset_server_url');
   return stored || getDefaultBaseUrl().replace(/\/api$/, '');
+}
+
+export function hasConfiguredServerUrl(): boolean {
+  return !!localStorage.getItem('sunset_server_url');
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {

@@ -85,6 +85,11 @@ fn is_discord_running(state: State<'_, Mutex<DiscordState>>) -> Result<bool, Str
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        // Window starts hidden (visible: false) to avoid a white flash on boot;
+        // show it as soon as the frontend has actually loaded its page.
+        .on_page_load(|webview, _payload| {
+            let _ = webview.window().show();
+        })
         .manage(Mutex::new(DiscordState { client: None }))
         .invoke_handler(tauri::generate_handler![
             start_discord_rpc,

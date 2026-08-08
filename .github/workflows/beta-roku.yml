@@ -1,0 +1,73 @@
+name: Beta Build (Roku)
+
+on:
+  push:
+    branches:
+      - pre
+    paths:
+      - '.github/workflows/beta-roku.yml'
+      - 'roku/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Zip Roku Channel
+        run: |
+          cd roku
+          zip -r ../sunset-roku-beta.zip . -x "out/*" "*.zip"
+
+      - name: Verify manifest at zip root
+        run: |
+          unzip -l sunset-roku-beta.zip
+          unzip -p sunset-roku-beta.zip manifest | grep -E "^(title|major_version|minor_version|build_version)"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: roku-zip
+          path: sunset-roku-beta.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Delete existing Roku beta release
+        run: |
+          gh release delete roku-beta --yes || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Delete existing Roku beta tag
+        run: |
+          git fetch origin refs/tags/roku-beta 2>/dev/null && git push origin --delete roku-beta || true
+
+      - name: Create Roku Beta Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: roku-beta
+          name: Roku Beta Build
+          body: |
+            ## Roku Beta Build
+
+            Automated beta release from `${{ github.ref_name }}` branch.
+
+            - Commit: ${{ github.sha }}
+            - Build time: ${{ github.event.head_commit.timestamp || github.event.client_payload.timestamp || 'latest' }}
+
+            **Note:** Beta builds are unstable. Sideload via the Roku web installer (Developer Settings → Web Installer) with `sunset-roku-beta.zip`.
+          prerelease: true
+          files: |
+            artifacts/roku-zip/sunset-roku-beta.zip

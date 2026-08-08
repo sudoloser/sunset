@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MediaPoster" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="itemContentChanged" />
+    <field id="itemFocused" type="bool" onChange="itemFocusedChanged" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/MediaPoster.brs" />
+  <children>
+    <Poster id="poster" loadDisplayMode="scaleToFit" />
+    <Rectangle id="focusBorder" />
+    <Label id="title" horizAlign="center" />
+  </children>
+</component>

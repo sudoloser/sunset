@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ApiTask" extends="Task">
+  <interface>
+    <field id="uri" type="string" />
+    <field id="method" type="string" value="GET" />
+    <field id="body" type="string" value="" />
+    <field id="response" type="string" value="" />
+    <field id="status" type="integer" value="0" />
+    <field id="error" type="string" value="" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/ApiTask.brs" />
+</component>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeLoader" extends="Task">
+  <interface>
+    <field id="userId" type="string" value="" />
+    <field id="result" type="array" />
+    <field id="error" type="string" value="" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/HomeLoader.brs" />
+</component>

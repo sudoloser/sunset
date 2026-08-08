@@ -9,7 +9,7 @@ import { CollectionPage } from './pages/CollectionPage';
 import { ServerSetupPage } from './pages/ServerSetup';
 import { OnboardingWizard } from './features/onboarding/OnboardingWizard';
 import { LoginForm } from './features/auth/LoginForm';
-import { api, getCurrentServerUrl } from './api/client';
+import { api, hasConfiguredServerUrl } from './api/client';
 import { isDesktop } from './desktop';
 
 const loadingStyle = {
@@ -95,7 +95,7 @@ function LoginRoute() {
 }
 
 export default function App() {
-  const needsServerUrl = isDesktop() && !getCurrentServerUrl();
+  const needsServerUrl = isDesktop() && !hasConfiguredServerUrl();
 
   return (
     <ErrorBoundary>
