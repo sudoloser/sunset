@@ -21,11 +21,10 @@ interface VideoPlayerProps {
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 const getClientX = (e: React.MouseEvent | React.TouchEvent): number => {
-  if ('touches' in e) {
-    if (e.touches.length > 0) return e.touches[0].clientX;
-    if (e.changedTouches.length > 0) return e.changedTouches[0].clientX;
-  }
-  return e.clientX;
+  const te = e as React.TouchEvent;
+  if (te.touches && te.touches.length > 0) return te.touches[0].clientX;
+  if (te.changedTouches && te.changedTouches.length > 0) return te.changedTouches[0].clientX;
+  return (e as React.MouseEvent).clientX;
 };
 
 const H265_MP4_CODECS = ['hev1.1.6.L93.B0', 'hvc1.1.6.L93.B0', 'hev1.1.6.L120.90'];
