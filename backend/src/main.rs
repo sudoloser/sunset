@@ -28,6 +28,11 @@ use rust_embed::RustEmbed;
 use std::fs::File as StdFile;
 use std::io::Write;
 use tokio::process::Command as TokioCommand;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Set to `true` when the server is started with `--logs`; enables detailed
+/// ffmpeg logging and verbose Discord gateway logging.
+static LOGS_ENABLED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct DiscordActivity {
@@ -466,13 +471,13 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
     let url = "wss://gateway.discord.gg/?v=10&encoding=json";
     
     loop {
-        info!("Connecting to Discord Gateway...");
+        info!(target: "sunset_backend::rpc", "Connecting to Discord Gateway...");
         let ws_stream = tokio::select! {
             res = connect_async(url) => {
                 match res {
                     Ok((v, _)) => v,
                     Err(e) => {
-                        error!("Failed to connect to Discord Gateway: {}", e);
+                        error!(target: "sunset_backend::rpc", "Failed to connect to Discord Gateway: {}", e);
                         tokio::select! {
                             _ = tokio::time::sleep(std::time::Duration::from_secs(5)) => {
                                 continue;
@@ -503,12 +508,12 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                         if let Some(interval) = val["d"]["heartbeat_interval"].as_u64() {
                             heartbeat_interval = interval;
                         }
-                        info!("Discord Gateway HELLO received, heartbeat interval: {}ms", heartbeat_interval);
+                        info!(target: "sunset_backend::rpc", "Discord Gateway HELLO received, heartbeat interval: {}ms", heartbeat_interval);
                     } else {
-                        warn!("Discord Gateway: failed to parse HELLO: {}", msg);
+                        warn!(target: "sunset_backend::rpc", "Discord Gateway: failed to parse HELLO: {}", msg);
                     }
                 } else {
-                    warn!("Discord Gateway: no HELLO received");
+                    warn!(target: "sunset_backend::rpc", "Discord Gateway: no HELLO received");
                     continue;
                 }
             }
@@ -521,7 +526,7 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
         // Send heartbeat immediately (op 1) as required by Discord before IDENTIFY
         let hb = serde_json::json!({"op": 1, "d": sequence});
         if let Err(e) = write.send(Message::Text(hb.to_string())).await {
-            warn!("Initial Discord heartbeat failed: {}", e);
+            warn!(target: "sunset_backend::rpc", "Initial Discord heartbeat failed: {}", e);
             continue;
         }
 
@@ -545,7 +550,7 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
             }
         });
         if let Err(e) = write.send(Message::Text(identify.to_string())).await {
-            error!("Failed to send identify to Discord: {}", e);
+            error!(target: "sunset_backend::rpc", "Failed to send identify to Discord: {}", e);
             continue;
         }
 
@@ -559,7 +564,7 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                 _ = heartbeat_timer.tick() => {
                     let hb = serde_json::json!({"op": 1, "d": sequence});
                     if let Err(e) = write.send(Message::Text(hb.to_string())).await {
-                        warn!("Discord heartbeat send failed: {}", e);
+                        warn!(target: "sunset_backend::rpc", "Discord heartbeat send failed: {}", e);
                         break;
                     }
                 }
@@ -571,12 +576,12 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                                 "d": presence
                             });
                             if let Err(e) = write.send(Message::Text(update.to_string())).await {
-                                warn!("Discord presence send failed: {}", e);
+                                warn!(target: "sunset_backend::rpc", "Discord presence send failed: {}", e);
                                 break;
                             }
                         }
                         None => {
-                            debug!("Discord RPC channel closed, shutting down session");
+                            debug!(target: "sunset_backend::rpc", "Discord RPC channel closed, shutting down session");
                             // Send close frame
                             let _ = write.send(Message::Close(Some(tungstenite::protocol::frame::CloseFrame {
                                 code: tungstenite::protocol::frame::coding::CloseCode::Normal,
@@ -597,25 +602,25 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                                         let t = val["t"].as_str().unwrap_or("");
                                         if t == "READY" {
                                             identified = true;
-                                            info!("Discord RPC connected successfully (READY received)");
+                                            info!(target: "sunset_backend::rpc", "Discord RPC connected successfully (READY received)");
                                         } else if t == "PRESENCE_UPDATE" {
-                                            debug!("Discord PRESENCE_UPDATE received");
+                                            debug!(target: "sunset_backend::rpc", "Discord PRESENCE_UPDATE received");
                                         }
                                     }
                                     1 => {
                                         // Heartbeat request from Discord
                                         let hb = serde_json::json!({"op": 1, "d": sequence});
                                         if let Err(e) = write.send(Message::Text(hb.to_string())).await {
-                                            warn!("Discord heartbeat response failed: {}", e);
+                                            warn!(target: "sunset_backend::rpc", "Discord heartbeat response failed: {}", e);
                                             break;
                                         }
                                     }
                                     7 => {
-                                        warn!("Discord requested reconnect (op 7)");
+                                        warn!(target: "sunset_backend::rpc", "Discord requested reconnect (op 7)");
                                         break;
                                     }
                                     9 => {
-                                        warn!("Discord Invalid Session (op 9), waiting before reconnect...");
+                                        warn!(target: "sunset_backend::rpc", "Discord Invalid Session (op 9), waiting before reconnect...");
                                         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                                         break;
                                     }
@@ -629,18 +634,18 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
                                     }
                                     11 => {
                                         // Heartbeat ACK - connection is alive
-                                        debug!("Discord heartbeat ACK received");
+                                        debug!(target: "sunset_backend::rpc", "Discord heartbeat ACK received");
                                     }
                                     _ => {}
                                 }
                             }
                         }
                         Some(Err(e)) => {
-                            warn!("Discord websocket error: {}", e);
+                            warn!(target: "sunset_backend::rpc", "Discord websocket error: {}", e);
                             break;
                         }
                         None => {
-                            debug!("Discord websocket closed");
+                            debug!(target: "sunset_backend::rpc", "Discord websocket closed");
                             break;
                         }
                         _ => {}
@@ -649,7 +654,7 @@ async fn run_discord_rpc(token: String, mut rx: tokio::sync::mpsc::UnboundedRece
             }
         }
         
-        info!("Discord RPC session ended, reconnecting in 5s...");
+        info!(target: "sunset_backend::rpc", "Discord RPC session ended, reconnecting in 5s...");
         tokio::select! {
             _ = tokio::time::sleep(std::time::Duration::from_secs(5)) => {}
             _ = rx.recv() => {
@@ -693,10 +698,12 @@ async fn main() {
         return;
     }
 
+    LOGS_ENABLED.store(args.logs, Ordering::Relaxed);
+
     let filter = if args.logs {
-        "info"
+        "info,sunset_backend::rpc=debug"
     } else {
-        "warn,sunset_backend=info"
+        "warn,sunset_backend=info,sunset_backend::rpc=off"
     };
 
     tracing_subscriber::fmt()
@@ -1384,6 +1391,38 @@ fn content_type_for(path: &StdPath) -> &'static str {
     }
 }
 
+/// Streams ffmpeg's stderr line-by-line into the logs (only spawned when
+/// `--logs` is active).
+async fn log_ffmpeg_stderr(stderr: tokio::process::ChildStderr) {
+    use tokio::io::AsyncBufReadExt;
+    let mut lines = tokio::io::BufReader::new(stderr).lines();
+    while let Ok(Some(line)) = lines.next_line().await {
+        info!(target: "ffmpeg", "{}", line);
+    }
+}
+
+/// Logs the captured stderr/stdout of a completed ffmpeg process.
+fn log_ffmpeg_output(out: &tokio::process::Output) {
+    if !LOGS_ENABLED.load(Ordering::Relaxed) {
+        return;
+    }
+    if !out.stderr.is_empty() {
+        for line in String::from_utf8_lossy(&out.stderr).lines() {
+            info!(target: "ffmpeg", "{}", line);
+        }
+    }
+}
+
+/// Returns the ffmpeg `-loglevel` argument, `verbose` with `--logs`.
+fn ffmpeg_loglevel() -> &'static str {
+    if LOGS_ENABLED.load(Ordering::Relaxed) { "verbose" } else { "error" }
+}
+
+/// Returns whether to pipe ffmpeg's stderr into the logs (`--logs` only).
+fn capture_ffmpeg_stderr() -> bool {
+    LOGS_ENABLED.load(Ordering::Relaxed)
+}
+
 /// Returns the path to a remuxed copy of the media in a browser-friendly container.
 ///
 /// The remux is `-c copy` (no re-encode) and writes to a cache file in
@@ -1421,6 +1460,8 @@ async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
 
     let status = TokioCommand::new("ffmpeg")
         .arg("-y")
+        .arg("-loglevel")
+        .arg(ffmpeg_loglevel())
         .arg("-i")
         .arg(&path_str)
         .arg("-map")
@@ -1433,13 +1474,22 @@ async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
         .arg("mp4")
         .arg(&out_str)
         .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
+        .stderr(std::process::Stdio::piped())
+        .output()
         .await;
 
     match status {
-        Ok(s) if s.success() => cache_path,
-        _ => {
+        Ok(out) if out.status.success() => {
+            log_ffmpeg_output(&out);
+            cache_path
+        }
+        Ok(out) => {
+            log_ffmpeg_output(&out);
+            // ffmpeg missing or failed: clean up and fall back to the original file
+            let _ = std::fs::remove_file(&cache_path);
+            path.to_path_buf()
+        }
+        Err(_) => {
             // ffmpeg missing or failed: clean up and fall back to the original file
             let _ = std::fs::remove_file(&cache_path);
             path.to_path_buf()
@@ -1510,6 +1560,8 @@ async fn remux_to_mp4(path: &StdPath) -> Response {
     let path_str = path.to_string_lossy().to_string();
 
     let mut child = match TokioCommand::new("ffmpeg")
+        .arg("-loglevel")
+        .arg(ffmpeg_loglevel())
         .arg("-i")
         .arg(&path_str)
         .arg("-c")
@@ -1520,7 +1572,7 @@ async fn remux_to_mp4(path: &StdPath) -> Response {
         .arg("mp4")
         .arg("pipe:1")
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null())
+        .stderr(if capture_ffmpeg_stderr() { std::process::Stdio::piped() } else { std::process::Stdio::null() })
         .spawn()
     {
         Ok(c) => c,
@@ -1533,6 +1585,9 @@ async fn remux_to_mp4(path: &StdPath) -> Response {
     };
 
     let stdout = child.stdout.take().unwrap();
+    if let Some(stderr) = child.stderr.take() {
+        tokio::spawn(log_ffmpeg_stderr(stderr));
+    }
     let stream = ReaderStream::new(stdout);
 
     Response::builder()
@@ -1665,9 +1720,13 @@ async fn transcode_to_h264(path: &StdPath, start_secs: u64) -> Response {
     let path_str = path.to_string_lossy().to_string();
 
     let mut cmd = TokioCommand::new("ffmpeg");
-    cmd.arg("-hide_banner")
-        .arg("-loglevel")
-        .arg("error");
+    if capture_ffmpeg_stderr() {
+        cmd.arg("-loglevel").arg("verbose");
+    } else {
+        cmd.arg("-hide_banner")
+            .arg("-loglevel")
+            .arg("error");
+    }
     if start_secs > 0 {
         cmd.arg("-ss").arg(start_secs.to_string());
     }
@@ -1695,7 +1754,7 @@ async fn transcode_to_h264(path: &StdPath, start_secs: u64) -> Response {
         .arg("mp4")
         .arg("pipe:1")
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null());
+        .stderr(if capture_ffmpeg_stderr() { std::process::Stdio::piped() } else { std::process::Stdio::null() });
 
     let mut child = match cmd.spawn() {
         Ok(c) => c,
@@ -1708,6 +1767,9 @@ async fn transcode_to_h264(path: &StdPath, start_secs: u64) -> Response {
     };
 
     let stdout = child.stdout.take().unwrap();
+    if let Some(stderr) = child.stderr.take() {
+        tokio::spawn(log_ffmpeg_stderr(stderr));
+    }
     let stream = ReaderStream::new(stdout);
 
     Response::builder()

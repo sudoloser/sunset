@@ -20,6 +20,14 @@ interface VideoPlayerProps {
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+const getClientX = (e: React.MouseEvent | React.TouchEvent): number => {
+  if ('touches' in e) {
+    if (e.touches.length > 0) return e.touches[0].clientX;
+    if (e.changedTouches.length > 0) return e.changedTouches[0].clientX;
+  }
+  return e.clientX;
+};
+
 const H265_MP4_CODECS = ['hev1.1.6.L93.B0', 'hvc1.1.6.L93.B0', 'hev1.1.6.L120.90'];
 
 function supportsH265(): boolean {
@@ -308,16 +316,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ item, onClose, onSelec
 
   const handleSeek = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
-    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    calcSeek(x);
+    calcSeek(getClientX(e));
     setSeeking(true);
   };
 
   const handleSeekMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!seeking) return;
     e.preventDefault();
-    const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    calcSeek(x);
+    calcSeek(getClientX(e));
   };
 
   const handleSeekEnd = () => setSeeking(false);
@@ -372,7 +378,7 @@ const tapTimeout = useRef<any>(null);
 const [, setSkipAccumulator] = useState(0);
 const skipResetTimer = useRef<any>(null);
 const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
-  const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
+  const x = getClientX(e);
   const width = window.innerWidth;
   const now = Date.now();
 
