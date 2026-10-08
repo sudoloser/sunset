@@ -10,12 +10,6 @@ export interface UploadMovieResult {
 }
 
 function getDefaultBaseUrl(): string {
-  // Desktop builds: the backend normally runs on the same machine.
-  if (typeof window !== 'undefined' &&
-    (typeof (window as any).__TAURI_INTERNALS__ !== 'undefined' ||
-      typeof (window as any).__TAURI__ !== 'undefined')) {
-    return 'http://localhost:7867/api';
-  }
   return import.meta.env.DEV
     ? 'http://localhost:7867/api'
     : '/api';

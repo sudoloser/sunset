@@ -3,7 +3,6 @@ import { Card } from '../../components/common/Card';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { api } from '../../api/client';
-import { isDesktop, connectDiscord, disconnectDiscord } from '../../desktop';
 import { getImgurClientId, setImgurClientId, clearCoverCache } from '../../coverArt';
 
 interface DiscordSettingsProps {
@@ -11,9 +10,6 @@ interface DiscordSettingsProps {
 }
 
 export const DiscordSettings: React.FC<DiscordSettingsProps> = ({ sudoloserMode = false }) => {
-  const desktop = isDesktop();
-
-  const [discordClientId, setDiscordClientId] = useState('');
   const [imgurClientId, setLocalImgurClientId] = useState('');
   const [token, setToken] = useState('');
   const [status, setStatus] = useState('online');
@@ -25,21 +21,19 @@ export const DiscordSettings: React.FC<DiscordSettingsProps> = ({ sudoloserMode 
 
   useEffect(() => {
     setLocalImgurClientId(getImgurClientId() || '');
-    if (userId && !desktop) {
+    if (userId) {
       api.getUserProfile(userId).then(profile => {
         if (profile?.discord_token) setToken(profile.discord_token);
         if (profile?.discord_status) setStatus(profile.discord_status);
         if (profile?.discord_cover_url) setCoverUrl(profile.discord_cover_url);
       });
     }
-  }, [userId, desktop]);
+  }, [userId]);
 
   const handleConnect = async () => {
     setLoading(true);
     try {
-      const ok = desktop
-        ? await connectDiscord(discordClientId)
-        : await connectDiscord(token);
+      const ok = userId ? await api.updateDiscordConfig(userId, token, 'online') : false;
       if (ok) {
         setConnected(true);
         setSaveStatus('success');
@@ -56,7 +50,7 @@ export const DiscordSettings: React.FC<DiscordSettingsProps> = ({ sudoloserMode 
 
   const handleDisconnect = async () => {
     try {
-      await disconnectDiscord();
+      if (userId) await api.stopDiscordRpc(userId);
       setConnected(false);
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -78,28 +72,17 @@ export const DiscordSettings: React.FC<DiscordSettingsProps> = ({ sudoloserMode 
       <Card style={{ backgroundColor: 'var(--surface-color)' }}>
         <h3 style={{ fontSize: '1.4rem', marginBottom: '1.5rem' }}>Rich Presence</h3>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-          {desktop
-            ? 'Show what you\'re watching on Discord via native Rich Presence. Requires Discord to be running.'
-            : 'Sync your "Watching SunSet" status to Discord. You\'ll need your Discord User Token (not a bot token). Keep this token private!'}
+          Sync your "Watching SunSet" status to Discord. You'll need your Discord User Token (not a bot token). Keep this token private!
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {desktop ? (
-            <Input
-              label="Discord Application Client ID"
-              value={discordClientId}
-              onChange={(e) => setDiscordClientId(e.target.value)}
-              placeholder="YOUR_CLIENT_ID"
-            />
-          ) : (
-            <Input
-              label="Discord User Token"
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="PASTE_TOKEN_HERE"
-            />
-          )}
+          <Input
+            label="Discord User Token"
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="PASTE_TOKEN_HERE"
+          />
 
           {sudoloserMode && (
             <Input
@@ -171,25 +154,16 @@ export const DiscordSettings: React.FC<DiscordSettingsProps> = ({ sudoloserMode 
 
       <Card style={{ marginTop: '2rem', backgroundColor: 'var(--surface-variant)', border: '1px dashed var(--border-color)' }}>
         <h4 style={{ marginBottom: '0.5rem' }}>
-          {desktop ? 'How to get your Client ID?' : 'How to find your token?'}
+          How to find your token?
         </h4>
-        {desktop ? (
-          <ol style={{ paddingLeft: '1.2rem', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <li>Go to the <strong>Discord Developer Portal</strong> (discord.com/developers/applications).</li>
-            <li>Create a new application and give it a name.</li>
-            <li>Copy the <strong>Application ID</strong> (Client ID) and paste it above.</li>
-            <li>Make sure Discord desktop is running on your machine.</li>
-          </ol>
-        ) : (
-          <ol style={{ paddingLeft: '1.2rem', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <li>Open Discord in your browser and log in.</li>
-            <li>Press <strong>Ctrl+Shift+I</strong> to open Developer Tools.</li>
-            <li>Go to the <strong>Network</strong> tab and type <code>/api</code> in the filter.</li>
-            <li>Refresh the page or click a channel.</li>
-            <li>Click on an entry like <code>science</code> or <code>messages</code>.</li>
-            <li>Find the <code>authorization</code> header in the request headers — that's your token.</li>
-          </ol>
-        )}
+        <ol style={{ paddingLeft: '1.2rem', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <li>Open Discord in your browser and log in.</li>
+          <li>Press <strong>Ctrl+Shift+I</strong> to open Developer Tools.</li>
+          <li>Go to the <strong>Network</strong> tab and type <code>/api</code> in the filter.</li>
+          <li>Refresh the page or click a channel.</li>
+          <li>Click on an entry like <code>science</code> or <code>messages</code>.</li>
+          <li>Find the <code>authorization</code> header in the request headers — that's your token.</li>
+        </ol>
       </Card>
 
       <Card style={{ marginTop: '2rem', backgroundColor: 'var(--surface-variant)', border: '1px dashed var(--border-color)' }}>

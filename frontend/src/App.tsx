@@ -9,8 +9,7 @@ import { CollectionPage } from './pages/CollectionPage';
 import { ServerSetupPage } from './pages/ServerSetup';
 import { OnboardingWizard } from './features/onboarding/OnboardingWizard';
 import { LoginForm } from './features/auth/LoginForm';
-import { api, hasConfiguredServerUrl } from './api/client';
-import { isDesktop } from './desktop';
+import { api } from './api/client';
 
 const loadingStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -95,27 +94,21 @@ function LoginRoute() {
 }
 
 export default function App() {
-  const needsServerUrl = isDesktop() && !hasConfiguredServerUrl();
-
   return (
     <ErrorBoundary>
-      {needsServerUrl ? (
-        <ServerSetupPage />
-      ) : (
-        <Routes>
-          <Route path="/server-setup" element={<ServerSetupPage />} />
-          <Route path="/onboarding" element={<OnboardingRoute />} />
-          <Route path="/login" element={<LoginRoute />} />
-          <Route element={<AppLayout />}>
-            <Route index element={<Navigate to="/home" replace />} />
-            <Route path="home" element={<DashboardPage />} />
-            <Route path="libraries" element={<LibrariesPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="collection/:name" element={<CollectionPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/home" replace />} />
-        </Routes>
-      )}
+      <Routes>
+        <Route path="/server-setup" element={<ServerSetupPage />} />
+        <Route path="/onboarding" element={<OnboardingRoute />} />
+        <Route path="/login" element={<LoginRoute />} />
+        <Route element={<AppLayout />}>
+          <Route index element={<Navigate to="/home" replace />} />
+          <Route path="home" element={<DashboardPage />} />
+          <Route path="libraries" element={<LibrariesPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="collection/:name" element={<CollectionPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/home" replace />} />
+      </Routes>
     </ErrorBoundary>
   );
 }

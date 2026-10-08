@@ -2,11 +2,9 @@ import { HashRouter } from 'react-router-dom';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { isDesktop } from './desktop';
 import './index.css';
 
-// Skip service worker in desktop builds to avoid caching issues with Tauri custom protocol
-if (!isDesktop() && 'serviceWorker' in navigator) {
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   });

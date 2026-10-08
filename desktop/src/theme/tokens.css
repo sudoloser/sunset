@@ -1,0 +1,86 @@
+@import url("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
+
+:root {
+  --sl-bg: #FFF5F5;
+  --sl-bg-soft: #ffddf8;
+  --sl-text: #4A4A4A;
+  --sl-text-inverse: #ffffff;
+  --sl-text-link: #868484;
+  --sl-accent: #c098c3;
+  --sl-accent-hover: #555555;
+  --sl-accent-pressed: #3a3a3a;
+  --sl-divider: #4A4A4A;
+  --sl-surface: #4A4A4A;
+  --sl-surface-hover: #555555;
+
+  --sl-font: "Varela Round", sans-serif;
+
+  --sl-text-xs: 0.75rem;
+  --sl-text-sm: 0.875rem;
+  --sl-text-base: 1rem;
+  --sl-text-lg: 1.25rem;
+  --sl-text-xl: 1.5rem;
+  --sl-text-2xl: 2rem;
+  --sl-text-hero: 3rem;
+
+  --sl-radius-sm: 5px;
+  --sl-radius-md: 10px;
+  --sl-radius-pill: 999px;
+
+  --sl-space-xs: 0.25rem;
+  --sl-space-sm: 0.5rem;
+  --sl-space-md: 1rem;
+  --sl-space-lg: 2rem;
+  --sl-space-xl: 7rem;
+
+  --sl-divider-height: 6px;
+  --sl-divider-width: 50%;
+
+  --sl-scrollbar-size: 10px;
+}
+
+* { font-family: var(--sl-font); }
+
+body {
+  background: var(--sl-bg);
+  color: var(--sl-text);
+}
+
+.sl-button {
+  color: var(--sl-text-inverse);
+  background-color: var(--sl-surface);
+  padding: 2px 8px;
+  border-radius: var(--sl-radius-sm);
+  text-decoration: none;
+  font-weight: 700;
+  display: inline-block;
+  transition: background-color 0.15s ease;
+}
+
+.sl-button:hover { background-color: var(--sl-surface-hover); }
+.sl-button:active { background-color: var(--sl-accent-pressed); }
+
+.sl-tag {
+  color: var(--sl-text-inverse);
+  background-color: var(--sl-surface);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm, var(--sl-radius-sm));
+  font-size: var(--sl-text-lg);
+}
+
+.sl-divider {
+  width: var(--sl-divider-width);
+  height: var(--sl-divider-height);
+  background-color: var(--sl-divider);
+  border: none;
+  border-radius: var(--sl-radius-md);
+  margin: var(--sl-space-lg) auto;
+}
+
+.sl-scrollbar::-webkit-scrollbar { width: var(--sl-scrollbar-size); height: var(--sl-scrollbar-size); }
+.sl-scrollbar::-webkit-scrollbar-track { background: var(--sl-bg-soft); border-radius: var(--sl-radius-md); }
+.sl-scrollbar::-webkit-scrollbar-thumb { background: var(--sl-accent); border-radius: var(--sl-radius-md); }
+.sl-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--sl-accent-hover); }
+
+.sl-hero { font-size: var(--sl-text-hero); color: var(--sl-text); text-align: center; }
+.sl-section-title { text-align: center; color: var(--sl-text); }

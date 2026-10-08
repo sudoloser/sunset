@@ -4,9 +4,7 @@ import { SubtitleSettings } from './SubtitleSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 import { DiscordSettings } from './DiscordSettings';
 import { AccountSettings } from './AccountSettings';
-import { ServerSettings } from './ServerSettings';
 import { UploadMovie } from './UploadMovie';
-import { isDesktop } from '../../desktop';
 
 interface SettingsProps {
   isAdmin: boolean;
@@ -55,12 +53,7 @@ export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
           <div style={{ maxWidth: '800px', paddingBottom: 'var(--spacing-xxl)' }}>
             <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '3rem' }}>Media</h2>
 
-            {isDesktop() && (
-              <div style={{ marginBottom: '3rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border-color)' }}>
-                <ServerSettings />
-              </div>
-            )}
-            {isAdmin && !isDesktop() && (
+            {isAdmin && (
               <div style={{ marginBottom: '3rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border-color)' }}>
                 <UploadMovie />
               </div>

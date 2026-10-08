@@ -1,74 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { HomeIcon, LibraryIcon, SettingsIcon } from '../common/Icons';
 import { api } from '../../api/client';
-import { isDesktop } from '../../desktop';
 import styles from './Navigation.module.css';
 
 interface NavigationProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-}
-
-function useWindowControls() {
-  const [maximized, setMaximized] = useState(false);
-
-  useEffect(() => {
-    if (!isDesktop()) return;
-    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-      const w = getCurrentWindow();
-      w.isMaximized().then(setMaximized);
-      const unlisten = w.onResized(() => w.isMaximized().then(setMaximized));
-      return () => { unlisten.then(fn => fn()); };
-    });
-  }, []);
-
-  const minimize = useCallback(() => {
-    if (!isDesktop()) return;
-    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => getCurrentWindow().minimize());
-  }, []);
-
-  const toggleMaximize = useCallback(() => {
-    if (!isDesktop()) return;
-    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-      getCurrentWindow().toggleMaximize();
-      setMaximized(v => !v);
-    });
-  }, []);
-
-  const close = useCallback(() => {
-    if (!isDesktop()) return;
-    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => getCurrentWindow().close());
-  }, []);
-
-  return { maximized, minimize, toggleMaximize, close };
-}
-
-function WindowControls() {
-  const { maximized, minimize, toggleMaximize, close } = useWindowControls();
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      <button onClick={minimize} title="Minimize" className={styles.controlBtn}>
-        <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="5.5" width="10" height="1" fill="currentColor"/></svg>
-      </button>
-      <button onClick={toggleMaximize} title={maximized ? 'Restore' : 'Maximize'} className={styles.controlBtn}>
-        {maximized ? (
-          <svg width="12" height="12" viewBox="0 0 12 12">
-            <rect x="2.5" y="0.5" width="9" height="9" rx="1" fill="none" stroke="currentColor" strokeWidth="1"/>
-            <rect x="0.5" y="2.5" width="9" height="9" rx="1" fill="var(--bg-color)" stroke="currentColor" strokeWidth="1"/>
-          </svg>
-        ) : (
-          <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.2"/></svg>
-        )}
-      </button>
-      <button onClick={close} title="Close" className={styles.controlBtn}>
-        <svg width="12" height="12" viewBox="0 0 12 12">
-          <line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-          <line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-        </svg>
-      </button>
-    </div>
-  );
 }
 
 export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }) => {
@@ -96,8 +33,8 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
 
   return (
     <>
-      <nav data-tauri-drag-region className={styles.nav}>
-        <div className={styles.left} data-tauri-drag-region>
+      <nav className={styles.nav}>
+        <div className={styles.left}>
           <span className={styles.brand}>SUNSET</span>
           <div style={{ display: 'flex', gap: 'var(--spacing-lg)' }}>
             {navItems.map((item) => (
@@ -113,7 +50,6 @@ export const Navigation: React.FC<NavigationProps> = ({ activeTab, onTabChange }
         </div>
 
         <div className={styles.right}>
-          {isDesktop() && <WindowControls />}
           <div style={{ position: 'relative' }} ref={menuRef}>
             <button className={styles.profileBtn} onClick={() => setMenuOpen(!menuOpen)}>
               <img
