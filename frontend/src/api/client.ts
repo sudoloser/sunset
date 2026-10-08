@@ -3,6 +3,12 @@ import type {
   User, StorageInfo, PlaybackState
 } from '../types';
 
+export interface UploadMovieResult {
+  success: boolean;
+  title: string;
+  file_path: string;
+}
+
 function getDefaultBaseUrl(): string {
   // Desktop builds: the backend normally runs on the same machine.
   if (typeof window !== 'undefined' &&
@@ -96,6 +102,28 @@ export const api = {
   changeUsername: (id: string, new_username: string) => request<boolean>(`/users/${id}/username`, { method: 'PUT', body: JSON.stringify({ new_username }) }),
   getProfilePictureUrl: (id: string) => `${baseUrl}/users/${id}/profile-picture`,
   uploadProfilePicture: (id: string, image: string) => request<boolean>(`/users/${id}/profile-picture`, { method: 'POST', body: JSON.stringify({ image }) }),
+  uploadMovie: (libraryId: string, form: FormData, onProgress?: (loaded: number, total: number) => void) =>
+    new Promise<UploadMovieResult>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${baseUrl}/libraries/${libraryId}/upload/movie`);
+      xhr.upload.onprogress = e => {
+        if (onProgress && e.lengthComputable) onProgress(e.loaded, e.total);
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText) as UploadMovieResult);
+          } catch {
+            reject(new Error('Bad server response'));
+          }
+        } else {
+          reject(new Error(xhr.responseText || `Upload failed (${xhr.status})`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Upload failed: network error'));
+      xhr.onabort = () => reject(new Error('Upload cancelled'));
+      xhr.send(form);
+    }),
   getContinueWatching: (userId: string) => request<MediaItem[]>(`/continue-watching/${userId}`),
   getUserItems: (userId: string) => request<MediaItem[]>(`/user-items/${userId}`),
   addUserItem: (userId: string, itemId: string) => request<boolean>(`/user-items/${userId}`, { method: 'POST', body: JSON.stringify({ item_id: itemId }) }),

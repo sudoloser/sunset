@@ -5,6 +5,7 @@ import { AppearanceSettings } from './AppearanceSettings';
 import { DiscordSettings } from './DiscordSettings';
 import { AccountSettings } from './AccountSettings';
 import { ServerSettings } from './ServerSettings';
+import { UploadMovie } from './UploadMovie';
 import { isDesktop } from '../../desktop';
 
 interface SettingsProps {
@@ -57,6 +58,11 @@ export const Settings: React.FC<SettingsProps> = ({ isAdmin }) => {
             {isDesktop() && (
               <div style={{ marginBottom: '3rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border-color)' }}>
                 <ServerSettings />
+              </div>
+            )}
+            {isAdmin && !isDesktop() && (
+              <div style={{ marginBottom: '3rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border-color)' }}>
+                <UploadMovie />
               </div>
             )}
             <SubtitleSettings />

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use axum::{
     routing::{get, post, put, delete},
     Json, Router,
-    extract::{State, Path, Query},
+    extract::{State, Path, Query, Multipart, DefaultBodyLimit},
     response::{IntoResponse, Response},
     body::Body,
 };
@@ -403,6 +403,51 @@ struct Library {
     lib_type: String,
 }
 
+/// Expand a leading `~` in a library path to the user's home directory.
+/// WalkDir / notify do not expand `~`, so a stored path like
+/// `~/media2/shows` would silently scan zero files. Normalizing here
+/// (and at write time) prevents that class of bug.
+fn expand_library_path(path: &str) -> String {
+    if path == "~" || path.starts_with("~/") {
+        if let Some(home) = dirs::home_dir() {
+            if path == "~" {
+                return home.to_string_lossy().to_string();
+            }
+            return home.join(&path[2..]).to_string_lossy().to_string();
+        }
+    }
+    path.to_string()
+}
+
+/// Video container extensions the scanner indexes and the upload endpoint accepts.
+const VIDEO_EXTENSIONS: &[&str] = &[
+    "mp4", "m4v", "mov", "qt", "mkv", "mk3d", "avi", "webm",
+    "ts", "m2ts", "mts", "wmv", "flv", "mpg", "mpeg", "3gp", "3g2", "ogv",
+];
+
+/// Subtitle extensions the player can serve (sidecar files next to the video).
+const SUBTITLE_EXTENSIONS: &[&str] = &["srt", "vtt"];
+
+/// Strip characters that are unsafe in file/folder names (separators,
+/// reserved characters), collapse whitespace and cap the length.
+/// Returns an empty string when nothing usable remains.
+fn sanitize_media_name(name: &str) -> String {
+    let filtered: String = name
+        .chars()
+        .filter(|c| !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|'))
+        .collect();
+    let mut collapsed = filtered
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    collapsed = collapsed.trim().trim_matches('.').trim().to_string();
+    if collapsed.len() > 120 {
+        collapsed.truncate(120);
+        collapsed = collapsed.trim().to_string();
+    }
+    collapsed
+}
+
 #[derive(Serialize, Deserialize)]
 struct UserConfig {
     username: String,
@@ -797,6 +842,12 @@ async fn main() {
         .route("/api/libraries", get(get_libraries).post(add_library))
         .route("/api/libraries/:id", put(update_library).delete(delete_library))
         .route("/api/libraries/:id/items", get(get_library_items))
+        // Movie uploads can be gigabytes; lift the default 2 MB body cap for this route only.
+        .merge(
+            Router::new()
+                .route("/api/libraries/:id/upload/movie", post(upload_movie))
+                .layer(DefaultBodyLimit::disable())
+        )
         .route("/api/shows/:show_title/episodes", get(get_show_episodes))
         .route("/api/search", get(search_media))
         .route("/api/scan", post(manual_scan))
@@ -995,11 +1046,12 @@ async fn onboard(State(state): State<Arc<AppState>>, Json(payload): Json<Onboard
         .execute(&state.pool).await.unwrap();
 
     for lib in payload.libraries {
-        info!("Registering library: {} ({}) at {}...", lib.name, lib.lib_type, lib.path);
+        let expanded_path = expand_library_path(&lib.path);
+        info!("Registering library: {} ({}) at {}...", lib.name, lib.lib_type, expanded_path);
         sqlx::query("INSERT INTO libraries (id, name, path, lib_type) VALUES (?, ?, ?, ?)")
             .bind(uuid::Uuid::new_v4().to_string())
             .bind(lib.name)
-            .bind(lib.path)
+            .bind(expanded_path)
             .bind(lib.lib_type)
             .execute(&state.pool).await.unwrap();
     }
@@ -1190,10 +1242,11 @@ async fn get_libraries(State(state): State<Arc<AppState>>) -> Json<Vec<Library>>
 
 async fn add_library(State(state): State<Arc<AppState>>, Json(payload): Json<LibraryConfig>) -> Json<bool> {
     let id = uuid::Uuid::new_v4().to_string();
+    let expanded_path = expand_library_path(&payload.path);
     sqlx::query("INSERT INTO libraries (id, name, path, lib_type) VALUES (?, ?, ?, ?)")
         .bind(&id)
         .bind(&payload.name)
-        .bind(&payload.path)
+        .bind(&expanded_path)
         .bind(&payload.lib_type)
         .execute(&state.pool).await.unwrap();
     
@@ -1203,9 +1256,10 @@ async fn add_library(State(state): State<Arc<AppState>>, Json(payload): Json<Lib
 }
 
 async fn update_library(Path(id): Path<String>, State(state): State<Arc<AppState>>, Json(payload): Json<LibraryConfig>) -> Json<bool> {
+    let expanded_path = expand_library_path(&payload.path);
     sqlx::query("UPDATE libraries SET name = ?, path = ?, lib_type = ? WHERE id = ?")
         .bind(payload.name)
-        .bind(payload.path)
+        .bind(expanded_path)
         .bind(payload.lib_type)
         .bind(id)
         .execute(&state.pool).await.unwrap();
@@ -1367,6 +1421,209 @@ async fn upload_subtitle(
     }
 }
 
+#[derive(Serialize)]
+struct UploadMovieResponse {
+    success: bool,
+    title: String,
+    file_path: String,
+}
+
+/// Upload a movie file (plus optional subtitle) into a movies library.
+///
+/// Multipart fields: `title` (text), `year` (text, 4 digits), `video`
+/// (file), `subtitle` (file, optional). The video is streamed to a temp
+/// file in chunks so large movies never sit fully in memory, then moved
+/// into place. Layout on disk:
+/// `<library>/<Title> (<Year>)/<Title> (<Year>)<video-ext>`, with the
+/// subtitle sidecar next to it. A scan of the library is kicked off in
+/// the background so the movie gets indexed.
+async fn upload_movie(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    use tokio::io::AsyncWriteExt;
+
+    let lib = match sqlx::query_as::<_, Library>("SELECT id, name, path, lib_type FROM libraries WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap_or(None)
+    {
+        Some(l) => l,
+        None => return (StatusCode::NOT_FOUND, "Library not found".to_string()).into_response(),
+    };
+    if lib.lib_type != "movies" {
+        return (StatusCode::BAD_REQUEST, "Uploads are only supported for movies libraries".to_string()).into_response();
+    }
+    let lib_path = expand_library_path(&lib.path);
+
+    let home_dir = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/"));
+    let tmp_dir = home_dir.join(".sunset").join("tmp").join("uploads");
+    if let Err(e) = std::fs::create_dir_all(&tmp_dir) {
+        error!("Movie upload: failed to create temp dir {:?}: {}", tmp_dir, e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Server storage error".to_string()).into_response();
+    }
+    let tmp_path = tmp_dir.join(format!("{}.part", uuid::Uuid::new_v4()));
+
+    let mut title: Option<String> = None;
+    let mut year: Option<String> = None;
+    let mut video_ext: Option<String> = None;
+    let mut video_bytes: u64 = 0;
+    let mut video_file: Option<tokio::fs::File> = None;
+    let mut sub_name: Option<String> = None;
+    let mut sub_data: Vec<u8> = Vec::new();
+
+    while let Ok(Some(mut field)) = multipart.next_field().await {
+        let field_name = field.name().unwrap_or("").to_string();
+        match field_name.as_str() {
+            "title" => {
+                if let Ok(text) = field.text().await {
+                    title = Some(text);
+                }
+            }
+            "year" => {
+                if let Ok(text) = field.text().await {
+                    year = Some(text);
+                }
+            }
+            "video" => {
+                let ext = field
+                    .file_name()
+                    .and_then(|n| StdPath::new(n).extension().and_then(|e| e.to_str()))
+                    .unwrap_or("")
+                    .to_lowercase();
+                if !VIDEO_EXTENSIONS.contains(&ext.as_str()) {
+                    let _ = tokio::fs::remove_file(&tmp_path).await;
+                    return (StatusCode::BAD_REQUEST, format!("Unsupported video format: .{}", ext)).into_response();
+                }
+                video_ext = Some(ext);
+                let mut out = match tokio::fs::File::create(&tmp_path).await {
+                    Ok(f) => f,
+                    Err(e) => {
+                        error!("Movie upload: failed to create temp file: {}", e);
+                        return (StatusCode::INTERNAL_SERVER_ERROR, "Could not write movie file".to_string()).into_response();
+                    }
+                };
+                while let Ok(Some(chunk)) = field.chunk().await {
+                    if chunk.is_empty() {
+                        break;
+                    }
+                    video_bytes += chunk.len() as u64;
+                    if out.write_all(&chunk).await.is_err() {
+                        let _ = tokio::fs::remove_file(&tmp_path).await;
+                        return (StatusCode::INTERNAL_SERVER_ERROR, "Could not write movie file".to_string()).into_response();
+                    }
+                }
+                if let Err(e) = out.flush().await {
+                    error!("Movie upload: failed to flush temp file: {}", e);
+                    let _ = tokio::fs::remove_file(&tmp_path).await;
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "Could not write movie file".to_string()).into_response();
+                }
+                video_file = Some(out);
+            }
+            "subtitle" => {
+                sub_name = field.file_name().map(|s| s.to_string());
+                while let Ok(Some(chunk)) = field.chunk().await {
+                    if chunk.is_empty() {
+                        break;
+                    }
+                    // Subtitles are tiny; 10 MB cap guards against abuse.
+                    if sub_data.len() + chunk.len() > 10 * 1024 * 1024 {
+                        let _ = tokio::fs::remove_file(&tmp_path).await;
+                        return (StatusCode::BAD_REQUEST, "Subtitle file is too large".to_string()).into_response();
+                    }
+                    sub_data.extend_from_slice(&chunk);
+                }
+            }
+            _ => {}
+        }
+    }
+    drop(video_file);
+
+    let cleanup_tmp = |tmp: &StdPath| {
+        let _ = std::fs::remove_file(tmp);
+    };
+
+    let title = sanitize_media_name(title.as_deref().unwrap_or(""));
+    if title.is_empty() || title == "." || title == ".." {
+        cleanup_tmp(&tmp_path);
+        return (StatusCode::BAD_REQUEST, "Movie name is required".to_string()).into_response();
+    }
+
+    let year = year.unwrap_or_default().trim().to_string();
+    let current_year: i32 = chrono::Utc::now().format("%Y").to_string().parse().unwrap_or(2100);
+    let year_ok = year.len() == 4
+        && year.chars().all(|c| c.is_ascii_digit())
+        && year.parse::<i32>().map(|y| y >= 1888 && y <= current_year + 2).unwrap_or(false);
+    if !year_ok {
+        cleanup_tmp(&tmp_path);
+        return (StatusCode::BAD_REQUEST, "Year must be a 4-digit year".to_string()).into_response();
+    }
+
+    let video_ext = match video_ext {
+        Some(e) if video_bytes > 0 => e,
+        _ => {
+            cleanup_tmp(&tmp_path);
+            return (StatusCode::BAD_REQUEST, "Movie file is required".to_string()).into_response();
+        }
+    };
+
+    let mut sub_ext: Option<String> = None;
+    if !sub_data.is_empty() {
+        let ext = sub_name
+            .as_deref()
+            .and_then(|n| StdPath::new(n).extension().and_then(|e| e.to_str()))
+            .unwrap_or("")
+            .to_lowercase();
+        if !SUBTITLE_EXTENSIONS.contains(&ext.as_str()) {
+            cleanup_tmp(&tmp_path);
+            return (StatusCode::BAD_REQUEST, "Subtitle must be .srt or .vtt".to_string()).into_response();
+        }
+        sub_ext = Some(ext);
+    }
+
+    let base = format!("{} ({})", title, year);
+    let folder = StdPath::new(&lib_path).join(&base);
+    let video_path = folder.join(format!("{}.{}", base, video_ext));
+    if video_path.exists() {
+        cleanup_tmp(&tmp_path);
+        return (StatusCode::CONFLICT, "That movie already exists in this library".to_string()).into_response();
+    }
+    if let Err(e) = std::fs::create_dir_all(&folder) {
+        error!("Movie upload: failed to create folder {:?}: {}", folder, e);
+        cleanup_tmp(&tmp_path);
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Could not create movie folder".to_string()).into_response();
+    }
+
+    // Move into place (rename, with copy fallback across filesystems).
+    if std::fs::rename(&tmp_path, &video_path).is_err() {
+        if tokio::fs::copy(&tmp_path, &video_path).await.is_err() {
+            error!("Movie upload: failed to move temp file to {:?}", video_path);
+            cleanup_tmp(&tmp_path);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Could not save movie file".to_string()).into_response();
+        }
+        cleanup_tmp(&tmp_path);
+    }
+
+    if let Some(ext) = sub_ext {
+        let sub_path = folder.join(format!("{}.{}", base, ext));
+        if let Err(e) = tokio::fs::write(&sub_path, &sub_data).await {
+            error!("Movie upload: failed to write subtitle {:?}: {}", sub_path, e);
+        }
+    }
+
+    let file_path = video_path.to_string_lossy().to_string();
+    info!("Movie upload: saved '{}' ({} bytes) to {}", base, video_bytes, file_path);
+
+    let state_clone = state.clone();
+    tokio::spawn(async move {
+        scan_library(state_clone, lib).await;
+    });
+
+    (StatusCode::OK, Json(UploadMovieResponse { success: true, title: base, file_path })).into_response()
+}
+
 fn content_type_for(path: &StdPath) -> &'static str {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
     match ext.as_str() {
@@ -1402,7 +1659,7 @@ async fn log_ffmpeg_stderr(stderr: tokio::process::ChildStderr) {
 }
 
 /// Logs the captured stderr/stdout of a completed ffmpeg process.
-fn log_ffmpeg_output(out: &tokio::process::Output) {
+fn log_ffmpeg_output(out: &std::process::Output) {
     if !LOGS_ENABLED.load(Ordering::Relaxed) {
         return;
     }
@@ -2415,18 +2672,22 @@ async fn scan_all_libraries(state: Arc<AppState>) {
 }
 
 async fn scan_library(state: Arc<AppState>, lib: Library) {
-    info!("Scanning library '{}' at {}...", lib.name, lib.path);
+    let scan_path = expand_library_path(&lib.path);
+    if scan_path != lib.path {
+        info!("Expanded library '{}' path {} -> {}...", lib.name, lib.path, scan_path);
+    }
+    info!("Scanning library '{}' at {}...", lib.name, scan_path);
     let movie_regex = Regex::new(r"^(.*)\s\((\d{4})\)$").unwrap();
     // More flexible show regex: S01E01, 1x01, S1E1, Anime Style ( - 01, 01), etc.
     let show_regex = Regex::new(r"(?i)^(.*?)\s*(?:S(\d{1,2})E(\d{1,2})|(\d{1,2})x(\d{1,2})|(?:\s-\s|\s)(\d{1,3})$)").unwrap();
     let mut count = 0;
     let mut found_paths: Vec<String> = Vec::new();
 
-    for entry in WalkDir::new(&lib.path).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(&scan_path).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let path = entry.path();
             let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-            if !["mp4", "mkv", "avi", "mov"].contains(&ext.to_lowercase().as_str()) { continue; }
+            if !VIDEO_EXTENSIONS.contains(&ext.to_lowercase().as_str()) { continue; }
             let file_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
             let file_path = path.to_str().unwrap().to_string();
             found_paths.push(file_path.clone());
@@ -2542,7 +2803,10 @@ async fn start_watchers(state: Arc<AppState>) {
     }, Config::default()).unwrap();
 
     let libs = sqlx::query_as::<_, Library>("SELECT id, name, path, lib_type FROM libraries").fetch_all(&state.pool).await.unwrap();
-    for lib in libs { let _ = watcher.watch(StdPath::new(&lib.path), RecursiveMode::Recursive); }
+    for lib in libs {
+        let watch_path = expand_library_path(&lib.path);
+        let _ = watcher.watch(StdPath::new(&watch_path), RecursiveMode::Recursive);
+    }
 
     tokio::spawn(async move {
         let _watcher = watcher;
@@ -2554,6 +2818,19 @@ async fn start_watchers(state: Arc<AppState>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_sanitize_media_name() {
+        assert_eq!(sanitize_media_name("The Matrix"), "The Matrix");
+        assert_eq!(sanitize_media_name("  Dune: Part Two  "), "Dune Part Two");
+        assert_eq!(sanitize_media_name("../../etc/passwd"), "etcpasswd");
+        assert_eq!(sanitize_media_name("a/b\\c*d?e\"f<g>h|i"), "abcdefghi");
+        assert_eq!(sanitize_media_name(""), "");
+        assert_eq!(sanitize_media_name("   "), "");
+        assert!(VIDEO_EXTENSIONS.contains(&"mkv"));
+        assert!(VIDEO_EXTENSIONS.contains(&"avi"));
+        assert!(!VIDEO_EXTENSIONS.contains(&"exe"));
+    }
 
     #[test]
     fn test_storage_info_defaults() {
