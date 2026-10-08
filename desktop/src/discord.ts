@@ -57,6 +57,16 @@ export async function updatePresence(p: Presence): Promise<void> {
   }
 }
 
+export async function setFullscreen(fullscreen: boolean): Promise<boolean> {
+  if (!isDesktop()) return false;
+  try {
+    await invoke('set_fullscreen', { fullscreen });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function mpvAvailable(mpvPath: string): Promise<boolean> {
   if (!isDesktop()) return false;
   try {
@@ -64,6 +74,50 @@ export async function mpvAvailable(mpvPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function gstreamerMissing(): Promise<string[]> {
+  if (!isDesktop()) return [];
+  try {
+    return await invoke<string[]>('gstreamer_check');
+  } catch {
+    return [];
+  }
+}
+
+export interface MpvStatus {
+  time_pos: number | null;
+  duration: number | null;
+  paused: boolean;
+  eof: boolean;
+}
+
+export async function mpvStartSession(args: {
+  mpvPath: string;
+  url: string;
+  title: string;
+  subPath?: string;
+  shaders?: string[];
+}): Promise<string> {
+  return invoke<string>('mpv_start', {
+    mpvPath: args.mpvPath,
+    url: args.url,
+    title: args.title,
+    subPath: args.subPath ?? null,
+    shaders: args.shaders ?? [],
+  });
+}
+
+export async function mpvCmd(id: string, command: unknown[]): Promise<void> {
+  await invoke('mpv_command', { id, command });
+}
+
+export async function mpvStatusPoll(id: string): Promise<MpvStatus> {
+  return invoke<MpvStatus>('mpv_status', { id });
+}
+
+export async function mpvStopSession(id: string): Promise<void> {
+  await invoke('mpv_stop', { id });
 }
 
 export async function mpvPlay(args: {

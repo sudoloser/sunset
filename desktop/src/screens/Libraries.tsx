@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type Library, type MediaItem } from '../api/client';
 import type { Session } from '../session';
-import { cacheItems } from '../itemCache';
+import { cacheItems, sortEpisodes } from '../itemCache';
 import { Poster } from '../components/Poster';
 
 export function Libraries({ serverUrl }: { serverUrl: string }) {
@@ -68,6 +68,9 @@ export function LibraryDetail({ serverUrl, session }: { serverUrl: string; sessi
       list.push(item);
       grouped.set(key, list);
     }
+    // Order each show so the representative is always S1E1, never a
+    // later season that happened to sort first from the database.
+    for (const [key, eps] of grouped) grouped.set(key, sortEpisodes(eps));
   }
 
   return (

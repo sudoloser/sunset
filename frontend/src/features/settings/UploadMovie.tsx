@@ -91,7 +91,7 @@ export const UploadMovie: React.FC = () => {
         Saved as <code>Name (Year)</code> inside the target library, then indexed automatically.
       </p>
 
-      {libraries.length > 1 && (
+      {libraries.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 'var(--spacing-xs)', fontWeight: 600 }}>Library</label>
           <select value={libraryId} onChange={e => setLibraryId(e.target.value)} style={selectStyle} disabled={uploading}>

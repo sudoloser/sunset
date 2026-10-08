@@ -113,6 +113,18 @@ export default function App() {
     }
     setSessionState(await getSession());
     setReady(true);
+    // Native Discord RPC replaces the server pipeline on desktop:
+    // reconnect silently at boot when the user opted in.
+    try {
+      const { loadPref } = await import('./prefs');
+      const { startRpc } = await import('./discord');
+      const p = await loadPref('sunset_prefs_discord');
+      if (p.autoConnect && p.clientId.trim()) {
+        await startRpc(p.clientId.trim());
+      }
+    } catch {
+      // Discord not running (or no client ID): presence just stays off.
+    }
   }, []);
 
   useEffect(() => {

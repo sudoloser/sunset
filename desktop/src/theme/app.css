@@ -68,3 +68,11 @@ body {
 /* Compact density tightens section spacing. */
 html[data-density='compact'] .sl-card { padding: var(--sl-space-md); }
 html[data-density='compact'] section { margin-bottom: var(--sl-space-md) !important; }
+
+html { scroll-behavior: smooth; }
+
+/* Let the compositor skip off-screen posters instead of decoding them all. */
+.sl-poster-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: 150px 260px;
+}

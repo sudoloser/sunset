@@ -106,6 +106,7 @@ export const api = {
   subtitleUrl: (serverUrl: string, id: string, name: string) =>
     `${apiBase(serverUrl)}/media/${id}/subtitle/${encodeURIComponent(name)}`,
   streamUrl: (serverUrl: string, id: string) => `${apiBase(serverUrl)}/stream/${id}`,
+  remuxUrl: (serverUrl: string, id: string) => `${apiBase(serverUrl)}/stream/${id}/remux`,
   transcodeUrl: (serverUrl: string, id: string, start = 0) =>
     `${apiBase(serverUrl)}/stream/${id}/transcode${start > 0 ? `?start=${Math.floor(start)}` : ''}`,
   getPlayback: (serverUrl: string, itemId: string, userId?: string) =>

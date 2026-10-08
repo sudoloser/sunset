@@ -34,6 +34,28 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// ffmpeg logging and verbose Discord gateway logging.
 static LOGS_ENABLED: AtomicBool = AtomicBool::new(false);
 
+/// How many ffmpeg jobs (transcodes, progressive remuxes) may run at once.
+/// On weak machines concurrent re-encodes pile up until the box falls over,
+/// so excess plays get a 503 (with an mpv hint) instead of killing the server.
+const MAX_FFMPEG_JOBS: usize = 2;
+static FFMPEG_JOBS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Reserve an ffmpeg slot. Returns false when the server is already
+/// transcoding/remuxing at capacity — callers should answer 503.
+fn try_start_ffmpeg_job() -> bool {
+    FFMPEG_JOBS
+        .fetch_update(
+            std::sync::atomic::Ordering::SeqCst,
+            std::sync::atomic::Ordering::SeqCst,
+            |n| (n < MAX_FFMPEG_JOBS).then_some(n + 1),
+        )
+        .is_ok()
+}
+
+fn finish_ffmpeg_job() {
+    FFMPEG_JOBS.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct DiscordActivity {
     name: String,
@@ -852,6 +874,7 @@ async fn main() {
         .route("/api/search", get(search_media))
         .route("/api/scan", post(manual_scan))
         .route("/api/stream/:id", get(stream_media))
+        .route("/api/stream/:id/remux", get(remux_media))
         .route("/api/stream/:id/transcode", get(transcode_media))
         .route("/api/media/:id/asset/:name", get(get_media_asset))
         .route("/api/media/:id/subtitles", get(get_media_subtitles))
@@ -1687,7 +1710,9 @@ fn capture_ffmpeg_stderr() -> bool {
 /// The cache is keyed on the source path + modified time. If ffmpeg is not
 /// installed the original path is returned so callers can fall back to serving
 /// the raw file.
-async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
+/// Cache file for the stream-copied fragmented MP4 of `path`.
+/// Keyed on path + mtime so edited files remux again.
+fn remux_cache_path(path: &StdPath) -> std::path::PathBuf {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
@@ -1704,7 +1729,11 @@ async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
             }
         }
     }
-    let cache_path = remux_dir.join(format!("{:016x}.mp4", hasher.finish()));
+    remux_dir.join(format!("{:016x}.mp4", hasher.finish()))
+}
+
+async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
+    let cache_path = remux_cache_path(path);
 
     // Cache hit
     if cache_path.exists() {
@@ -1722,11 +1751,13 @@ async fn ensure_remuxed(path: &StdPath) -> std::path::PathBuf {
         .arg("-i")
         .arg(&path_str)
         .arg("-map")
-        .arg("0")
+        .arg("0:v?")
+        .arg("-map")
+        .arg("0:a?")
         .arg("-c")
         .arg("copy")
         .arg("-movflags")
-        .arg("+faststart+frag_keyframe+empty_moov")
+        .arg("+faststart+frag_keyframe+empty_moov+delay_moov")
         .arg("-f")
         .arg("mp4")
         .arg(&out_str)
@@ -1821,10 +1852,14 @@ async fn remux_to_mp4(path: &StdPath) -> Response {
         .arg(ffmpeg_loglevel())
         .arg("-i")
         .arg(&path_str)
+        .arg("-map")
+        .arg("0:v?")
+        .arg("-map")
+        .arg("0:a?")
         .arg("-c")
         .arg("copy")
         .arg("-movflags")
-        .arg("+frag_keyframe+empty_moov")
+        .arg("+frag_keyframe+empty_moov+delay_moov")
         .arg("-f")
         .arg("mp4")
         .arg("pipe:1")
@@ -1851,6 +1886,152 @@ async fn remux_to_mp4(path: &StdPath) -> Response {
         .header(header::CONTENT_TYPE, "video/mp4")
         .header(header::ACCEPT_RANGES, "bytes")
         .body(Body::from_stream(stream))
+        .unwrap()
+}
+
+/// Remuxed stream for containers browsers can't demux (MKV, WMV, ...).
+///
+/// If a finished remux is cached, it is served with full byte-range support
+/// (fast seeks). Otherwise ffmpeg stream-copies to a fragmented MP4 with an
+/// empty moov so playback starts within seconds while the rest copies in the
+/// background — and the same bytes are written to the cache file, so later
+/// plays and seeks are instant. No Content-Length / ranges on the progressive
+/// response because the total size isn't known until the copy finishes.
+async fn remux_media(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<HashMap<String, String>>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio_util::io::ReaderStream;
+
+    if let Some(token) = params.get("token").map(|s| s.as_str()) {
+        let valid = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM temp_tokens WHERE id = ? AND media_id = ? AND expires_at > datetime('now')"
+        )
+        .bind(token)
+        .bind(&id)
+        .fetch_one(&state.pool)
+        .await.unwrap_or(0);
+        if valid == 0 {
+            return StatusCode::UNAUTHORIZED.into_response();
+        }
+    }
+
+    let row = sqlx::query("SELECT file_path FROM media_items WHERE id = ?").bind(id).fetch_optional(&state.pool).await.unwrap();
+    let Some(r) = row else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let file_path: String = r.get("file_path");
+    let path = std::path::Path::new(&file_path);
+    if !path.exists() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+
+    let cache_path = remux_cache_path(path);
+    if cache_path.exists() {
+        let range_header = headers.get(header::RANGE).and_then(|h| h.to_str().ok());
+        return serve_file_with_range(&cache_path, range_header).await;
+    }
+
+    if !try_start_ffmpeg_job() {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Server is already transcoding. Try again in a bit, or play with mpv (no server load).",
+        )
+            .into_response();
+    }
+
+    let path_str = path.to_string_lossy().to_string();
+    let mut child = match TokioCommand::new("ffmpeg")
+        .arg("-y")
+        .arg("-loglevel")
+        .arg(ffmpeg_loglevel())
+        .arg("-i")
+        .arg(&path_str)
+        .arg("-map")
+        .arg("0:v?")
+        .arg("-map")
+        .arg("0:a?")
+        .arg("-c")
+        .arg("copy")
+        .arg("-movflags")
+        .arg("+frag_keyframe+empty_moov+delay_moov")
+        .arg("-f")
+        .arg("mp4")
+        .arg("pipe:1")
+        .stdout(std::process::Stdio::piped())
+        .stderr(if capture_ffmpeg_stderr() { std::process::Stdio::piped() } else { std::process::Stdio::null() })
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(_) => {
+            finish_ffmpeg_job();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "ffmpeg is required to play this file format but was not found on the server",
+            ).into_response();
+        }
+    };
+
+    let stdout = child.stdout.take().unwrap();
+    if let Some(stderr) = child.stderr.take() {
+        tokio::spawn(log_ffmpeg_stderr(stderr));
+    }
+
+    // Stream to the client and the cache file at once. A unique temp name
+    // avoids two simultaneous plays of the same file clobbering each other;
+    // only fully-copied results are renamed into place.
+    let tmp_path = cache_path.with_extension(format!("{}.part", uuid::Uuid::new_v4()));
+    let (mut pipe_in, pipe_out) = tokio::io::duplex(256 * 1024);
+    tokio::spawn(async move {
+        let mut src = stdout;
+        let mut cache = match tokio::fs::File::create(&tmp_path).await {
+            Ok(f) => f,
+            Err(e) => {
+                error!("Remux: failed to create cache file: {}", e);
+                return;
+            }
+        };
+        let mut buf = vec![0u8; 64 * 1024];
+        let mut ok = true;
+        loop {
+            match src.read(&mut buf).await {
+                Ok(0) => break,
+                Ok(n) => {
+                    if cache.write_all(&buf[..n]).await.is_err() || pipe_in.write_all(&buf[..n]).await.is_err() {
+                        ok = false;
+                        break;
+                    }
+                }
+                Err(_) => {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+        drop(pipe_in);
+        // Only finalize the cache when ffmpeg itself succeeded; otherwise a
+        // truncated/empty file would poison later plays (and seeks).
+        let status = child.wait().await;
+        if ok && status.map(|s| s.success()).unwrap_or(false) {
+            if let Err(e) = tokio::fs::rename(&tmp_path, &cache_path).await {
+                error!("Remux: failed to finalize cache file: {}", e);
+                let _ = tokio::fs::remove_file(&tmp_path).await;
+            } else {
+                info!("Remux: cached {}", cache_path.display());
+            }
+        } else {
+            error!("Remux: ffmpeg failed for {}", path_str);
+            let _ = tokio::fs::remove_file(&tmp_path).await;
+        }
+        finish_ffmpeg_job();
+    });
+
+    Response::builder()
+        .header(header::CONTENT_TYPE, "video/mp4")
+        .body(Body::from_stream(ReaderStream::new(pipe_out)))
         .unwrap()
 }
 
@@ -1996,7 +2177,9 @@ async fn transcode_to_h264(path: &StdPath, start_secs: u64) -> Response {
         .arg("-c:v")
         .arg("libx264")
         .arg("-preset")
-        .arg("veryfast")
+        .arg("ultrafast")
+        .arg("-tune")
+        .arg("zerolatency")
         .arg("-crf")
         .arg("23")
         .arg("-pix_fmt")
@@ -2013,9 +2196,18 @@ async fn transcode_to_h264(path: &StdPath, start_secs: u64) -> Response {
         .stdout(std::process::Stdio::piped())
         .stderr(if capture_ffmpeg_stderr() { std::process::Stdio::piped() } else { std::process::Stdio::null() });
 
+    if !try_start_ffmpeg_job() {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Server is already transcoding. Try again in a bit, or play with mpv (no server load).",
+        )
+            .into_response();
+    }
+
     let mut child = match cmd.spawn() {
         Ok(c) => c,
         Err(_) => {
+            finish_ffmpeg_job();
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "ffmpeg is required for transcoding but was not found on the server",
@@ -2027,6 +2219,13 @@ async fn transcode_to_h264(path: &StdPath, start_secs: u64) -> Response {
     if let Some(stderr) = child.stderr.take() {
         tokio::spawn(log_ffmpeg_stderr(stderr));
     }
+    // Free the slot when ffmpeg exits (stream finished or client went away
+    // and ffmpeg got SIGPIPE). Without this, abandoned plays would wedge
+    // the server at MAX_FFMPEG_JOBS forever.
+    tokio::spawn(async move {
+        let _ = child.wait().await;
+        finish_ffmpeg_job();
+    });
     let stream = ReaderStream::new(stdout);
 
     Response::builder()
@@ -2066,6 +2265,8 @@ async fn transcode_media(
     }
     StatusCode::NOT_FOUND.into_response()
 }
+
+
 
 async fn generate_media_token(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Json<String> {
     let token = uuid::Uuid::new_v4().to_string();

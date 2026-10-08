@@ -24,3 +24,11 @@ export function cacheItems(items: MediaItem[]): void {
 export function getCachedItem(id: string): MediaItem | null {
   return readAll()[id] ?? null;
 }
+
+/** Season-major, episode-minor order. Sorting by episode alone mixes
+ * seasons together (S2E1 lands before S1E2) and breaks prev/next. */
+export function sortEpisodes(items: MediaItem[]): MediaItem[] {
+  return [...items].sort(
+    (a, b) => (a.season ?? 1) - (b.season ?? 1) || (a.episode ?? 0) - (b.episode ?? 0),
+  );
+}

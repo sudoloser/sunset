@@ -1,24 +1,37 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
-import type { Session } from '../../session';
+import { loadPref, savePref } from '../../prefs';
 import { startRpc, stopRpc } from '../../discord';
+import { clearCoverCache } from '../../coverArt';
 
-export function DiscordSettings({ serverUrl, session }: { serverUrl: string; session: Session }) {
-  const [token, setToken] = useState('');
-  const [status, setStatus] = useState('online');
+// Desktop drives presence natively and never arms the server-side pipeline
+// (the player reports is_playing=false), so this is the only presence
+// switch. The server token flow still exists for web clients.
+export function DiscordSettings() {
   const [clientId, setClientId] = useState('');
+  const [autoConnect, setAutoConnect] = useState(false);
+  const [imgurClientId, setImgurClientId] = useState('');
   const [nativeOn, setNativeOn] = useState(false);
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    api
-      .getUserProfile(serverUrl, session.user_id)
-      .then(p => {
-        if (p.discord_token) setToken(p.discord_token);
-        if (p.discord_status) setStatus(p.discord_status);
-      })
-      .catch(() => {});
-  }, [serverUrl, session.user_id]);
+    void loadPref('sunset_prefs_discord').then(p => {
+      setClientId(p.clientId);
+      setAutoConnect(p.autoConnect);
+      setImgurClientId(p.imgurClientId ?? '');
+    });
+  }, []);
+
+  const persist = (patch: { clientId?: string; autoConnect?: boolean; imgurClientId?: string }) => {
+    const next = {
+      clientId: patch.clientId ?? clientId,
+      autoConnect: patch.autoConnect ?? autoConnect,
+      imgurClientId: patch.imgurClientId ?? imgurClientId,
+    };
+    setClientId(next.clientId);
+    setAutoConnect(next.autoConnect);
+    setImgurClientId(next.imgurClientId);
+    void savePref('sunset_prefs_discord', next);
+  };
 
   const flash = (m: string) => {
     setMsg(m);
@@ -29,57 +42,15 @@ export function DiscordSettings({ serverUrl, session }: { serverUrl: string; ses
     <div style={{ maxWidth: 560 }}>
       <h3 style={{ fontSize: 'var(--sl-text-lg)' }}>Discord</h3>
       <p style={{ color: 'var(--sl-text-link)', fontSize: 'var(--sl-text-sm)' }}>
-        Server-driven presence uses your user token (kept on the server). Native presence talks to
-        Discord directly from this app and needs an application Client ID plus the Discord client running.
+        Native Rich Presence, straight from this app to Discord. Needs an application Client ID
+        and the Discord client running. The server pipeline stays off for desktop plays.
       </p>
-      <label style={{ fontWeight: 700 }}>Discord user token</label>
-      <input
-        className="sl-input"
-        type="password"
-        value={token}
-        onChange={e => setToken(e.target.value)}
-        placeholder="PASTE_TOKEN_HERE"
-      />
-      <label style={{ fontWeight: 700, display: 'block', marginTop: 'var(--sl-space-sm)' }}>Status</label>
-      <select className="sl-input" value={status} onChange={e => setStatus(e.target.value)}>
-        <option value="online">Online</option>
-        <option value="idle">Idle</option>
-        <option value="dnd">Do Not Disturb</option>
-        <option value="invisible">Invisible</option>
-      </select>
-      <div style={{ display: 'flex', gap: 'var(--sl-space-sm)', marginTop: 'var(--sl-space-sm)' }}>
-        <button
-          className="sl-button"
-          onClick={() =>
-            void api
-              .updateDiscordConfig(serverUrl, session.user_id, token, status)
-              .then(ok => flash(ok ? 'Presence saved.' : 'Save failed.'))
-              .catch(() => flash('Save failed.'))
-          }
-        >
-          Save presence
-        </button>
-        <button
-          className="sl-button"
-          style={{ opacity: 0.7 }}
-          onClick={() =>
-            void api
-              .stopDiscordRpc(serverUrl, session.user_id)
-              .then(() => flash('Presence stopped.'))
-              .catch(() => flash('Stop failed.'))
-          }
-        >
-          Stop
-        </button>
-      </div>
-
-      <h3 style={{ fontSize: 'var(--sl-text-lg)', marginTop: 'var(--sl-space-lg)' }}>Native RPC</h3>
       <label style={{ fontWeight: 700 }}>Application Client ID</label>
       <div style={{ display: 'flex', gap: 'var(--sl-space-sm)' }}>
         <input
           className="sl-input"
           value={clientId}
-          onChange={e => setClientId(e.target.value)}
+          onChange={e => persist({ clientId: e.target.value })}
           placeholder="1234567890"
         />
         {nativeOn ? (
@@ -106,6 +77,40 @@ export function DiscordSettings({ serverUrl, session }: { serverUrl: string; ses
             Connect
           </button>
         )}
+      </div>
+      <label style={{ display: 'flex', gap: 'var(--sl-space-sm)', alignItems: 'center', marginTop: 'var(--sl-space-sm)' }}>
+        <input
+          type="checkbox"
+          checked={autoConnect}
+          onChange={e => persist({ autoConnect: e.target.checked })}
+        />
+        Connect automatically on launch
+      </label>
+
+      <h3 style={{ fontSize: 'var(--sl-text-lg)', marginTop: 'var(--sl-space-lg)' }}>Cover art</h3>
+      <p style={{ color: 'var(--sl-text-link)', fontSize: 'var(--sl-text-sm)' }}>
+        Posters upload to Imgur once each, then the hosted URL becomes the presence cover.
+        Requires an Imgur Client ID (anonymous usage) and "Use External Assets" enabled on
+        your Discord application.
+      </p>
+      <label style={{ fontWeight: 700 }}>Imgur Client ID</label>
+      <div style={{ display: 'flex', gap: 'var(--sl-space-sm)' }}>
+        <input
+          className="sl-input"
+          value={imgurClientId}
+          onChange={e => persist({ imgurClientId: e.target.value })}
+          placeholder="YOUR_IMGUR_CLIENT_ID"
+        />
+        <button
+          className="sl-button"
+          style={{ opacity: 0.7 }}
+          onClick={() => {
+            clearCoverCache();
+            flash('Cover cache cleared. Posters re-upload on next play.');
+          }}
+        >
+          Clear cache
+        </button>
       </div>
       {msg && <p style={{ fontSize: 'var(--sl-text-sm)' }}>{msg}</p>}
     </div>

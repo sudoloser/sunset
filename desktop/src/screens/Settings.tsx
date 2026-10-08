@@ -48,7 +48,7 @@ export function Settings({ serverUrl, session }: { serverUrl: string; session: S
       {tab === 'appearance' && <AppearanceSettings />}
       {tab === 'subtitles' && <SubtitleSettings />}
       {tab === 'playback' && <PlaybackSettings />}
-      {tab === 'discord' && <DiscordSettings serverUrl={serverUrl} session={session} />}
+      {tab === 'discord' && <DiscordSettings />}
       {tab === 'admin' && session.is_admin && <AdminSettings serverUrl={serverUrl} />}
       {tab === 'about' && <AboutSettings serverUrl={serverUrl} />}
     </div>

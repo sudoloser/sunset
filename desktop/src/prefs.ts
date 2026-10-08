@@ -42,7 +42,14 @@ const DEFAULTS = {
     mpvPath: 'mpv',
   } as PlaybackPrefs,
   sunset_prefs_appearance: { density: 'comfortable' } as AppearancePrefs,
+  sunset_prefs_discord: { clientId: '', autoConnect: false, imgurClientId: '' } as DiscordPrefs,
 };
+
+export interface DiscordPrefs {
+  clientId: string;
+  autoConnect: boolean;
+  imgurClientId: string;
+}
 
 type PrefKey = keyof typeof DEFAULTS;
 

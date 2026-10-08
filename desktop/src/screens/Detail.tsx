@@ -2,29 +2,39 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, assetUrl, type MediaItem } from '../api/client';
 import type { Session } from '../session';
-import { cacheItems, getCachedItem } from '../itemCache';
+import { cacheItems, getCachedItem, sortEpisodes } from '../itemCache';
 
 export function Detail({ serverUrl, session }: { serverUrl: string; session: Session }) {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [item] = useState<MediaItem | null>(
-    (location.state as MediaItem | null) ?? (id ? getCachedItem(id) : null),
-  );
+  const locationItem = (location as unknown as { state?: MediaItem | null }).state ?? null;
+  const item: MediaItem | null =
+    (locationItem && id && locationItem.id === id ? locationItem : null) ??
+    (id ? getCachedItem(id) : null);
   const [episodes, setEpisodes] = useState<MediaItem[]>([]);
+  const [season, setSeason] = useState<number | null>(null);
 
   useEffect(() => {
+    setEpisodes([]);
+    setSeason(null);
     if (item) cacheItems([item]);
     if (item?.media_type === 'episode' && item.show_title) {
       api
         .getShowEpisodes(serverUrl, item.show_title, session.user_id)
         .then(eps => {
-          cacheItems(eps);
-          setEpisodes(eps);
+          const ordered = sortEpisodes(eps);
+          cacheItems(ordered);
+          setEpisodes(ordered);
+          const seasons = [...new Set(ordered.map(e => e.season ?? 1))].sort((a, b) => a - b);
+          // Show pages always open at season 1; resume/continue flows go
+          // straight to the player, so the dropdown never needs S4 first.
+          setSeason(seasons[0] ?? 1);
         })
         .catch(() => {});
     }
-  }, [serverUrl, session.user_id, item]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverUrl, session.user_id, id]);
 
   if (!item) {
     return (
@@ -38,12 +48,11 @@ export function Detail({ serverUrl, session }: { serverUrl: string; session: Ses
   }
 
   const isShow = item.media_type === 'episode' && item.show_title;
-  const seasons = new Map<number, MediaItem[]>();
-  for (const ep of episodes) {
-    const list = seasons.get(ep.season ?? 1) ?? [];
-    list.push(ep);
-    seasons.set(ep.season ?? 1, list);
-  }
+  const seasonNumbers = [...new Set(episodes.map(e => e.season ?? 1))].sort((a, b) => a - b);
+  const shownSeason = season ?? seasonNumbers[0] ?? 1;
+  const shownEpisodes = episodes
+    .filter(e => (e.season ?? 1) === shownSeason)
+    .sort((a, b) => (a.episode ?? 0) - (b.episode ?? 0));
 
   return (
     <div style={{ padding: 'var(--sl-space-lg)', maxWidth: 900, margin: '0 auto' }}>
@@ -84,28 +93,38 @@ export function Detail({ serverUrl, session }: { serverUrl: string; session: Ses
         )}
       </div>
 
-      {isShow &&
-        [...seasons.entries()]
-          .sort(([a], [b]) => a - b)
-          .map(([season, eps]) => (
-            <div key={season} style={{ marginTop: 'var(--sl-space-lg)' }}>
-              <h2>Season {season}</h2>
-              <div style={{ display: 'grid', gap: 'var(--sl-space-sm)' }}>
-                {eps
-                  .sort((a, b) => (a.episode ?? 0) - (b.episode ?? 0))
-                  .map(ep => (
-                    <button
-                      key={ep.id}
-                      className="sl-button"
-                      style={{ textAlign: 'left', padding: 'var(--sl-space-md)' }}
-                      onClick={() => navigate(`/play/${ep.id}`)}
-                    >
-                      E{ep.episode}: {ep.title}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          ))}
+      {isShow && seasonNumbers.length > 0 && (
+        <div style={{ marginTop: 'var(--sl-space-lg)' }}>
+          <label style={{ fontWeight: 700, marginRight: 'var(--sl-space-sm)' }}>Season</label>
+          <select
+            className="sl-input"
+            style={{ width: 'auto' }}
+            value={shownSeason}
+            onChange={e => setSeason(Number(e.target.value))}
+          >
+            {seasonNumbers.map(s => (
+              <option key={s} value={s}>
+                Season {s}
+              </option>
+            ))}
+          </select>
+          <div style={{ display: 'grid', gap: 'var(--sl-space-sm)', marginTop: 'var(--sl-space-md)' }}>
+            {shownEpisodes.map(ep => (
+              <button
+                key={ep.id}
+                className="sl-button"
+                style={{ textAlign: 'left', padding: 'var(--sl-space-md)' }}
+                onClick={() => {
+                  cacheItems([ep]);
+                  navigate(`/play/${ep.id}`, { state: ep });
+                }}
+              >
+                E{ep.episode}: {ep.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

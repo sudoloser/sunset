@@ -132,17 +132,16 @@ export function AdminSettings({ serverUrl }: { serverUrl: string }) {
 
       <h4 style={{ marginTop: 'var(--sl-space-lg)' }}>Upload movie</h4>
       <div className="sl-card" style={{ padding: 'var(--sl-space-md)' }}>
-        {libraries.filter(l => l.lib_type === 'movies').length > 1 && (
-          <select className="sl-input" value={upLib} onChange={e => setUpLib(e.target.value)}>
-            {libraries
-              .filter(l => l.lib_type === 'movies')
-              .map(l => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-          </select>
-        )}
+        <label style={{ fontWeight: 700 }}>Library</label>
+        <select className="sl-input" value={upLib} onChange={e => setUpLib(e.target.value)}>
+          {libraries
+            .filter(l => l.lib_type === 'movies')
+            .map(l => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+        </select>
         <input
           className="sl-input"
           style={{ marginTop: 'var(--sl-space-sm)' }}

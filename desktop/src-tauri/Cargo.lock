@@ -3601,6 +3601,7 @@ dependencies = [
  "tauri-plugin-store",
  "tauri-plugin-updater",
  "tokio",
+ "uuid 1.27.0",
 ]
 
 [[package]]

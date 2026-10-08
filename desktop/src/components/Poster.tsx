@@ -13,7 +13,7 @@ interface PosterProps {
 export function Poster({ serverUrl, item, imageFrom, title, subtitle, onClick }: PosterProps) {
   const src = assetUrl(serverUrl, (imageFrom ?? item).id, 'folder.jpg');
   return (
-    <div style={{ width: 150, flexShrink: 0 }}>
+    <div className="sl-poster-lazy" style={{ width: 150, flexShrink: 0 }}>
       <div
         onClick={onClick}
         style={{
