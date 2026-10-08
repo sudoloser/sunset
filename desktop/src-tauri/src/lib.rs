@@ -123,14 +123,9 @@ fn mpv_available(mpv_path: String) -> bool {
 /// Elements WebKit needs for in-app video: an MP4 demuxer, an H.264
 /// decoder, and audio/video sinks. Reports which are missing so the UI
 /// can tell the user exactly what to install.
+#[cfg(not(windows))]
 #[tauri::command]
 fn gstreamer_check() -> Vec<String> {
-    // GStreamer probing is a Linux/WebKit thing. On Windows the check
-    // would just report everything missing (false positive), so skip it.
-    #[cfg(windows)]
-    {
-        return Vec::new();
-    }
     // At least one working element per role is enough.
     const REQUIRED: &[(&str, &[&str])] = &[
         ("MP4 demuxer (qtdemux/isomp4)", &["qtdemux", "isomp4"]),
@@ -159,6 +154,16 @@ fn gstreamer_check() -> Vec<String> {
             }
         })
         .collect()
+}
+
+/// GStreamer probing is a Linux/WebKit thing. On Windows the check would
+/// just report everything missing (false positive), so skip it. Separate
+/// cfg-gated definition (instead of an early return) so the Linux body
+/// isn't flagged as unreachable code on Windows.
+#[cfg(windows)]
+#[tauri::command]
+fn gstreamer_check() -> Vec<String> {
+    Vec::new()
 }
 
 /// Launch mpv as a detached player for upscaled (Anime4K shader) playback.
@@ -191,6 +196,8 @@ struct MpvState {
     sessions: std::collections::HashMap<String, std::path::PathBuf>,
 }
 
+/// IPC endpoint mpv listens on: a unix socket file on Unix, a named pipe
+/// on Windows (`tokio::net::UnixStream` doesn't exist there).
 #[cfg(unix)]
 fn mpv_socket_path(id: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!("sunset-mpv-{}.sock", id))
