@@ -125,6 +125,12 @@ fn mpv_available(mpv_path: String) -> bool {
 /// can tell the user exactly what to install.
 #[tauri::command]
 fn gstreamer_check() -> Vec<String> {
+    // GStreamer probing is a Linux/WebKit thing. On Windows the check
+    // would just report everything missing (false positive), so skip it.
+    #[cfg(windows)]
+    {
+        return Vec::new();
+    }
     // At least one working element per role is enough.
     const REQUIRED: &[(&str, &[&str])] = &[
         ("MP4 demuxer (qtdemux/isomp4)", &["qtdemux", "isomp4"]),
@@ -185,8 +191,15 @@ struct MpvState {
     sessions: std::collections::HashMap<String, std::path::PathBuf>,
 }
 
+#[cfg(unix)]
 fn mpv_socket_path(id: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!("sunset-mpv-{}.sock", id))
+}
+
+#[cfg(windows)]
+fn mpv_socket_path(id: &str) -> std::path::PathBuf {
+    // mpv on Windows serves IPC over a named pipe, not a socket file.
+    std::path::PathBuf::from(format!(r"\\.\pipe\sunset-mpv-{}", id))
 }
 
 /// Start a controllable mpv session (JSON IPC). Returns a session id the
@@ -210,7 +223,9 @@ async fn mpv_start(
     // Resolve each shader: as given, else by basename under the conventional
     // per-user shader dir (~/.config/mpv/shaders), so a standard Anime4K
     // install works even if the frontend sent a stale custom folder.
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| std::env::temp_dir().to_string_lossy().to_string());
     let fallback_dir = std::path::PathBuf::from(home).join(".config").join("mpv").join("shaders");
     let shaders: Vec<String> = shaders
         .into_iter()
@@ -246,14 +261,35 @@ async fn mpv_start(
     cmd.spawn().map_err(|e| e.to_string())?;
 
     // Wait for mpv to create the socket (it starts before loading media).
-    for _ in 0..30 {
-        if sock.exists() {
-            break;
+    #[cfg(unix)]
+    {
+        for _ in 0..30 {
+            if sock.exists() {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        if !sock.exists() {
+            return Err("mpv did not start its control socket".to_string());
+        }
     }
-    if !sock.exists() {
-        return Err("mpv did not start its control socket".to_string());
+    #[cfg(windows)]
+    {
+        // Named pipes don't appear as files, so poll by connecting.
+        let mut ready = false;
+        for _ in 0..30 {
+            if tokio::net::windows::named_pipe::ClientOptions::new()
+                .open(&sock)
+                .is_ok()
+            {
+                ready = true;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        if !ready {
+            return Err("mpv did not start its control socket".to_string());
+        }
     }
 
     state
@@ -264,6 +300,7 @@ async fn mpv_start(
     Ok(id)
 }
 
+#[cfg(unix)]
 async fn mpv_send(sock: &std::path::Path, command: serde_json::Value) -> Result<serde_json::Value, String> {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
     let mut stream = tokio::net::UnixStream::connect(sock)
@@ -277,6 +314,38 @@ async fn mpv_send(sock: &std::path::Path, command: serde_json::Value) -> Result<
         .map_err(|e| e.to_string())?;
     stream.write_all(b"\n").await.map_err(|e| e.to_string())?;
     let mut reader = tokio::io::BufReader::new(stream);
+    let mut resp = String::new();
+    tokio::time::timeout(std::time::Duration::from_secs(5), reader.read_line(&mut resp))
+        .await
+        .map_err(|_| "mpv did not answer".to_string())?
+        .map_err(|e| e.to_string())?;
+    let json: serde_json::Value =
+        serde_json::from_str(&resp).map_err(|e| e.to_string())?;
+    if json.get("error").and_then(|e| e.as_str()) != Some("success") {
+        return Err(json
+            .get("error")
+            .and_then(|e| e.as_str())
+            .unwrap_or("mpv command failed")
+            .to_string());
+    }
+    Ok(json.get("data").cloned().unwrap_or(serde_json::Value::Null))
+}
+
+#[cfg(windows)]
+async fn mpv_send(sock: &std::path::Path, command: serde_json::Value) -> Result<serde_json::Value, String> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+    let pipe = tokio::net::windows::named_pipe::ClientOptions::new()
+        .open(sock)
+        .map_err(|e| e.to_string())?;
+    let mut reader = tokio::io::BufReader::new(pipe);
+    let line = serde_json::to_string(&serde_json::json!({ "command": command }))
+        .map_err(|e| e.to_string())?;
+    reader
+        .write_all(line.as_bytes())
+        .await
+        .map_err(|e| e.to_string())?;
+    reader.write_all(b"\n").await.map_err(|e| e.to_string())?;
+    reader.flush().await.map_err(|e| e.to_string())?;
     let mut resp = String::new();
     tokio::time::timeout(std::time::Duration::from_secs(5), reader.read_line(&mut resp))
         .await
