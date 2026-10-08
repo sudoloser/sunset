@@ -36,6 +36,35 @@ jobs:
         with:
           workspaces: "desktop/src-tauri"
 
+      # Tauri's Linux bundler downloads AppRun + linuxdeploy from
+      # tauri-apps/binary-releases at bundle time. That endpoint flakes
+      # with `http status: 500` and kills the whole build even though
+      # deb/rpm already succeeded. Cache + pre-warm them so a retry
+      # usually doesn't need the network at all.
+      - name: Cache Tauri bundler tools (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/tauri
+          key: tauri-bundler-${{ runner.os }}-v1
+          restore-keys: |
+            tauri-bundler-${{ runner.os }}-
+
+      - name: Pre-download Tauri Linux bundler tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p ~/.cache/tauri
+          set -x
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 5 \
+            -o ~/.cache/tauri/AppRun-x86_64 \
+            https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-x86_64
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 5 \
+            -o ~/.cache/tauri/linuxdeploy-x86_64.AppImage \
+            https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy-07333c6/linuxdeploy-x86_64.AppImage
+          cp ~/.cache/tauri/linuxdeploy-x86_64.AppImage ~/.cache/tauri/linuxdeploy-07333c6-x86_64.AppImage || true
+          chmod +x ~/.cache/tauri/AppRun-x86_64 ~/.cache/tauri/linuxdeploy-x86_64.AppImage || true
+          ls -la ~/.cache/tauri
+
       - name: Install system deps (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -48,7 +77,24 @@ jobs:
 
       - name: Build Tauri app
         working-directory: desktop
-        run: pnpm tauri:build
+        run: |
+          # The AppImage bundling step downloads external binaries and
+          # transiently fails with `http status: 500`. deb/rpm already
+          # succeed before that point, and rust-cache makes a retry cheap,
+          # so retry the whole build up to 3 times.
+          for i in 1 2 3; do
+            echo "Build attempt $i..."
+            if pnpm tauri:build; then
+              echo "Build succeeded on attempt $i"
+              break
+            fi
+            echo "Build attempt $i failed"
+            if [ "$i" -eq 3 ]; then
+              echo "All build attempts failed"
+              exit 1
+            fi
+            sleep 15
+          done
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -62,7 +108,16 @@ jobs:
         working-directory: desktop/src-tauri/target/release/bundle/appimage
         run: |
           rm -f SunSet.AppDir/usr/lib/libgst*
-          curl -sL -o /tmp/appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          # `continuous` tag for appimagetool flakes the same way as the
+          # Tauri binaries above. Prefer a versioned release, fall back
+          # to continuous, all with retries.
+          if ! curl -fSL --retry 5 --retry-all-errors --retry-delay 5 \
+            -o /tmp/appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/13/appimagetool-x86_64.AppImage; then
+            curl -fSL --retry 5 --retry-all-errors --retry-delay 5 \
+              -o /tmp/appimagetool \
+              https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          fi
           chmod +x /tmp/appimagetool
           ARCH=x86_64 /tmp/appimagetool SunSet.AppDir SunSet_0.2.0_amd64.AppImage
 
