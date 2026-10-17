@@ -466,8 +466,42 @@ async fn mpv_stop(state: State<'_, Mutex<MpvState>>, id: String) -> Result<(), S
     Ok(())
 }
 
+/// Earlier builds shipped the PWA frontend, whose service worker registered
+/// itself in the shared WebView2 profile and was never removed. On machines
+/// where that build ran, the worker keeps serving the old cached
+/// `index.html`, which references asset hashes that no longer exist in the
+/// bundle — the webview loads no JS at all and the window stays blank
+/// ("white screen"). The desktop app never wants a service worker: drop its
+/// storage before any webview starts, so the next load serves the real
+/// embedded app. No-op when the directories are absent.
+#[cfg(windows)]
+fn clear_stale_webview_state(identifier: &str) {
+    let Some(local_app_data) = std::env::var_os("LOCALAPPDATA") else {
+        return;
+    };
+    let profile = std::path::Path::new(&local_app_data)
+        .join(identifier)
+        .join("EBWebView")
+        .join("Default");
+    // `CacheStorage` lives inside `Service Worker` on current runtimes; the
+    // top-level location is a legacy layout. Both only ever hold web caches.
+    for name in ["Service Worker", "CacheStorage"] {
+        let dir = profile.join(name);
+        if dir.exists() {
+            let _ = std::fs::remove_dir_all(dir);
+        }
+    }
+}
+
+#[cfg(not(windows))]
+fn clear_stale_webview_state(_identifier: &str) {}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+    // Must happen before the builder starts, while no webview exists to
+    // hold these files open (see the function docs above).
+    clear_stale_webview_state(&context.config().identifier);
     tauri::Builder::default()
         // Per the plugin docs, single-instance must be the first plugin
         // registered so it runs before other plugins can interfere.
@@ -516,6 +550,6 @@ pub fn run() {
             set_fullscreen,
             show_main_window,
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running tauri application");
 }

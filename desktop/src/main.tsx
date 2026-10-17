@@ -5,6 +5,24 @@ import App from './App';
 import './theme/tokens.css';
 import './theme/app.css';
 
+// A pre-rewrite build shipped the PWA frontend, and its service worker has
+// been living in this machine's webview profile ever since, serving a stale
+// document whose assets no longer exist (a blank window). The desktop app
+// has no use for service workers: unregister any survivor and clear caches.
+// (Windows profiles are also cleaned natively before the webview starts.)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((regs) => regs.forEach((reg) => { void reg.unregister(); }))
+    .catch(() => undefined);
+}
+if ('caches' in window) {
+  caches
+    .keys()
+    .then((keys) => keys.forEach((key) => { void caches.delete(key); }))
+    .catch(() => undefined);
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
