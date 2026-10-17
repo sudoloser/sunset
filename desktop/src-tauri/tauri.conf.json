@@ -22,7 +22,8 @@
         "fullscreen": false,
         "decorations": false,
         "devtools": true,
-        "visible": false
+        "visible": false,
+        "backgroundColor": "#FFF5F5"
       }
     ],
     "security": {

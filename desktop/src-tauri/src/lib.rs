@@ -93,6 +93,21 @@ fn set_fullscreen(window: tauri::Window, fullscreen: bool) -> Result<(), String>
     window.set_fullscreen(fullscreen).map_err(|e| e.to_string())
 }
 
+/// Reveal the main window once the UI has content to show. The window is
+/// created hidden (`visible: false`) so nothing flashes while the webview
+/// boots; the frontend calls this right after its first render.
+/// This has to come from the webview instead of `on_page_load`: on Windows,
+/// showing the window at page-load time (while WebView2 is still loading)
+/// can leave it stuck on a blank white surface that never composites until
+/// the window is resized. Linux gets away with the early show, Windows
+/// does not.
+#[tauri::command]
+fn show_main_window(window: tauri::Window) -> Result<(), String> {
+    window.show().map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 fn resolve_mpv(mpv_path: &str) -> Option<std::path::PathBuf> {
     let candidate = std::path::PathBuf::from(mpv_path);
     // Absolute/relative path with a separator: use as-is if executable.
@@ -454,19 +469,32 @@ async fn mpv_stop(state: State<'_, Mutex<MpvState>>, id: String) -> Result<(), S
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
+        // Per the plugin docs, single-instance must be the first plugin
+        // registered so it runs before other plugins can interfere.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Focus the existing window when a second copy is launched.
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
             }
         }))
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        // Window starts hidden (visible: false) to avoid a white flash on boot;
-        // show it as soon as the frontend has actually loaded its page.
-        .on_page_load(|webview, _payload| {
-            let _ = webview.window().show();
+        // The window starts hidden (visible: false) to avoid a white flash
+        // on boot. The frontend reveals it via `show_main_window` once its
+        // first frame has rendered. This timer is only a last-resort reveal
+        // (frontend failed to load) so the app can never end up invisible.
+        .setup(|app| {
+            let handle = app.handle().clone();
+            let _ = std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(5));
+                if let Some(window) = handle.get_webview_window("main") {
+                    if !window.is_visible().unwrap_or(false) {
+                        let _ = window.show();
+                    }
+                }
+            });
+            Ok(())
         })
         .manage(Mutex::new(DiscordState { client: None }))
         .manage(Mutex::new(MpvState {
@@ -486,6 +514,7 @@ pub fn run() {
             mpv_stop,
             gstreamer_check,
             set_fullscreen,
+            show_main_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
