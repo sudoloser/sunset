@@ -62,11 +62,25 @@ jobs:
           curl -fSL --retry 5 --retry-all-errors --retry-delay 5 \
             -o ~/.cache/tauri/AppRun-x86_64 \
             https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-x86_64
+          # Tauri's bundler execs linuxdeploy-07333c6-x86_64.AppImage and
+          # only downloads it when missing, so seed that exact name.
+          # Downloading straight to it avoids the cp-then-chmod trap: the
+          # old step copied the file *before* chmod, so the sha-named copy
+          # had no exec bit, the bundler skipped its own download and then
+          # died with `failed to bundle project: Permission denied
+          # (os error 13)` when running it.
           curl -fSL --retry 5 --retry-all-errors --retry-delay 5 \
-            -o ~/.cache/tauri/linuxdeploy-x86_64.AppImage \
+            -o ~/.cache/tauri/linuxdeploy-07333c6-x86_64.AppImage \
             https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy-07333c6/linuxdeploy-x86_64.AppImage
-          cp ~/.cache/tauri/linuxdeploy-x86_64.AppImage ~/.cache/tauri/linuxdeploy-07333c6-x86_64.AppImage || true
-          chmod +x ~/.cache/tauri/AppRun-x86_64 ~/.cache/tauri/linuxdeploy-x86_64.AppImage || true
+          # Keep the plain name too for other CLI versions.
+          cp ~/.cache/tauri/linuxdeploy-07333c6-x86_64.AppImage ~/.cache/tauri/linuxdeploy-x86_64.AppImage
+          # Cached copies can come back without +x and the bundler only
+          # checks existence, so always restore the exec bits.
+          chmod +x ~/.cache/tauri/AppRun-x86_64 \
+            ~/.cache/tauri/linuxdeploy-07333c6-x86_64.AppImage \
+            ~/.cache/tauri/linuxdeploy-x86_64.AppImage
+          # Same for any other cached AppImage (e.g. the AppImage plugin).
+          chmod +x ~/.cache/tauri/*.AppImage
           ls -la ~/.cache/tauri
 
       - name: Install system deps (Linux)
